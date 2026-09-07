@@ -1847,6 +1847,50 @@ class ProjectWizard extends Component
         $this->showDistributeModal = false;
     }
 
+    public function resetCircuitAssignments(): void
+    {
+        $this->clearMessages();
+        $this->pushHistory();
+        $this->showDistributeModal = false;
+
+        foreach (array_keys($this->loads) as $li) {
+            $this->loads[$li]['circuit_number'] = null;
+        }
+
+        if ($this->projectId) {
+            try {
+                DB::table('project_loads')
+                    ->where('project_id', $this->projectId)
+                    ->update(['circuit_number' => null, 'updated_at' => now()]);
+
+                DB::table('project_circuit_previews')
+                    ->where('project_id', $this->projectId)
+                    ->delete();
+
+                DB::table('project_load_rows')
+                    ->where('project_id', $this->projectId)
+                    ->delete();
+
+                DB::table('project_circuit_calculations')
+                    ->where('project_id', $this->projectId)
+                    ->delete();
+
+                DB::table('project_phase_distribution')
+                    ->where('project_id', $this->projectId)
+                    ->delete();
+
+                $roomIds = ProjectRoom::where('project_id', $this->projectId)->pluck('id')->toArray();
+                if (!empty($roomIds)) {
+                    ProjectInputRow::whereIn('room_id', $roomIds)->delete();
+                }
+            } catch (\Throwable) {}
+        }
+
+        $this->circuitOverrides = [];
+        $this->phaseAssignments = [];
+        $this->successMessage = 'Circuitos resetados. Todas as cargas estao sem circuito atribuido.';
+    }
+
     public function autoAssignCircuits(): void
     {
         $this->clearMessages();
@@ -2391,6 +2435,9 @@ class ProjectWizard extends Component
     private function saveStep4(): void
     {
         if (!$this->projectId) return;
+
+        $this->renumberCircuitsBySequence();
+        $this->sortLoadsBySequence();
 
         // Persist circuit_number to project_loads
         foreach ($this->loads as $load) {

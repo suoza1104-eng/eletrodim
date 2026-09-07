@@ -94,6 +94,10 @@ class CalculationService
      */
     public function calculateLoads(int $projectId): void
     {
+        DB::table('project_load_rows')
+            ->where('project_id', $projectId)
+            ->delete();
+
         $inputRows = DB::table('project_input_rows')
             ->where('project_id', $projectId)
             ->orderBy('id')
@@ -151,6 +155,10 @@ class CalculationService
      */
     public function calculateCircuits(int $projectId): void
     {
+        DB::table('project_circuit_calculations')
+            ->where('project_id', $projectId)
+            ->delete();
+
         // Carrega load_rows com dados de input_rows via join
         $loadRows = DB::table('project_load_rows as lr')
             ->join('project_input_rows as ir', 'ir.id', '=', 'lr.input_row_id')
