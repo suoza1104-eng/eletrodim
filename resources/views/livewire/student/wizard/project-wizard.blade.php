@@ -1756,13 +1756,14 @@
 
             <div>
                 @if($currentStep < \App\Livewire\Student\Wizard\ProjectWizard::TOTAL_STEPS)
-                <button wire:click="nextStep" wire:loading.attr="disabled" wire:target="nextStep"
+                @php $nextAction = $currentStep === 4 ? 'calculateCircuits' : 'nextStep'; @endphp
+                <button wire:click="{{ $nextAction }}" wire:loading.attr="disabled" wire:target="{{ $nextAction }}"
                     class="inline-flex items-center gap-2 bg-brand-yellow hover:bg-brand-yellow-hover text-brand-black font-bold text-sm px-5 py-2.5 rounded-lg transition disabled:opacity-60">
-                    Próximo
-                    <span wire:loading.remove wire:target="nextStep">
+                    {{ $currentStep === 4 ? 'Calcular Circuitos' : 'Próximo' }}
+                    <span wire:loading.remove wire:target="{{ $nextAction }}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     </span>
-                    <span wire:loading wire:target="nextStep">
+                    <span wire:loading wire:target="{{ $nextAction }}">
                         <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                     </span>
                 </button>

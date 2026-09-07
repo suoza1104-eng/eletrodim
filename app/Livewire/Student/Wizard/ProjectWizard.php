@@ -375,13 +375,15 @@ class ProjectWizard extends Component
             return;
         }
 
+        $this->validateCurrentStep();
+        $this->saveCurrentStep();
+
         try {
             $service = app(CalculationService::class);
             $result  = $service->calculateProject($this->projectId);
 
             if ($result['success']) {
                 $this->successMessage = 'Circuitos calculados com sucesso!';
-                $this->saveCurrentStep();
                 $this->currentStep = min($this->currentStep + 1, self::TOTAL_STEPS);
                 $this->updateProgress();
                 $this->circuitOverrides = [];
