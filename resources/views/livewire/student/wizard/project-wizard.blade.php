@@ -308,7 +308,7 @@
                                 <div class="text-xs font-semibold text-green-700 dark:text-green-300 mt-0.5">
                                     {{ $effectiveTugQty }} tomada{{ $effectiveTugQty !== 1 ? 's' : '' }}
                                     @if($effectiveTugQty600 > 0 || $effectiveTugQty100 > 0)
-                                        <span class="text-[11px] font-normal text-green-600 dark:text-green-400 opacity-90">({{ $effectiveTugQty600 }}× 600VA + {{ $effectiveTugQty100 }}× 100VA)</span>
+                                        <span class="text-[11px] font-normal text-green-600 dark:text-green-400 opacity-90">({{ $effectiveTugQty100 }}× 100VA + {{ $effectiveTugQty600 }}× 600VA)</span>
                                     @endif
                                 </div>
                                 @if($room['use_manual_tug_qty'] ?? false)
@@ -328,21 +328,21 @@
                                 <div class="space-y-2 mt-2">
                                     <div class="grid grid-cols-2 gap-2">
                                         <div>
-                                            <label class="block text-[11px] font-medium text-green-800 dark:text-green-300 mb-0.5">Tomadas 600 VA</label>
-                                            <input type="text" inputmode="decimal" wire:model="rooms.{{ $i }}.tug_qty_600_manual"
-                                                wire:change="calculateRoomLoads({{ $i }})"
-                                                @keydown.enter="evaluateCalcFormula($event.target); $event.target.blur()"
-                                                @blur="evaluateCalcFormula($event.target)"
-                                                placeholder="Ex: =3"
-                                                class="w-full border border-green-300 bg-white dark:bg-gray-800 rounded-lg px-2 py-1 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-green-400">
-                                        </div>
-                                        <div>
                                             <label class="block text-[11px] font-medium text-green-800 dark:text-green-300 mb-0.5">Tomadas 100 VA</label>
                                             <input type="text" inputmode="decimal" wire:model="rooms.{{ $i }}.tug_qty_100_manual"
                                                 wire:change="calculateRoomLoads({{ $i }})"
                                                 @keydown.enter="evaluateCalcFormula($event.target); $event.target.blur()"
                                                 @blur="evaluateCalcFormula($event.target)"
                                                 placeholder="Ex: =2"
+                                                class="w-full border border-green-300 bg-white dark:bg-gray-800 rounded-lg px-2 py-1 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-green-400">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[11px] font-medium text-green-800 dark:text-green-300 mb-0.5">Tomadas 600 VA</label>
+                                            <input type="text" inputmode="decimal" wire:model="rooms.{{ $i }}.tug_qty_600_manual"
+                                                wire:change="calculateRoomLoads({{ $i }})"
+                                                @keydown.enter="evaluateCalcFormula($event.target); $event.target.blur()"
+                                                @blur="evaluateCalcFormula($event.target)"
+                                                placeholder="Ex: =3"
                                                 class="w-full border border-green-300 bg-white dark:bg-gray-800 rounded-lg px-2 py-1 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-green-400">
                                         </div>
                                     </div>
