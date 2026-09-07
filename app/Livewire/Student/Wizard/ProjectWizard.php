@@ -746,11 +746,8 @@ class ProjectWizard extends Component
     {
         if (!$this->projectId) return;
 
-        // Clear existing input rows
-        $roomIds = ProjectRoom::where('project_id', $this->projectId)->pluck('id')->toArray();
-        if (!empty($roomIds)) {
-            ProjectInputRow::whereIn('room_id', $roomIds)->delete();
-        }
+        // Clear existing input rows for this project to prevent orphan rows
+        ProjectInputRow::where('project_id', $this->projectId)->delete();
 
         $sequentialCircuit = 1;
         $savedRoomIds      = [];
@@ -1459,6 +1456,12 @@ class ProjectWizard extends Component
     private function sortLoadsBySequence(): void
     {
         usort($this->loads, function ($a, $b) {
+            $circA = (int)($a['circuit_number'] ?? 0);
+            $circB = (int)($b['circuit_number'] ?? 0);
+            if ($circA > 0 && $circB > 0 && $circA !== $circB) return $circA <=> $circB;
+            if ($circA > 0 && $circB <= 0) return -1;
+            if ($circA <= 0 && $circB > 0) return 1;
+
             $typeOrder = ['ILUMINAÇÃO' => 1, 'TUG' => 2, 'TUE' => 3];
             $tA = $typeOrder[$a['load_type'] ?? ''] ?? 99;
             $tB = $typeOrder[$b['load_type'] ?? ''] ?? 99;
@@ -1467,10 +1470,6 @@ class ProjectWizard extends Component
             $vA = (int)($a['voltage_v'] ?? 127);
             $vB = (int)($b['voltage_v'] ?? 127);
             if ($vA !== $vB) return $vA <=> $vB;
-
-            $circA = (int)($a['circuit_number'] ?? 0);
-            $circB = (int)($b['circuit_number'] ?? 0);
-            if ($circA > 0 && $circB > 0 && $circA !== $circB) return $circA <=> $circB;
 
             $flA = (int)($a['floor_number'] ?? 1);
             $flB = (int)($b['floor_number'] ?? 1);
