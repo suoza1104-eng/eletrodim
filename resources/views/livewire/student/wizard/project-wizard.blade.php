@@ -202,12 +202,38 @@
                     <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200">Cadastro dos Cômodos e Cargas Mínimas</h3>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Cadastre os ambientes da instalação. O EletroDIM calcula automaticamente a iluminação e as tomadas mínimas conforme a NBR 5410.</p>
                 </div>
-                <button wire:click="addRoom"
-                    class="inline-flex items-center gap-1.5 bg-brand-yellow hover:bg-brand-yellow-hover text-brand-black text-sm font-bold px-4 py-2.5 rounded-lg transition flex-shrink-0 whitespace-nowrap shadow-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                    Adicionar Cômodo
-                </button>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <button wire:click="toggleFloorPlanEditor" type="button"
+                        class="inline-flex items-center gap-1.5 {{ $showFloorPlanEditor ? 'bg-brand-black text-white' : 'bg-white dark:bg-gray-800 text-brand-black dark:text-gray-200 border border-gray-300 dark:border-gray-600' }} text-sm font-bold px-4 py-2.5 rounded-lg transition whitespace-nowrap shadow-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                        {{ $showFloorPlanEditor ? 'Fechar planta baixa' : 'Desenhar planta baixa' }}
+                    </button>
+                    <button wire:click="addRoom"
+                        class="inline-flex items-center gap-1.5 bg-brand-yellow hover:bg-brand-yellow-hover text-brand-black text-sm font-bold px-4 py-2.5 rounded-lg transition flex-shrink-0 whitespace-nowrap shadow-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Adicionar Cômodo
+                    </button>
+                </div>
             </div>
+
+            @if($showFloorPlanEditor)
+            <div class="mb-6 rounded-xl overflow-hidden border border-gray-300 dark:border-gray-600" x-data x-init="
+                if (!window.__eletrodimFloorPlanListenerAttached) {
+                    window.__eletrodimFloorPlanListenerAttached = true;
+                    window.addEventListener('message', (e) => {
+                        if (e.origin !== window.location.origin) return;
+                        if (e.data && e.data.type === 'eletrodim:floorplan-rooms') {
+                            $wire.importRoomsFromFloorPlan(e.data.comodos);
+                        }
+                    });
+                }
+            ">
+                <iframe src="{{ asset('floor-plan-editor.html') }}" wire:ignore
+                    style="width:100%;height:640px;border:0;display:block;"
+                    title="Editor de planta baixa"></iframe>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 -mt-4 mb-6">Desenhe as paredes, nomeie os cômodos (feche o contorno primeiro) e clique em <strong>"Enviar cômodos para o projeto"</strong> no painel direito do editor. O tipo de cada cômodo é adivinhado pelo nome — confira e ajuste antes de avançar.</p>
+            @endif
 
             @error('rooms')<p class="text-sm text-red-600 dark:text-red-400 mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded px-3 py-2">{{ $message }}</p>@enderror
 

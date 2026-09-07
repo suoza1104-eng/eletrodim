@@ -89,6 +89,9 @@ class ProjectWizard extends Component
     // Step 2 — rooms
     public array $rooms = [];
 
+    // Step 2 — editor de planta baixa (opcional, alimenta $rooms via importRoomsFromFloorPlan)
+    public bool $showFloorPlanEditor = false;
+
     // Step 3 — loads
     public array $loads = [];
 
@@ -1067,7 +1070,6 @@ class ProjectWizard extends Component
                     'split_original_description' => isset($row->split_original_description) && $row->split_original_description !== null ? (string)$row->split_original_description : null,
                 ];
             }
-        } catch (\Throwable) {}
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Error loading loads from DB: ' . $e->getMessage());
         }
@@ -1224,6 +1226,96 @@ class ProjectWizard extends Component
         array_splice($this->rooms, $index, 1);
         $this->rooms = array_values($this->rooms);
         $this->dispatch('toast', type: 'error', message: 'Cômodo removido.');
+    }
+
+    // ─── Step 2: editor de planta baixa ──────────────────
+
+    public function toggleFloorPlanEditor(): void
+    {
+        $this->showFloorPlanEditor = !$this->showFloorPlanEditor;
+    }
+
+    /**
+     * Recebe os cômodos fechados desenhados no editor de planta baixa
+     * (nome, área e perímetro medidos automaticamente) e os transforma em
+     * linhas de $rooms, reaproveitando o mesmo cálculo de cargas mínimas
+     * (iluminação/TUG) usado no cadastro manual.
+     */
+    public function importRoomsFromFloorPlan(array $comodos): void
+    {
+        $imported = 0;
+        foreach ($comodos as $c) {
+            if (empty($c['fechado'])) continue;
+
+            $nome      = trim((string)($c['nome'] ?? ''));
+            $area      = $c['area_m2']     ?? null;
+            $perimetro = $c['perimetro_m'] ?? null;
+            if ($area === null && $perimetro === null) continue;
+
+            $room = $this->emptyRoom(count($this->rooms));
+            $room['room_type']   = $this->guessRoomType($nome);
+            $room['description'] = $nome;
+            $room['area_m2']     = $area      !== null ? (string)$area      : '';
+            $room['perimeter_m'] = $perimetro !== null ? (string)$perimetro : '';
+
+            $this->rooms[] = $room;
+            $this->calculateRoomLoads(count($this->rooms) - 1);
+            $imported++;
+        }
+
+        if ($imported > 0) {
+            $this->showFloorPlanEditor = false;
+            $this->successMessage = "{$imported} cômodo(s) importado(s) da planta baixa. Confira o tipo de cada cômodo (foi adivinhado pelo nome) antes de avançar.";
+            $this->dispatch('room-added');
+        } else {
+            $this->errorMessage = 'Nenhum cômodo fechado foi recebido da planta — desenhe as paredes ao redor e nomeie os cômodos antes de enviar.';
+        }
+    }
+
+    /**
+     * Tenta adivinhar o tipo de cômodo (NBR/ROOM_TYPES) a partir do nome
+     * dado pelo aluno no editor de planta (ex: "Quarto 1" -> "QUARTO").
+     * Cai em "OUTRO" quando não reconhece — o aluno ajusta manualmente.
+     */
+    private function guessRoomType(string $nome): string
+    {
+        $accentMap = ['Á'=>'A','Ã'=>'A','Â'=>'A','À'=>'A','É'=>'E','Ê'=>'E','Í'=>'I','Ó'=>'O','Õ'=>'O','Ô'=>'O','Ú'=>'U','Ç'=>'C'];
+        $flat = strtr(mb_strtoupper($nome, 'UTF-8'), $accentMap);
+
+        $map = [
+            'SUITE'            => 'SUÍTE',
+            'DORMIT'           => 'DORMITÓRIO',
+            'QUARTO'           => 'QUARTO',
+            'SALA DE JANTAR'   => 'SALA DE JANTAR',
+            'SALA'             => 'SALA',
+            'COZINHA-AREA'     => 'COZINHA-ÁREA DE SERVIÇO',
+            'COPA-COZINHA'     => 'COPA-COZINHA',
+            'COZINHA'          => 'COZINHA',
+            'COPA'             => 'COPA',
+            'LAVANDERIA'       => 'LAVANDERIA',
+            'AREA DE SERVICO'  => 'ÁREA DE SERVIÇO',
+            'SERVICO'          => 'ÁREA DE SERVIÇO',
+            'LAVABO'           => 'LAVABO',
+            'BANHEIRO'         => 'BANHEIRO',
+            'WC'               => 'BANHEIRO',
+            'GARAGEM'          => 'GARAGEM',
+            'VARANDA'          => 'VARANDA',
+            'TERRACO'          => 'TERRAÇO',
+            'CORREDOR'         => 'CORREDOR',
+            'HALL'             => 'HALL',
+            'ESCADA'           => 'ESCADA',
+            'CLOSET'           => 'CLOSET',
+            'ESCRITORIO'       => 'ESCRITÓRIO',
+            'AREA EXTERNA'     => 'ÁREA EXTERNA',
+        ];
+
+        foreach ($map as $needle => $type) {
+            $needleFlat = strtr($needle, $accentMap);
+            if (str_contains($flat, $needleFlat)) {
+                return in_array($type, self::ROOM_TYPES, true) ? $type : 'OUTRO';
+            }
+        }
+        return 'OUTRO';
     }
 
     // ─── Step 2: Cálculo automático de cargas mínimas ────

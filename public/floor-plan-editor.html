@@ -1,0 +1,2324 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Editor de Planta Baixa — v2 (blocos)</title>
+<style>
+  :root{
+    --bg: #14171a;
+    --panel: #1b1f24;
+    --panel-border: #2a2f36;
+    --grid-minor: #22262b;
+    --grid-major: #2d333b;
+    --text: #e6e9ec;
+    --muted: #8a92a0;
+    --accent: #ff8a3d;
+    --accent-dim: #7a4522;
+    --wall: #d7dbe0;
+    --door: #7fd1ae;
+    --window: #5fb4e0;
+    --danger: #e2564f;
+    --tomada: #e0c85f;
+    --interruptor: #c98fe0;
+    --luz: #ffe08a;
+    --qdc: #ff6b6b;
+    --duto: #9fd66b;
+    --camada-teto: #7fb8ff;
+    --camada-piso: #9fd66b;
+    --camada-parede: #e0a355;
+  }
+  * { box-sizing: border-box; }
+  body{
+    margin:0;
+    font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height:100vh;
+    overflow:hidden;
+  }
+  .app{
+    display:grid;
+    grid-template-columns: 1fr 330px;
+    grid-template-rows: auto 1fr;
+    height:100vh;
+  }
+  header{
+    grid-column: 1 / 3;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding: 10px 18px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--panel-border);
+  }
+  header h1{
+    font-size: 15px;
+    font-weight:600;
+    margin:0;
+    letter-spacing:.2px;
+    color: var(--text);
+  }
+  header .sub{
+    font-size:12px;
+    color: var(--muted);
+    margin-top:2px;
+  }
+  .toolbar{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+  }
+  .tool-btn{
+    background: #23282e;
+    border: 1px solid var(--panel-border);
+    color: var(--text);
+    padding: 7px 12px;
+    font-size: 12.5px;
+    border-radius: 6px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    transition: background .12s, border-color .12s;
+  }
+  .tool-btn:hover{ background:#2a3038; }
+  .tool-btn.active{
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: #ffd9b8;
+  }
+  .tool-btn.danger:hover{ border-color: var(--danger); color:#ffb3af; }
+  .tool-btn.zoom{ padding:7px 10px; font-weight:700; }
+  .swatch{ width:9px; height:9px; border-radius:2px; display:inline-block; }
+  main{
+    position:relative;
+    overflow:hidden;
+    background: var(--bg);
+  }
+  canvas{ display:block; cursor: crosshair; }
+  .hint{
+    position:absolute;
+    bottom:12px;
+    left:12px;
+    background: rgba(27,31,36,.9);
+    border:1px solid var(--panel-border);
+    padding:6px 10px;
+    font-size:11.5px;
+    color: var(--muted);
+    border-radius:6px;
+    pointer-events:none;
+    max-width:60%;
+  }
+  .coords{
+    position:absolute;
+    top:12px;
+    left:12px;
+    background: rgba(27,31,36,.9);
+    border:1px solid var(--panel-border);
+    padding:6px 10px;
+    font-size:11.5px;
+    color: var(--text);
+    border-radius:6px;
+    pointer-events:none;
+    font-variant-numeric: tabular-nums;
+  }
+  aside{
+    background: var(--panel);
+    border-left: 1px solid var(--panel-border);
+    padding: 16px;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .panel-block h2{
+    font-size:11px;
+    text-transform: none;
+    letter-spacing:.3px;
+    color: var(--muted);
+    margin:0 0 8px 0;
+    font-weight:600;
+  }
+  .stat-row{
+    display:flex;
+    justify-content:space-between;
+    font-size:13px;
+    padding:5px 0;
+    border-bottom: 1px solid var(--panel-border);
+    gap:8px;
+  }
+  .stat-row span:first-child{ color: var(--muted); flex-shrink:0; }
+  ul.item-list{
+    list-style:none;
+    margin:0; padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    max-height:220px;
+    overflow-y:auto;
+  }
+  ul.item-list li{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:12.5px;
+    padding:6px 8px;
+    background:#20252b;
+    border-radius:5px;
+    border:1px solid transparent;
+  }
+  ul.item-list li.selected{ border-color: var(--accent); }
+  ul.item-list li.error{ border-color: var(--danger); }
+  ul.item-list li .len{ color: var(--muted); font-variant-numeric: tabular-nums;}
+  ul.item-list li .len.err{ color: var(--danger); }
+  button.wide{
+    width:100%;
+    padding:9px;
+    border-radius:6px;
+    border:1px solid var(--panel-border);
+    background:#23282e;
+    color:var(--text);
+    font-size:13px;
+    cursor:pointer;
+  }
+  button.wide.primary{
+    background: var(--accent);
+    border-color: var(--accent);
+    color:#1a1000;
+    font-weight:600;
+  }
+  button.wide:hover{ filter:brightness(1.1); }
+  textarea{
+    width:100%;
+    height:140px;
+    background:#101317;
+    border:1px solid var(--panel-border);
+    color:#9be29b;
+    font-family: 'Consolas', monospace;
+    font-size:11px;
+    border-radius:6px;
+    padding:8px;
+    resize:vertical;
+    display:none;
+  }
+  textarea.show{ display:block; }
+  .empty{ color: var(--muted); font-size:12.5px; padding:8px 0;}
+  .mini-modal{
+    position:absolute;
+    background: var(--panel);
+    border:1px solid var(--accent);
+    border-radius:8px;
+    padding:12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.45);
+    z-index:20;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    max-height:80vh;
+    overflow-y:auto;
+  }
+  .mini-modal.inline{ flex-direction:row; align-items:center; }
+  .mini-modal label{
+    font-size:11px;
+    color:var(--muted);
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .mini-modal .field-row{ display:flex; gap:8px; }
+  .mini-modal input, .mini-modal select{
+    background:#101317;
+    border:1px solid var(--panel-border);
+    color:var(--text);
+    padding:6px 8px;
+    border-radius:5px;
+    font-size:13px;
+    width:100%;
+  }
+  .mini-modal input[type=color]{ padding:2px 4px; height:32px; }
+  .mini-modal .buttons{ display:flex; gap:6px; justify-content:flex-end; margin-top:2px; }
+  .mini-modal button{
+    padding:6px 10px;
+    border-radius:5px;
+    border:1px solid var(--panel-border);
+    background:#23282e;
+    color:var(--text);
+    font-size:12px;
+    cursor:pointer;
+  }
+  .mini-modal button.ok{ background: var(--accent); border-color:var(--accent); color:#1a1000; font-weight:600; }
+  .rules-modal{
+    position:absolute;
+    background: var(--panel);
+    border:1px solid var(--accent);
+    border-radius:8px;
+    padding:14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.5);
+    z-index:25;
+    width:340px;
+    max-height:70vh;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    font-size:13px;
+  }
+  .rules-modal h3{ margin:0; font-size:13px; }
+  .rule-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:6px 8px;
+    background:#20252b;
+    border-radius:5px;
+  }
+  .rule-row label{ flex:1; font-size:12.5px; cursor:pointer; }
+  .rule-row select, .rule-row input{
+    background:#101317; border:1px solid var(--panel-border); color:var(--text);
+    padding:4px 6px; border-radius:4px; font-size:11.5px;
+  }
+  .new-rule-form{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding-top:6px; border-top:1px solid var(--panel-border); }
+  .new-rule-form select{ flex:1; min-width:80px; }
+  .toast{
+    position:absolute;
+    top:14px;
+    left:50%;
+    transform: translateX(-50%);
+    background: rgba(226,86,79,.15);
+    border:1px solid var(--danger);
+    color:#ffb3af;
+    padding:7px 14px;
+    border-radius:6px;
+    font-size:12.5px;
+    z-index:15;
+    display:none;
+    max-width:70%;
+    text-align:center;
+  }
+  .block-grid{ display:flex; flex-wrap:wrap; gap:6px; }
+  .prop-field{ display:flex; flex-direction:column; gap:3px; font-size:11px; color:var(--muted); margin-bottom:8px; }
+  .prop-field input, .prop-field select{
+    background:#101317; border:1px solid var(--panel-border); color:var(--text);
+    padding:6px 8px; border-radius:5px; font-size:13px;
+  }
+  .np-row{ display:flex; flex-direction:column; gap:4px; padding:6px; background:#20252b; border-radius:5px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Editor de Planta Baixa</h1>
+      <div class="sub">v2 — blocos editáveis, biblioteca de símbolos, painel de propriedades e roteamento automático de cabos</div>
+    </div>
+    <div class="toolbar">
+      <button class="tool-btn active" data-tool="wall"><span class="swatch" style="background:var(--wall)"></span>Parede</button>
+      <button class="tool-btn" data-tool="door"><span class="swatch" style="background:var(--door)"></span>Porta</button>
+      <button class="tool-btn" data-tool="window"><span class="swatch" style="background:var(--window)"></span>Janela</button>
+      <button class="tool-btn" data-tool="room"><span class="swatch" style="background:var(--accent)"></span>Nomear cômodo</button>
+      <span style="width:1px;background:var(--panel-border);align-self:stretch;margin:0 2px;"></span>
+      <button class="tool-btn" data-tool="eletroduto"><span class="swatch" style="background:var(--duto)"></span>Eletroduto</button>
+      <button class="tool-btn" id="btnAutoRules">Distribuição automática</button>
+      <span style="width:1px;background:var(--panel-border);align-self:stretch;margin:0 2px;"></span>
+      <button class="tool-btn" data-tool="select">Selecionar</button>
+      <span style="width:1px;background:var(--panel-border);align-self:stretch;margin:0 2px;"></span>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);">Escala símbolos
+        <input type="number" id="symbolScaleInput" value="1.5" min="0.5" max="4" step="0.1" style="width:52px;background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;">
+      </label>
+      <button class="tool-btn zoom" id="btnZoomOut" title="Diminuir zoom">−</button>
+      <button class="tool-btn zoom" id="btnZoomIn" title="Aumentar zoom">+</button>
+      <button class="tool-btn" id="btnResetView">Resetar vista</button>
+      <button class="tool-btn danger" id="btnDelete">Excluir</button>
+      <button class="tool-btn danger" id="btnClear">Limpar tudo</button>
+    </div>
+  </header>
+  <main>
+    <canvas id="canvas"></canvas>
+    <div class="coords" id="coordsBox">X: 0.00 m &nbsp; Y: 0.00 m &nbsp; <span id="zoomLabel" style="color:var(--muted)">100%</span></div>
+    <div class="hint" id="hintBox">Clique para começar a desenhar uma parede. Cada clique adiciona um trecho. Pressione Esc para encerrar a corrente.</div>
+    <div class="toast" id="toast"></div>
+  </main>
+  <aside>
+    <div class="panel-block">
+      <h2>RESUMO</h2>
+      <div class="stat-row"><span>Paredes</span><span id="statWalls">0</span></div>
+      <div class="stat-row"><span>Comprimento total</span><span id="statLength">0.00 m</span></div>
+      <div class="stat-row"><span>Portas</span><span id="statDoors">0</span></div>
+      <div class="stat-row"><span>Janelas</span><span id="statWindows">0</span></div>
+      <div class="stat-row"><span>Tomadas</span><span id="statTomadas">0</span></div>
+      <div class="stat-row"><span>Interruptores</span><span id="statInterruptores">0</span></div>
+      <div class="stat-row"><span>Pontos de luz</span><span id="statLuz">0</span></div>
+      <div class="stat-row"><span>QDC</span><span id="statQdc">0</span></div>
+      <div class="stat-row"><span>Eletrodutos</span><span id="statDutos">0</span></div>
+    </div>
+    <div class="panel-block">
+      <h2>BIBLIOTECA DE BLOCOS</h2>
+      <div class="block-grid" id="blockLibraryGrid"></div>
+      <button class="wide" id="btnNewBlock" style="margin-top:8px;">+ Novo bloco</button>
+      <div style="font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.4;">Clique num bloco pra armar a ferramenta e depois clique na planta pra posicionar. Botão direito num bloco personalizado remove ele da biblioteca (sem apagar os já colocados na planta).</div>
+    </div>
+    <div class="panel-block">
+      <h2>PROPRIEDADES</h2>
+      <div id="propContent"><div class="empty">Selecione um elemento na planta (use a ferramenta "Selecionar") para ver e editar suas propriedades aqui.</div></div>
+    </div>
+    <div class="panel-block">
+      <h2>LEGENDA (aprox. NBR 5444)</h2>
+      <div class="stat-row"><span><span class="swatch" style="background:var(--tomada)"></span> Tomada</span><span style="color:var(--muted)">baixa / média / alta = preenchimento</span></div>
+      <div class="stat-row"><span><span class="swatch" style="background:var(--interruptor)"></span> Interruptor</span><span style="color:var(--muted)">círculo pequeno + rabicho, ex. "3c"</span></div>
+      <div class="stat-row"><span><span class="swatch" style="background:var(--luz)"></span> Ponto de luz</span><span style="color:var(--muted)">círculo maior, ex. "3c"</span></div>
+      <div class="stat-row"><span><span class="swatch" style="background:var(--qdc)"></span> QDC</span><span style="color:var(--muted)">retângulo</span></div>
+      <div class="stat-row"><span><span class="swatch" style="background:var(--duto)"></span> Eletroduto</span><span style="color:var(--muted)">rede física — cabos só após distribuir</span></div>
+      <div class="stat-row" style="border-bottom:none;"><span>Blocos personalizados</span><span style="color:var(--muted)">cor e forma escolhidas na criação</span></div>
+      <div style="font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.4;">A NBR 5444 foi formalmente cancelada em 2014, mas seus símbolos seguem sendo o padrão de fato usado no mercado e no ensino — ajuste conforme sua referência exata.</div>
+    </div>
+    <div class="panel-block">
+      <h2>ROTEAMENTO DE CABOS</h2>
+      <button class="wide primary" id="btnRoute">Distribuir cabos</button>
+      <div class="empty" id="routeEmpty">Desenhe os eletrodutos conectando os símbolos e clique aqui. O sistema acha o caminho mais curto de cada dispositivo até o QDC (ou até a luminária, no caso do retorno).</div>
+      <ul class="item-list" id="routeList" style="margin-top:8px;"></ul>
+    </div>
+    <div class="panel-block">
+      <h2>QUANTIDADE DE MATERIAL</h2>
+      <div class="field-row" style="display:flex;gap:8px;margin-bottom:6px;">
+        <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Pé direito (m)
+          <input type="number" id="matPeDireito" value="2.70" step="0.05" min="1" style="background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
+        </label>
+        <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Altura QDC (m)
+          <input type="number" id="matAlturaQdc" value="1.60" step="0.05" min="0" style="background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
+        </label>
+      </div>
+      <div class="field-row" style="display:flex;gap:8px;margin-bottom:6px;">
+        <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Altura interruptor (m)
+          <input type="number" id="matAlturaInt" value="1.10" step="0.05" min="0" style="background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
+        </label>
+        <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Folga/emenda (m)
+          <input type="number" id="matFolga" value="0.30" step="0.05" min="0" style="background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
+        </label>
+      </div>
+      <label style="font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;margin-bottom:8px;">Margem de segurança (%)
+        <input type="number" id="matMargem" value="10" step="1" min="0" style="background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
+      </label>
+      <button class="wide primary" id="btnMaterial">Calcular materiais</button>
+      <div class="empty" id="materialEmpty">Distribua os cabos primeiro. O cálculo soma o trecho horizontal (pelo eletroduto) com a descida do QDC e a subida até cada dispositivo, mais folga e margem.</div>
+      <ul class="item-list" id="materialList" style="margin-top:8px;"></ul>
+    </div>
+    <div class="panel-block">
+      <h2>CÔMODOS</h2>
+      <ul class="item-list" id="roomList"></ul>
+      <div class="empty" id="roomEmpty">Nenhum cômodo nomeado ainda. Feche as paredes ao redor e use "Nomear cômodo".</div>
+    </div>
+    <div class="panel-block">
+      <h2>PAREDES</h2>
+      <ul class="item-list" id="wallList"></ul>
+      <div class="empty" id="wallEmpty">Nenhuma parede ainda.</div>
+    </div>
+    <div class="panel-block">
+      <h2>EXPORTAR</h2>
+      <button class="wide primary" id="btnExport">Gerar JSON das coordenadas</button>
+      <textarea id="jsonOut" spellcheck="false"></textarea>
+    </div>
+    <div class="panel-block">
+      <h2>PROJETO ELETRODIM</h2>
+      <button class="wide primary" id="btnSendRooms">Enviar cômodos para o projeto</button>
+      <div style="font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.4;">Envia nome, área e perímetro de cada cômodo fechado pro assistente de dimensionamento (só funciona quando este editor está aberto dentro do EletroDIM).</div>
+    </div>
+  </aside>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const coordsBox = document.getElementById('coordsBox');
+  const hintBox = document.getElementById('hintBox');
+
+  const PX_PER_M = 60;       // escala: 60px = 1 metro
+  const GRID_MINOR_M = 0.5;  // linha fina a cada 0.5m
+  const GRID_MAJOR_M = 1.0;  // linha forte a cada 1m
+  const SNAP_M = 0.1;        // snap a cada 10cm
+  const WALL_THICK_M = 0.12; // espessura visual da parede (12cm)
+
+  let walls = [];    // {id, x1,y1,x2,y2} em metros
+  let openings = [];  // {id, wallId, type:'door'|'window', t: 0..1, widthM}
+  let rooms = [];     // {id, name, seed:{x,y}} em metros — área/perímetro recalculados a cada desenho
+  let symbols = [];   // {id, blockId, type, x, y, props:{...}} — "type" espelha o tipo lógico do bloco (tomada/interruptor/luz/qdc/custom)
+  let ducts = [];      // {id, x1,y1,x2,y2, camada?} em metros — rede física de eletrodutos, sem info de cabo
+  let cableResult = null; // {cableTags:{ductId:[{cabo,deviceId}]}, report:[...], devicePaths:[...]} — só após "Distribuir cabos"
+  let ductRules = [
+    { id: 1, tipo:'luz', altura:null, camada:'teto', ativo:true, label:'Iluminação → teto' },
+    { id: 2, tipo:'tomada', altura:'alta', camada:'teto', ativo:true, label:'Tomada alta → teto' },
+    { id: 3, tipo:'tomada', altura:'media', camada:'piso', ativo:true, label:'Tomada média → piso' },
+    { id: 4, tipo:'tomada', altura:'baixa', camada:'piso', ativo:true, label:'Tomada baixa → piso' },
+    { id: 5, tipo:'interruptor', altura:null, camada:'parede', ativo:true, label:'Interruptor → parede' },
+  ];
+  let nextRuleId = 6;
+  let materialResult = null; // {rows:[{circuito,kind,metros}], totals:{kind:metros}} — só após "Calcular materiais"
+  let nextId = 1;
+
+  // ---------------------------------------------------------------
+  // Biblioteca de blocos: cada símbolo colocado na planta referencia
+  // uma destas definições (blockId). Os 4 blocos padrão preservam os
+  // mesmos campos do protótipo original (circuito/altura/letra/potência)
+  // dentro de "properties", só que agora de forma genérica — o que
+  // permite criar blocos novos com propriedades próprias.
+  // ---------------------------------------------------------------
+  let blockLibrary = [
+    { id:'blk-tomada', tipo:'tomada', nome:'Tomada', cor:'--tomada', builtin:true, shape:'tomada', properties:[
+      { key:'circuito', label:'Circuito', type:'text', default:'C1' },
+      { key:'altura', label:'Altura', type:'select', default:'baixa', options:[
+        { value:'baixa', label:'Baixa (30cm) — sem cor' },
+        { value:'media', label:'Média (1,10m) — meio preenchida' },
+        { value:'alta', label:'Alta (2,00m) — totalmente preenchida' }
+      ]}
+    ]},
+    { id:'blk-interruptor', tipo:'interruptor', nome:'Interruptor', cor:'--interruptor', builtin:true, shape:'interruptor', properties:[
+      { key:'circuito', label:'Circuito', type:'text', default:'1' },
+      { key:'letra', label:'Letra (retorno)', type:'text', default:'a', maxlength:1 }
+    ]},
+    { id:'blk-luz', tipo:'luz', nome:'Ponto de luz', cor:'--luz', builtin:true, shape:'luz', properties:[
+      { key:'circuito', label:'Circuito', type:'text', default:'1' },
+      { key:'letra', label:'Letra', type:'text', default:'a', maxlength:1 },
+      { key:'potenciaW', label:'Potência (W)', type:'number', default:60 }
+    ]},
+    { id:'blk-qdc', tipo:'qdc', nome:'QDC', cor:'--qdc', builtin:true, shape:'qdc', properties:[] }
+  ];
+  let nextBlockId = 1;
+
+  let tool = 'wall';
+  let activeBlockId = null; // bloco armado quando tool==='block'
+  let chainStart = null;  // {x,y} em metros — corrente de parede em andamento
+  let ductChainStart = null; // {x,y} em metros — corrente de eletroduto em andamento
+  let mouseWorld = {x:0, y:0};
+  let selected = null; // {kind:'wall'|'room'|'symbol'|'duct', id}
+
+  function findBlockDef(id){
+    return blockLibrary.find(b=>b.id===id);
+  }
+  function defaultProps(blockDef){
+    const props = {};
+    (blockDef.properties||[]).forEach(p=>{
+      props[p.key] = p.default !== undefined ? p.default : (p.type==='number' ? 0 : '');
+    });
+    return props;
+  }
+  function resolveColor(c){
+    if(!c) return '#ffffff';
+    return c.indexOf('--')===0 ? getCss(c) : c;
+  }
+
+  // ---------------------------------------------------------------
+  // Detecção de cômodos: transforma o conjunto de paredes num grafo
+  // planar e extrai os polígonos fechados (faces internas = cômodos)
+  // ---------------------------------------------------------------
+  function buildGraph(){
+    const EPS = 0.02; // metros
+    const vertices = [];
+    function findOrAdd(x,y){
+      for(let i=0;i<vertices.length;i++){
+        if(Math.hypot(vertices[i].x-x, vertices[i].y-y) < EPS) return i;
+      }
+      vertices.push({x,y});
+      return vertices.length-1;
+    }
+    for(const w of walls){ findOrAdd(w.x1,w.y1); findOrAdd(w.x2,w.y2); }
+
+    const edges = [];
+    for(const w of walls){
+      const a = findOrAdd(w.x1,w.y1), b = findOrAdd(w.x2,w.y2);
+      if(a===b) continue;
+      const A = vertices[a], B = vertices[b];
+      const dx=B.x-A.x, dy=B.y-A.y, len2=dx*dx+dy*dy;
+      const onSeg = [];
+      for(let i=0;i<vertices.length;i++){
+        if(i===a||i===b) continue;
+        const P = vertices[i];
+        const t = ((P.x-A.x)*dx + (P.y-A.y)*dy)/len2;
+        if(t<=1e-3 || t>=1-1e-3) continue;
+        const projX=A.x+t*dx, projY=A.y+t*dy;
+        if(Math.hypot(P.x-projX,P.y-projY) < EPS) onSeg.push({i,t});
+      }
+      onSeg.sort((p1,p2)=>p1.t-p2.t);
+      const chain = [a, ...onSeg.map(p=>p.i), b];
+      for(let k=0;k<chain.length-1;k++) edges.push({a:chain[k], b:chain[k+1]});
+    }
+
+    const adj = vertices.map(()=>[]);
+    for(const e of edges){ adj[e.a].push(e.b); adj[e.b].push(e.a); }
+    for(let i=0;i<adj.length;i++){
+      adj[i].sort((n1,n2)=>{
+        const a1 = Math.atan2(vertices[n1].y-vertices[i].y, vertices[n1].x-vertices[i].x);
+        const a2 = Math.atan2(vertices[n2].y-vertices[i].y, vertices[n2].x-vertices[i].x);
+        return a1-a2;
+      });
+    }
+    return { vertices, adj };
+  }
+
+  function traceFaces(vertices, adj){
+    const visited = new Set();
+    const faces = [];
+    for(let u=0;u<adj.length;u++){
+      for(const v of adj[u]){
+        const key = u+'->'+v;
+        if(visited.has(key)) continue;
+        const path = [];
+        let curU=u, curV=v;
+        const startKey = key;
+        let guard=0;
+        while(true){
+          visited.add(curU+'->'+curV);
+          path.push(curU);
+          const neighbors = adj[curV];
+          const idx = neighbors.indexOf(curU);
+          const nextIdx = (idx-1+neighbors.length)%neighbors.length;
+          const nextVertex = neighbors[nextIdx];
+          curU = curV; curV = nextVertex;
+          if(++guard > 20000) break;
+          if(curU+'->'+curV === startKey) break;
+        }
+        faces.push(path);
+      }
+    }
+    return faces;
+  }
+
+  function polySignedArea(poly, vertices){
+    let sum=0;
+    for(let i=0;i<poly.length;i++){
+      const p1=vertices[poly[i]], p2=vertices[poly[(i+1)%poly.length]];
+      sum += (p1.x*p2.y - p2.x*p1.y);
+    }
+    return sum/2;
+  }
+  function polyPerimeter(poly, vertices){
+    let sum=0;
+    for(let i=0;i<poly.length;i++){
+      const p1=vertices[poly[i]], p2=vertices[poly[(i+1)%poly.length]];
+      sum += Math.hypot(p2.x-p1.x, p2.y-p1.y);
+    }
+    return sum;
+  }
+  function polyCentroid(poly, vertices, signedA){
+    let cx=0, cy=0;
+    for(let i=0;i<poly.length;i++){
+      const p1=vertices[poly[i]], p2=vertices[poly[(i+1)%poly.length]];
+      const cross = (p1.x*p2.y - p2.x*p1.y);
+      cx += (p1.x+p2.x)*cross;
+      cy += (p1.y+p2.y)*cross;
+    }
+    const A6 = 6*signedA;
+    if(Math.abs(A6) < 1e-9) return { x: poly.reduce((s,i)=>s+vertices[i].x,0)/poly.length, y: poly.reduce((s,i)=>s+vertices[i].y,0)/poly.length };
+    return { x: cx/A6, y: cy/A6 };
+  }
+  function pointInPoly(pt, poly, vertices){
+    let inside = false;
+    for(let i=0, j=poly.length-1; i<poly.length; j=i++){
+      const pi = vertices[poly[i]], pj = vertices[poly[j]];
+      const intersect = ((pi.y>pt.y) !== (pj.y>pt.y)) &&
+        (pt.x < (pj.x-pi.x)*(pt.y-pi.y)/(pj.y-pi.y) + pi.x);
+      if(intersect) inside = !inside;
+    }
+    return inside;
+  }
+
+  // Retorna todas as faces internas (cômodos fechados) já com métricas prontas
+  function computeRoomFaces(){
+    const { vertices, adj } = buildGraph();
+    const rawFaces = traceFaces(vertices, adj).filter(f=>f.length>=3);
+    const result = [];
+    for(const f of rawFaces){
+      const area = polySignedArea(f, vertices);
+      if(area <= 1e-4) continue; // descarta a face externa (área com sinal negativo)
+      result.push({
+        polyCoords: f.map(i=>vertices[i]),
+        area,
+        perimeter: polyPerimeter(f, vertices),
+        centroid: polyCentroid(f, vertices, area),
+        rawPoly: f, vertices
+      });
+    }
+    return result;
+  }
+  function findFaceContaining(pt, faces){
+    for(const face of faces){
+      if(pointInPoly(pt, face.rawPoly, face.vertices)) return face;
+    }
+    return null;
+  }
+
+  function resize(){
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
+    draw();
+  }
+  window.addEventListener('resize', resize);
+
+  // origem da planta fica deslocada pra dar espaço à esquerda/topo
+  const origin = { x: 80, y: 80 };
+  let zoom = 1; // fator de zoom — 1 = 60px/m, ajustado pela roda do mouse ou pelos botões +/-
+  let symbolScale = 1.5; // escala de desenho dos símbolos elétricos (independente do zoom)
+
+  function worldToScreen(x, y){
+    return { x: origin.x + x*PX_PER_M*zoom, y: origin.y + y*PX_PER_M*zoom };
+  }
+  function screenToWorld(x, y){
+    return { x: (x-origin.x)/(PX_PER_M*zoom), y: (y-origin.y)/(PX_PER_M*zoom) };
+  }
+  function snap(v, step){
+    return Math.round(v/step)*step;
+  }
+  function snapPoint(p){
+    // tenta grudar primeiro num símbolo, depois num ponto de parede/eletroduto
+    // existente (pra fechar cômodos e ancorar eletroduto exatamente no símbolo)
+    const tolPx = 10;
+    const ps = worldToScreen(p.x, p.y);
+    for(const s of symbols){
+      const sp = worldToScreen(s.x, s.y);
+      if(Math.hypot(sp.x-ps.x, sp.y-ps.y) < tolPx) return {x:s.x, y:s.y};
+    }
+    for(const w of walls){
+      for(const ep of [{x:w.x1,y:w.y1},{x:w.x2,y:w.y2}]){
+        const s = worldToScreen(ep.x, ep.y);
+        if(Math.hypot(s.x-ps.x, s.y-ps.y) < tolPx) return {x: ep.x, y: ep.y};
+      }
+    }
+    for(const d of ducts){
+      for(const ep of [{x:d.x1,y:d.y1},{x:d.x2,y:d.y2}]){
+        const s = worldToScreen(ep.x, ep.y);
+        if(Math.hypot(s.x-ps.x, s.y-ps.y) < tolPx) return {x: ep.x, y: ep.y};
+      }
+    }
+    return { x: snap(p.x, SNAP_M), y: snap(p.y, SNAP_M) };
+  }
+
+  function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+
+  function drawGrid(){
+    const w = canvas.width, h = canvas.height;
+    ctx.fillStyle = getCss('--bg');
+    ctx.fillRect(0,0,w,h);
+
+    const originScreen = origin;
+    ctx.strokeStyle = getCss('--grid-minor');
+    ctx.lineWidth = 1;
+    drawGridLines(GRID_MINOR_M);
+    ctx.strokeStyle = getCss('--grid-major');
+    drawGridLines(GRID_MAJOR_M);
+
+    function drawGridLines(stepM){
+      const stepPx = stepM*PX_PER_M*zoom;
+      ctx.beginPath();
+      for(let x = originScreen.x % stepPx; x < w; x += stepPx){
+        ctx.moveTo(x,0); ctx.lineTo(x,h);
+      }
+      for(let y = originScreen.y % stepPx; y < h; y += stepPx){
+        ctx.moveTo(0,y); ctx.lineTo(w,y);
+      }
+      ctx.stroke();
+    }
+  }
+
+  function getCss(varName){
+    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  }
+
+  function wallLenM(w){
+    return dist({x:w.x1,y:w.y1},{x:w.x2,y:w.y2});
+  }
+  function ductLenM(d){
+    return dist({x:d.x1,y:d.y1},{x:d.x2,y:d.y2});
+  }
+
+  function drawWall(w, isSelected){
+    const p1 = worldToScreen(w.x1, w.y1);
+    const p2 = worldToScreen(w.x2, w.y2);
+    const dx = p2.x-p1.x, dy = p2.y-p1.y;
+    const len = Math.hypot(dx,dy) || 1;
+    const ux = dx/len, uy = dy/len;
+    const thickPx = WALL_THICK_M*PX_PER_M*zoom;
+
+    const ops = openings.filter(o=>o.wallId===w.id).sort((a,b)=>a.t-b.t);
+
+    ctx.lineCap = 'butt';
+    ctx.strokeStyle = isSelected ? getCss('--accent') : getCss('--wall');
+    ctx.lineWidth = thickPx;
+
+    if(ops.length === 0){
+      ctx.beginPath();
+      ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+      ctx.stroke();
+    } else {
+      let cursor = 0;
+      for(const o of ops){
+        const centerPx = o.t*len;
+        const halfW = (o.widthM*PX_PER_M*zoom)/2;
+        const segStart = centerPx - halfW;
+        const segEnd = centerPx + halfW;
+        drawSeg(cursor, Math.max(cursor,segStart));
+        drawOpening(o, p1, ux, uy, segStart, segEnd, thickPx);
+        cursor = segEnd;
+      }
+      drawSeg(cursor, len);
+    }
+
+    function drawSeg(fromPx, toPx){
+      if(toPx <= fromPx) return;
+      const a = { x: p1.x+ux*fromPx, y: p1.y+uy*fromPx };
+      const b = { x: p1.x+ux*toPx, y: p1.y+uy*toPx };
+      ctx.beginPath();
+      ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+      ctx.stroke();
+    }
+
+    const midX = (p1.x+p2.x)/2, midY=(p1.y+p2.y)/2;
+    const nx = -uy, ny = ux;
+    ctx.save();
+    ctx.font = '11px Segoe UI, sans-serif';
+    ctx.fillStyle = getCss('--muted');
+    ctx.textAlign = 'center';
+    const label = wallLenM(w).toFixed(2) + ' m';
+    ctx.fillText(label, midX + nx*14, midY + ny*14);
+    ctx.restore();
+  }
+
+  function drawOpening(o, p1, ux, uy, segStart, segEnd, thickPx){
+    const a = { x: p1.x+ux*segStart, y: p1.y+uy*segStart };
+    const b = { x: p1.x+ux*segEnd, y: p1.y+uy*segEnd };
+    const nx = -uy, ny = ux;
+    const half = thickPx/2;
+
+    if(o.type === 'door'){
+      ctx.strokeStyle = getCss('--door');
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+      ctx.stroke();
+      const leafLen = Math.hypot(b.x-a.x,b.y-a.y);
+      const leafEnd = { x: a.x + nx*leafLen, y: a.y + ny*leafLen };
+      ctx.beginPath();
+      ctx.moveTo(a.x,a.y); ctx.lineTo(leafEnd.x, leafEnd.y);
+      ctx.stroke();
+      ctx.beginPath();
+      const angle1 = Math.atan2(b.y-a.y, b.x-a.x);
+      const angle2 = Math.atan2(leafEnd.y-a.y, leafEnd.x-a.x);
+      ctx.arc(a.x, a.y, leafLen, Math.min(angle1,angle2), Math.max(angle1,angle2));
+      ctx.stroke();
+    } else {
+      ctx.strokeStyle = getCss('--window');
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+      ctx.stroke();
+      [-half*0.6, half*0.6].forEach(off=>{
+        ctx.beginPath();
+        ctx.moveTo(a.x+nx*off, a.y+ny*off);
+        ctx.lineTo(b.x+nx*off, b.y+ny*off);
+        ctx.stroke();
+      });
+    }
+  }
+
+  function closestPointOnWall(w, p){
+    const a = {x:w.x1,y:w.y1}, b = {x:w.x2,y:w.y2};
+    const abx = b.x-a.x, aby=b.y-a.y;
+    const abLen2 = abx*abx+aby*aby || 1e-9;
+    let t = ((p.x-a.x)*abx + (p.y-a.y)*aby)/abLen2;
+    t = Math.max(0, Math.min(1,t));
+    return { t, point: {x:a.x+abx*t, y:a.y+aby*t} };
+  }
+
+  function findWallNear(worldPt, tolM){
+    let best=null, bestD=Infinity;
+    for(const w of walls){
+      const {t, point} = closestPointOnWall(w, worldPt);
+      const d = dist(point, worldPt);
+      if(d < bestD){ bestD = d; best = {wall:w, t}; }
+    }
+    if(best && bestD <= tolM) return best;
+    return null;
+  }
+
+  // ---------------------------------------------------------------
+  // Símbolos elétricos com atributos (circuito, letra de retorno,
+  // altura da tomada, potência) — aproximação da simbologia NBR 5444.
+  // Cada símbolo é uma instância de um bloco da biblioteca; os campos
+  // editáveis vivem em sym.props, com o schema vindo de blockDef.properties.
+  // ---------------------------------------------------------------
+  function findSymbolNear(worldPt, tolM){
+    let best=null, bestD=Infinity;
+    for(const s of symbols){
+      const d = dist(s, worldPt);
+      if(d<bestD){ bestD=d; best=s; }
+    }
+    return (best && bestD<=tolM) ? best : null;
+  }
+
+  function symbolLabel(sym, blockDef){
+    const props = sym.props || {};
+    if(blockDef.tipo === 'tomada') return props.circuito || '';
+    if(blockDef.tipo === 'interruptor') return (props.circuito||'')+(props.letra||'');
+    if(blockDef.tipo === 'luz') return (props.circuito||'')+(props.letra||'') + (props.potenciaW ? ' · '+props.potenciaW+'W' : '');
+    if(blockDef.tipo === 'qdc') return '';
+    const firstProp = (blockDef.properties||[])[0];
+    if(firstProp){
+      const v = props[firstProp.key];
+      if(v !== undefined && v !== null && v !== '') return String(v);
+    }
+    return '';
+  }
+
+  function drawSymbol(sym, isSelected){
+    const blockDef = findBlockDef(sym.blockId) || { tipo:'custom', cor:'#8a92a0', shape:'circulo', properties:[], nome:'Bloco removido' };
+    const p = worldToScreen(sym.x, sym.y);
+    const s = symbolScale;
+    const color = isSelected ? getCss('--accent') : resolveColor(blockDef.cor);
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 1.6*Math.min(s,1.6);
+    const props = sym.props || {};
+
+    if(blockDef.shape === 'tomada'){
+      const r = 7*s;
+      if(props.altura === 'alta'){
+        ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2); ctx.fill();
+      } else if(props.altura === 'media'){
+        ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI); ctx.closePath(); ctx.fill();
+      }
+      ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(p.x-9*s,p.y-9*s); ctx.lineTo(p.x-3*s,p.y-3*s); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(p.x+9*s,p.y-9*s); ctx.lineTo(p.x+3*s,p.y-3*s); ctx.stroke();
+    } else if(blockDef.shape === 'interruptor'){
+      ctx.beginPath(); ctx.arc(p.x,p.y,5*s,0,Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(p.x+4*s,p.y-4*s); ctx.lineTo(p.x+9*s,p.y-9*s); ctx.stroke();
+    } else if(blockDef.shape === 'luz'){
+      ctx.beginPath(); ctx.arc(p.x,p.y,9*s,0,Math.PI*2); ctx.stroke();
+    } else if(blockDef.shape === 'qdc'){
+      ctx.strokeRect(p.x-16*s, p.y-11*s, 32*s, 22*s);
+      ctx.font = '600 '+Math.round(10*Math.min(s,1.6))+'px Segoe UI, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('QDC', p.x, p.y+4*s);
+    } else if(blockDef.shape === 'quadrado'){
+      ctx.strokeRect(p.x-8*s, p.y-8*s, 16*s, 16*s);
+    } else if(blockDef.shape === 'triangulo'){
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y-9*s);
+      ctx.lineTo(p.x+8*s, p.y+7*s);
+      ctx.lineTo(p.x-8*s, p.y+7*s);
+      ctx.closePath();
+      ctx.stroke();
+    } else if(blockDef.shape === 'cruz'){
+      ctx.beginPath();
+      ctx.moveTo(p.x-8*s,p.y); ctx.lineTo(p.x+8*s,p.y);
+      ctx.moveTo(p.x,p.y-8*s); ctx.lineTo(p.x,p.y+8*s);
+      ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.arc(p.x,p.y,8*s,0,Math.PI*2); ctx.stroke();
+    }
+
+    const label = symbolLabel(sym, blockDef);
+    if(label){
+      const fontPx = Math.max(9, Math.min(16, Math.round(10 + (s-1)*4)));
+      ctx.font = '600 '+fontPx+'px Segoe UI, sans-serif';
+      ctx.fillStyle = isSelected ? getCss('--accent') : getCss('--text');
+      ctx.textAlign = 'left';
+      ctx.fillText(label, p.x+12*s, p.y-8*s);
+    }
+  }
+
+  // Glifo de cada tipo de condutor, desenhado perpendicular ao trecho de
+  // eletroduto: fase = traço maior atravessando a linha, retorno = meio
+  // traço (só um lado), neutro = L invertido, terra = T
+  function drawCableGlyph(kind, cx, cy, ux, uy, nx, ny, color){
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.3;
+    if(kind==='F'){
+      ctx.beginPath();
+      ctx.moveTo(cx-nx*5, cy-ny*5);
+      ctx.lineTo(cx+nx*5, cy+ny*5);
+      ctx.stroke();
+    } else if(kind==='R'){
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx+nx*5, cy+ny*5);
+      ctx.stroke();
+    } else if(kind==='N'){
+      const b1 = { x:cx-ux*3+nx*6, y:cy-uy*3+ny*6 };
+      const b2 = { x:cx+ux*3+nx*6, y:cy+uy*3+ny*6 };
+      ctx.beginPath(); ctx.moveTo(b1.x,b1.y); ctx.lineTo(b2.x,b2.y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(b2.x,b2.y); ctx.lineTo(cx+ux*3, cy+uy*3); ctx.stroke();
+    } else if(kind==='T'){
+      const b1 = { x:cx-ux*4+nx*6, y:cy-uy*4+ny*6 };
+      const b2 = { x:cx+ux*4+nx*6, y:cy+uy*4+ny*6 };
+      ctx.beginPath(); ctx.moveTo(b1.x,b1.y); ctx.lineTo(b2.x,b2.y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx+nx*6, cy+ny*6); ctx.lineTo(cx, cy); ctx.stroke();
+    }
+  }
+
+  function drawDuct(d, isSelected, isHovered){
+    const p1 = worldToScreen(d.x1, d.y1);
+    const p2 = worldToScreen(d.x2, d.y2);
+    const tags = cableResult ? (cableResult.cableTags[d.id] || []) : [];
+
+    if(isHovered && !isSelected){
+      ctx.save();
+      ctx.globalAlpha = 0.35;
+      ctx.strokeStyle = getCss('--accent');
+      ctx.lineWidth = 8;
+      ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
+      ctx.restore();
+    }
+
+    const baseColor = d.camada ? getCss('--camada-'+d.camada) : getCss('--duto');
+    ctx.strokeStyle = isSelected ? getCss('--accent') : baseColor;
+    ctx.lineWidth = isSelected ? 2.4 : 1.4;
+    // tracejado = selecionado OU ainda sem cabo distribuído
+    ctx.setLineDash(isSelected ? [6,4] : (tags.length>0 ? [] : [3,3]));
+    ctx.beginPath();
+    ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    if(tags.length>0){
+      const dx=p2.x-p1.x, dy=p2.y-p1.y, len=Math.hypot(dx,dy)||1;
+      const ux=dx/len, uy=dy/len, nx=-uy, ny=ux;
+      const mx=(p1.x+p2.x)/2, my=(p1.y+p2.y)/2;
+      const glyphColor = isSelected ? getCss('--accent') : baseColor;
+
+      // agrupa por circuito (tudo depois do primeiro '-' no rótulo do cabo),
+      // pra separar visualmente os "pacotinhos" quando o duto leva mais de um circuito
+      const groups = [];
+      for(const t of tags){
+        const parts = (t.cabo||'').split('-');
+        const kind = parts[0], key = parts.slice(1).join('-');
+        let g = groups.find(g=>g.key===key);
+        if(!g){ g = { key, items:[] }; groups.push(g); }
+        g.items.push(kind);
+      }
+      const spacing = 9, groupGap = 16;
+      const groupWidths = groups.map(g => Math.max(0, g.items.length-1)*spacing);
+      const totalWidth = groupWidths.reduce((a,b)=>a+b,0) + Math.max(0, groups.length-1)*groupGap;
+      let cursor = -totalWidth/2;
+      groups.forEach((g, gi)=>{
+        const groupStart = cursor;
+        g.items.forEach((kind, i)=>{
+          const off = groupStart + i*spacing;
+          const cx = mx+ux*off, cy = my+uy*off;
+          drawCableGlyph(kind, cx, cy, ux, uy, nx, ny, glyphColor);
+        });
+        const groupCenter = groupStart + groupWidths[gi]/2;
+        const lx = mx+ux*groupCenter, ly = my+uy*groupCenter;
+        ctx.font = '9px Segoe UI, sans-serif';
+        ctx.fillStyle = getCss('--muted');
+        ctx.textAlign = 'center';
+        ctx.fillText('-'+g.key+'-', lx+nx*13, ly+ny*13);
+        cursor += groupWidths[gi] + groupGap;
+      });
+
+      ctx.font = '10px Segoe UI, sans-serif';
+      ctx.fillStyle = getCss('--muted');
+      ctx.textAlign = 'left';
+      const countLabel = tags.length + (tags.length===1?' cabo':' cabos');
+      ctx.fillText(countLabel, mx+totalWidth/2+10, my-nx*13-ny*13);
+    }
+  }
+
+  function draw(){
+    drawGrid();
+
+    let roomFaces = null;
+    if(rooms.length>0 || tool==='room'){
+      roomFaces = computeRoomFaces();
+    }
+    if(rooms.length>0 && roomFaces){
+      for(const r of rooms){
+        const face = findFaceContaining(r.seed, roomFaces);
+        const isSel = selected && selected.kind==='room' && selected.id===r.id;
+        if(!face) continue;
+        ctx.beginPath();
+        face.polyCoords.forEach((p,i)=>{
+          const s = worldToScreen(p.x,p.y);
+          if(i===0) ctx.moveTo(s.x,s.y); else ctx.lineTo(s.x,s.y);
+        });
+        ctx.closePath();
+        ctx.fillStyle = isSel ? 'rgba(255,138,61,0.18)' : 'rgba(255,138,61,0.08)';
+        ctx.fill();
+        if(isSel){ ctx.strokeStyle = getCss('--accent'); ctx.lineWidth=2; ctx.stroke(); }
+
+        const c = worldToScreen(face.centroid.x, face.centroid.y);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = getCss('--text');
+        ctx.font = '600 13px Segoe UI, sans-serif';
+        ctx.fillText(r.name, c.x, c.y-6);
+        ctx.font = '11px Segoe UI, sans-serif';
+        ctx.fillStyle = getCss('--muted');
+        ctx.fillText(face.area.toFixed(2)+' m²  •  '+face.perimeter.toFixed(2)+' m perímetro', c.x, c.y+10);
+      }
+    }
+    if(tool==='room' && roomFaces){
+      const hover = findFaceContaining(mouseWorld, roomFaces);
+      if(hover){
+        ctx.beginPath();
+        hover.polyCoords.forEach((p,i)=>{
+          const s = worldToScreen(p.x,p.y);
+          if(i===0) ctx.moveTo(s.x,s.y); else ctx.lineTo(s.x,s.y);
+        });
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(255,138,61,0.14)';
+        ctx.fill();
+      }
+    }
+
+    for(const w of walls){
+      const isSel = selected && selected.kind==='wall' && selected.id===w.id;
+      drawWall(w, isSel);
+    }
+    if(tool==='wall' && chainStart){
+      const p1 = worldToScreen(chainStart.x, chainStart.y);
+      const snapped = snapPoint(mouseWorld);
+      const p2 = worldToScreen(snapped.x, snapped.y);
+      ctx.strokeStyle = getCss('--accent');
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6,4]);
+      ctx.beginPath();
+      ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const len = dist(chainStart, snapped);
+      ctx.fillStyle = getCss('--accent');
+      ctx.font = '12px Segoe UI, sans-serif';
+      ctx.fillText(len.toFixed(2)+' m', (p1.x+p2.x)/2+10, (p1.y+p2.y)/2-10);
+    }
+    if((tool==='door'||tool==='window')){
+      const near = findWallNear(mouseWorld, 0.3);
+      if(near){
+        const s = worldToScreen(near.wall.x1 + (near.wall.x2-near.wall.x1)*near.t,
+                                 near.wall.y1 + (near.wall.y2-near.wall.y1)*near.t);
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, 5, 0, Math.PI*2);
+        ctx.fillStyle = tool==='door' ? getCss('--door') : getCss('--window');
+        ctx.fill();
+      }
+    }
+
+    for(const d of ducts){
+      const isSel = selected && selected.kind==='duct' && selected.id===d.id;
+      const isHov = hoverDuct && hoverDuct.id===d.id;
+      drawDuct(d, isSel, isHov);
+    }
+    if(tool==='eletroduto'){
+      const nearSym = findSymbolNear(mouseWorld, 0.14*symbolScale);
+      if(ductChainStart){
+        const p1 = worldToScreen(ductChainStart.x, ductChainStart.y);
+        const endPt = nearSym ? {x:nearSym.x, y:nearSym.y} : mouseWorld;
+        const p2 = worldToScreen(endPt.x, endPt.y);
+        ctx.strokeStyle = nearSym ? getCss('--accent') : getCss('--danger');
+        ctx.lineWidth = 1.6;
+        ctx.setLineDash([5,4]);
+        ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
+        ctx.setLineDash([]);
+        const len = dist(ductChainStart, endPt);
+        ctx.fillStyle = nearSym ? getCss('--accent') : getCss('--danger');
+        ctx.font = '12px Segoe UI, sans-serif';
+        ctx.fillText(len.toFixed(2)+' m', (p1.x+p2.x)/2+10, (p1.y+p2.y)/2-10);
+      }
+      if(nearSym){
+        const p = worldToScreen(nearSym.x, nearSym.y);
+        ctx.beginPath(); ctx.arc(p.x,p.y,13*symbolScale,0,Math.PI*2);
+        ctx.strokeStyle = getCss('--accent'); ctx.lineWidth=1.5; ctx.stroke();
+      }
+    }
+
+    for(const s of symbols){
+      const isSel = selected && selected.kind==='symbol' && selected.id===s.id;
+      drawSymbol(s, isSel);
+    }
+    if(tool==='block' && activeBlockId){
+      const blockDef = findBlockDef(activeBlockId);
+      if(blockDef){
+        const snapped = snapPoint(mouseWorld);
+        ctx.globalAlpha = 0.5;
+        drawSymbol({ blockId: blockDef.id, type: blockDef.tipo, x: snapped.x, y: snapped.y, props: defaultProps(blockDef) }, false);
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  function updateStats(){
+    document.getElementById('statWalls').textContent = walls.length;
+    const totalLen = walls.reduce((s,w)=>s+wallLenM(w),0);
+    document.getElementById('statLength').textContent = totalLen.toFixed(2)+' m';
+    document.getElementById('statDoors').textContent = openings.filter(o=>o.type==='door').length;
+    document.getElementById('statWindows').textContent = openings.filter(o=>o.type==='window').length;
+    document.getElementById('statTomadas').textContent = symbols.filter(s=>s.type==='tomada').length;
+    document.getElementById('statInterruptores').textContent = symbols.filter(s=>s.type==='interruptor').length;
+    document.getElementById('statLuz').textContent = symbols.filter(s=>s.type==='luz').length;
+    document.getElementById('statQdc').textContent = symbols.filter(s=>s.type==='qdc').length;
+    document.getElementById('statDutos').textContent = ducts.length;
+
+    const list = document.getElementById('wallList');
+    const empty = document.getElementById('wallEmpty');
+    list.innerHTML = '';
+    if(walls.length===0){ empty.style.display='block'; }
+    else {
+      empty.style.display='none';
+      walls.forEach((w,idx)=>{
+        const li = document.createElement('li');
+        if(selected && selected.kind==='wall' && selected.id===w.id) li.classList.add('selected');
+        li.innerHTML = `<span>Parede ${idx+1}</span><span class="len">${wallLenM(w).toFixed(2)} m</span>`;
+        li.onclick = ()=>{ selected = {kind:'wall', id:w.id}; draw(); updateStats(); };
+        list.appendChild(li);
+      });
+    }
+
+    const roomListEl = document.getElementById('roomList');
+    const roomEmpty = document.getElementById('roomEmpty');
+    roomListEl.innerHTML = '';
+    if(rooms.length===0){ roomEmpty.style.display='block'; }
+    else {
+      roomEmpty.style.display='none';
+      const faces = computeRoomFaces();
+      rooms.forEach(r=>{
+        const face = findFaceContaining(r.seed, faces);
+        const li = document.createElement('li');
+        if(selected && selected.kind==='room' && selected.id===r.id) li.classList.add('selected');
+        const metrics = face ? `${face.area.toFixed(2)} m²` : 'aberto';
+        li.innerHTML = `<span>${r.name}</span><span class="len">${metrics}</span>`;
+        li.onclick = ()=>{ selected = {kind:'room', id:r.id}; draw(); updateStats(); };
+        roomListEl.appendChild(li);
+      });
+    }
+
+    const routeList = document.getElementById('routeList');
+    const routeEmpty = document.getElementById('routeEmpty');
+    routeList.innerHTML = '';
+    if(!cableResult){
+      routeEmpty.style.display = 'block';
+    } else {
+      routeEmpty.style.display = 'none';
+      cableResult.report.forEach(r=>{
+        const li = document.createElement('li');
+        if(r.erro) li.classList.add('error');
+        const val = r.erro ? r.erro : (r.distancia+' m');
+        li.innerHTML = `<span>${r.device}</span><span class="len${r.erro?' err':''}">${val}</span>`;
+        routeList.appendChild(li);
+      });
+    }
+
+    const materialList = document.getElementById('materialList');
+    const materialEmpty = document.getElementById('materialEmpty');
+    materialList.innerHTML = '';
+    if(!materialResult){
+      materialEmpty.style.display = 'block';
+    } else {
+      materialEmpty.style.display = 'none';
+      const circuitKeys = Object.keys(materialResult.byCircuit);
+      circuitKeys.forEach(ck=>{
+        const kinds = materialResult.byCircuit[ck];
+        const parts = Object.keys(kinds).map(k => `${KIND_NAME[k]} ${kinds[k].toFixed(2)}m`).join(' · ');
+        const li = document.createElement('li');
+        li.style.flexDirection = 'column';
+        li.style.alignItems = 'flex-start';
+        li.innerHTML = `<span style="font-weight:600;">Circuito ${ck}</span><span class="len" style="text-align:left;">${parts}</span>`;
+        materialList.appendChild(li);
+      });
+      const totalsLi = document.createElement('li');
+      totalsLi.style.flexDirection = 'column';
+      totalsLi.style.alignItems = 'flex-start';
+      totalsLi.style.borderColor = 'var(--accent)';
+      const totalParts = Object.keys(materialResult.totals).filter(k=>materialResult.totals[k]>0)
+        .map(k => `${KIND_NAME[k]} ${materialResult.totals[k].toFixed(2)}m`).join(' · ');
+      totalsLi.innerHTML = `<span style="font-weight:600;color:var(--accent);">Total geral</span><span class="len" style="text-align:left;">${totalParts}</span>`;
+      materialList.appendChild(totalsLi);
+    }
+
+    renderPropertiesPanel();
+  }
+
+  // ---------------------------------------------------------------
+  // Painel de propriedades: renderiza campos editáveis conforme o
+  // que está selecionado (bloco, parede, cômodo ou eletroduto). É o
+  // que substitui o antigo modal fixo por edição ao vivo, no painel
+  // lateral, como num editor CAD.
+  // ---------------------------------------------------------------
+  function propFieldHtml(p, val){
+    if(p.type==='select'){
+      const opts = (p.options||[]).map(o=>`<option value="${o.value}" ${o.value===val?'selected':''}>${o.label}</option>`).join('');
+      return `<label class="prop-field">${p.label}<select data-propkey="${p.key}">${opts}</select></label>`;
+    }
+    const inputType = p.type==='number' ? 'number' : 'text';
+    const maxlenAttr = p.maxlength ? `maxlength="${p.maxlength}"` : '';
+    return `<label class="prop-field">${p.label}<input type="${inputType}" data-propkey="${p.key}" value="${val===undefined||val===null?'':val}" ${maxlenAttr}></label>`;
+  }
+
+  function renderPropertiesPanel(){
+    const container = document.getElementById('propContent');
+    if(!selected){
+      container.innerHTML = '<div class="empty">Selecione um elemento na planta (use a ferramenta "Selecionar") para ver e editar suas propriedades aqui.</div>';
+      return;
+    }
+    if(selected.kind==='symbol'){
+      const sym = symbols.find(s=>s.id===selected.id);
+      if(!sym){ selected=null; return renderPropertiesPanel(); }
+      const blockDef = findBlockDef(sym.blockId) || { nome:'Bloco removido', properties:[], cor:'#8a92a0' };
+      let html = `<div class="stat-row"><span>Bloco</span><span><span class="swatch" style="background:${resolveColor(blockDef.cor)}"></span> ${blockDef.nome}</span></div>`;
+      html += blockDef.properties.map(p=>propFieldHtml(p, sym.props ? sym.props[p.key] : undefined)).join('');
+      if(blockDef.properties.length===0) html += '<div class="empty">Este bloco não tem propriedades editáveis.</div>';
+      html += `<button class="wide danger" id="propDeleteBtn" style="margin-top:4px;background:#2a2020;border-color:var(--danger);">Excluir bloco (Delete)</button>`;
+      container.innerHTML = html;
+      container.querySelectorAll('[data-propkey]').forEach(el=>{
+        el.addEventListener('input', ()=>{
+          const key = el.dataset.propkey;
+          const propDef = blockDef.properties.find(p=>p.key===key);
+          let v = el.value;
+          if(propDef && propDef.type==='number') v = v===''?null:+v;
+          if(!sym.props) sym.props = {};
+          sym.props[key] = v;
+          cableResult = null; materialResult = null;
+          draw();
+        });
+      });
+      container.querySelector('#propDeleteBtn').addEventListener('click', deleteSelected);
+    } else if(selected.kind==='room'){
+      const room = rooms.find(r=>r.id===selected.id);
+      if(!room){ selected=null; return renderPropertiesPanel(); }
+      container.innerHTML = `
+        <label class="prop-field">Nome<input type="text" id="propRoomName" value="${room.name}" maxlength="30"></label>
+        <button class="wide danger" id="propDeleteBtn" style="background:#2a2020;border-color:var(--danger);">Excluir cômodo (Delete)</button>`;
+      container.querySelector('#propRoomName').addEventListener('input', (e)=>{ room.name = e.target.value; draw(); });
+      container.querySelector('#propDeleteBtn').addEventListener('click', deleteSelected);
+    } else if(selected.kind==='duct'){
+      const duct = ducts.find(d=>d.id===selected.id);
+      if(!duct){ selected=null; return renderPropertiesPanel(); }
+      const camadas = ['teto','piso','parede'];
+      const opts = camadas.map(c=>`<option value="${c}" ${duct.camada===c?'selected':''}>${c}</option>`).join('');
+      container.innerHTML = `
+        <div class="stat-row"><span>Comprimento</span><span>${ductLenM(duct).toFixed(2)} m</span></div>
+        <label class="prop-field">Camada<select id="propDuctCamada">${opts}</select></label>
+        <button class="wide danger" id="propDeleteBtn" style="background:#2a2020;border-color:var(--danger);">Excluir eletroduto (Delete)</button>`;
+      container.querySelector('#propDuctCamada').addEventListener('change', (e)=>{ duct.camada = e.target.value; draw(); });
+      container.querySelector('#propDeleteBtn').addEventListener('click', deleteSelected);
+    } else if(selected.kind==='wall'){
+      const wall = walls.find(w=>w.id===selected.id);
+      if(!wall){ selected=null; return renderPropertiesPanel(); }
+      container.innerHTML = `
+        <div class="stat-row"><span>Comprimento</span><span>${wallLenM(wall).toFixed(2)} m</span></div>
+        <button class="wide danger" id="propDeleteBtn" style="margin-top:8px;background:#2a2020;border-color:var(--danger);">Excluir parede (Delete)</button>`;
+      container.querySelector('#propDeleteBtn').addEventListener('click', deleteSelected);
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // Roteamento de cabos: dado a rede de eletrodutos e os símbolos
+  // com seus atributos, acha o caminho mais curto de cada dispositivo
+  // até o QDC (ou até a luminária correspondente, pro retorno) e marca
+  // quais cabos passam em cada trecho.
+  // ---------------------------------------------------------------
+  function buildDuctGraph(){
+    const EPS = 0.03;
+    const vertices = [];
+    function findOrAdd(x,y){
+      for(let i=0;i<vertices.length;i++){
+        if(Math.hypot(vertices[i].x-x, vertices[i].y-y) < EPS) return i;
+      }
+      vertices.push({x,y});
+      return vertices.length-1;
+    }
+    for(const d of ducts){ findOrAdd(d.x1,d.y1); findOrAdd(d.x2,d.y2); }
+    const anchorIndex = {};
+    for(const s of symbols){ anchorIndex[s.id] = findOrAdd(s.x,s.y); }
+
+    const adj = vertices.map(()=>[]);
+    for(const d of ducts){
+      const a = findOrAdd(d.x1,d.y1), b = findOrAdd(d.x2,d.y2);
+      if(a===b) continue;
+      const w = Math.hypot(d.x2-d.x1, d.y2-d.y1);
+      adj[a].push({to:b, w, ductId:d.id});
+      adj[b].push({to:a, w, ductId:d.id});
+    }
+    return { vertices, adj, anchorIndex };
+  }
+
+  function dijkstra(adj, sourceIdx, targetIdxSet){
+    const n = adj.length;
+    const distArr = new Array(n).fill(Infinity);
+    const prevEdge = new Array(n).fill(null);
+    const visited = new Array(n).fill(false);
+    distArr[sourceIdx] = 0;
+    for(let iter=0; iter<n; iter++){
+      let u=-1, best=Infinity;
+      for(let i=0;i<n;i++) if(!visited[i] && distArr[i]<best){ best=distArr[i]; u=i; }
+      if(u===-1) break;
+      visited[u]=true;
+      if(targetIdxSet.has(u)) break;
+      for(const e of adj[u]){
+        const nd = distArr[u]+e.w;
+        if(nd < distArr[e.to]){ distArr[e.to]=nd; prevEdge[e.to]={from:u, ductId:e.ductId}; }
+      }
+    }
+    let bestTarget=null, bestDist=Infinity;
+    for(const t of targetIdxSet){ if(distArr[t]<bestDist){ bestDist=distArr[t]; bestTarget=t; } }
+    if(bestTarget===null || bestDist===Infinity) return null;
+    const ductIds=[];
+    let cur=bestTarget;
+    while(prevEdge[cur]){ ductIds.push(prevEdge[cur].ductId); cur=prevEdge[cur].from; }
+    ductIds.reverse();
+    return { distance:bestDist, ductIds };
+  }
+
+  // Dijkstra multi-fonte: parte de vários vértices ao mesmo tempo (dist=0) —
+  // usado pra achar o ponto mais próximo da ÁRVORE já construída até um novo terminal.
+  function multiSourceDijkstra(adj, sources, targetSet){
+    const n = adj.length;
+    const distArr = new Array(n).fill(Infinity);
+    const prevEdge = new Array(n).fill(null);
+    const visited = new Array(n).fill(false);
+    for(const s of sources) distArr[s]=0;
+    for(let iter=0; iter<n; iter++){
+      let u=-1, best=Infinity;
+      for(let i=0;i<n;i++) if(!visited[i] && distArr[i]<best){ best=distArr[i]; u=i; }
+      if(u===-1) break;
+      visited[u]=true;
+      if(targetSet.has(u) && distArr[u]>0) break;
+      for(const e of adj[u]){
+        const nd = distArr[u]+e.w;
+        if(nd < distArr[e.to]){ distArr[e.to]=nd; prevEdge[e.to]={from:u, ductId:e.ductId}; }
+      }
+    }
+    let bestTarget=null, bestDist=Infinity;
+    for(const t of targetSet){ if(distArr[t]<bestDist && distArr[t]>0){ bestDist=distArr[t]; bestTarget=t; } }
+    if(bestTarget===null || bestDist===Infinity) return null;
+    const ductIds=[]; const vertexPath=[bestTarget];
+    let cur=bestTarget;
+    while(prevEdge[cur]){ ductIds.push(prevEdge[cur].ductId); cur=prevEdge[cur].from; vertexPath.push(cur); }
+    ductIds.reverse();
+    return { distance:bestDist, ductIds, targetVertex:bestTarget, vertexPath };
+  }
+
+  // Constrói a árvore compartilhada de um circuito: QDC + todos os terminais
+  // (lâmpadas ou tomadas do MESMO circuito) ligados por um tronco comum —
+  // um trecho de eletroduto usado por vários dispositivos do mesmo circuito
+  // entra só UMA VEZ na lista de cabos, em vez de duplicar F/N por dispositivo.
+  function buildSharedTree(adj, rootVertices, terminalVertices){
+    const treeVerts = new Set(rootVertices);
+    const treeEdges = new Set();
+    const remaining = terminalVertices.slice();
+    const distancePerTerminal = {};
+    const unreachable = [];
+    while(remaining.length){
+      const res = multiSourceDijkstra(adj, [...treeVerts], new Set(remaining));
+      if(!res){ unreachable.push(...remaining); break; }
+      for(const id of res.ductIds) treeEdges.add(id);
+      for(const v of res.vertexPath) treeVerts.add(v);
+      distancePerTerminal[res.targetVertex] = res.distance;
+      const idx = remaining.indexOf(res.targetVertex);
+      remaining.splice(idx,1);
+    }
+    return { treeEdges, distancePerTerminal, unreachable };
+  }
+
+  // ---------------------------------------------------------------
+  // Distribuição automática de eletrodutos por camada (teto/piso/parede),
+  // seguindo as regras ativas. Gera uma rede nova sobre uma grade auxiliar,
+  // reaproveitando o mesmo algoritmo de árvore compartilhada (evita cruzar
+  // eletrodutos da mesma camada porque é uma árvore, sem ciclos).
+  // ---------------------------------------------------------------
+  function classifyDevice(sym){
+    for(const r of ductRules){
+      if(!r.ativo) continue;
+      if(r.tipo !== sym.type) continue;
+      if(r.altura && (sym.props||{}).altura !== r.altura) continue;
+      return r.camada;
+    }
+    return 'piso'; // padrão quando nenhuma regra ativa se aplica
+  }
+
+  function computeBBox(){
+    const pts = [];
+    walls.forEach(w=>{ pts.push({x:w.x1,y:w.y1},{x:w.x2,y:w.y2}); });
+    symbols.forEach(s=>{ pts.push({x:s.x,y:s.y}); });
+    if(pts.length===0) return { minX:0, minY:0, maxX:5, maxY:5 };
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    pts.forEach(p=>{ minX=Math.min(minX,p.x); minY=Math.min(minY,p.y); maxX=Math.max(maxX,p.x); maxY=Math.max(maxY,p.y); });
+    return { minX:minX-0.5, minY:minY-0.5, maxX:maxX+0.5, maxY:maxY+0.5 };
+  }
+
+  function buildRoutingGrid(step){
+    const bbox = computeBBox();
+    const cols = Math.max(2, Math.ceil((bbox.maxX-bbox.minX)/step)+1);
+    const rows = Math.max(2, Math.ceil((bbox.maxY-bbox.minY)/step)+1);
+    const vIdx = (i,j)=> i*rows+j;
+    const vertices = [];
+    for(let i=0;i<cols;i++) for(let j=0;j<rows;j++) vertices.push({ x:bbox.minX+i*step, y:bbox.minY+j*step });
+    const adj = vertices.map(()=>[]);
+    for(let i=0;i<cols;i++){
+      for(let j=0;j<rows;j++){
+        const id = vIdx(i,j);
+        if(i+1<cols){ const id2=vIdx(i+1,j); const ductId='grid-h-'+i+'-'+j;
+          adj[id].push({to:id2,w:step,ductId}); adj[id2].push({to:id,w:step,ductId}); }
+        if(j+1<rows){ const id2=vIdx(i,j+1); const ductId='grid-v-'+i+'-'+j;
+          adj[id].push({to:id2,w:step,ductId}); adj[id2].push({to:id,w:step,ductId}); }
+      }
+    }
+    function nearestVertex(pt){
+      let best=0, bestD=Infinity;
+      vertices.forEach((v,idx)=>{ const d=dist(v,pt); if(d<bestD){bestD=d; best=idx;} });
+      return best;
+    }
+    function edgeCoords(ductId){
+      const parts = ductId.split('-');
+      const type=parts[1], i=+parts[2], j=+parts[3];
+      const a = vertices[vIdx(i,j)];
+      const b = type==='h' ? vertices[vIdx(i+1,j)] : vertices[vIdx(i,j+1)];
+      return { a, b };
+    }
+    return { vertices, adj, nearestVertex, edgeCoords };
+  }
+
+  function mergeCollinearDucts(list){
+    let segs = list.slice();
+    const key = (x,y)=> Math.round(x*1000)+','+Math.round(y*1000);
+    let progress = true;
+    while(progress){
+      progress = false;
+      const at = {};
+      segs.forEach((s,idx)=>{
+        const k1=key(s.x1,s.y1), k2=key(s.x2,s.y2);
+        (at[k1]=at[k1]||[]).push({idx, end:'1'});
+        (at[k2]=at[k2]||[]).push({idx, end:'2'});
+      });
+      for(const k in at){
+        const l2 = at[k];
+        if(l2.length!==2) continue;
+        const [e1,e2] = l2;
+        if(e1.idx===e2.idx) continue;
+        const s1=segs[e1.idx], s2=segs[e2.idx];
+        const p1 = e1.end==='1' ? {x:s1.x2,y:s1.y2} : {x:s1.x1,y:s1.y1};
+        const p2 = e2.end==='1' ? {x:s2.x2,y:s2.y2} : {x:s2.x1,y:s2.y1};
+        const shared = e1.end==='1' ? {x:s1.x1,y:s1.y1} : {x:s1.x2,y:s1.y2};
+        const v1x=p1.x-shared.x, v1y=p1.y-shared.y;
+        const v2x=p2.x-shared.x, v2y=p2.y-shared.y;
+        if(Math.abs(v1x*v2y - v1y*v2x) > 1e-4) continue;
+        const merged = { id:s1.id, x1:p1.x, y1:p1.y, x2:p2.x, y2:p2.y, camada:s1.camada };
+        const toRemove = new Set([e1.idx, e2.idx]);
+        segs = segs.filter((_,i)=>!toRemove.has(i));
+        segs.push(merged);
+        progress = true;
+        break;
+      }
+    }
+    return segs;
+  }
+
+  function generateAutoDucts(){
+    const qdcs = symbols.filter(s=>s.type==='qdc');
+    if(qdcs.length===0){ showToast('Coloque um QDC na planta antes de gerar os eletrodutos automaticamente.'); return; }
+    if(!confirm('Isso substitui todos os eletrodutos atuais pela rede gerada automaticamente. Continuar?')) return;
+
+    const step = 0.4;
+    const grid = buildRoutingGrid(step);
+    const qdcVertex = grid.nearestVertex({x:qdcs[0].x, y:qdcs[0].y});
+
+    const layerDevices = { teto:[], piso:[], parede:[] };
+    symbols.forEach(s=>{
+      if(s.type==='qdc') return;
+      if(!['tomada','interruptor','luz'].includes(s.type)) return; // blocos personalizados não entram no roteamento automático
+      layerDevices[classifyDevice(s)].push(s);
+    });
+
+    let newDucts = [];
+    for(const camada of ['teto','piso','parede']){
+      const devs = layerDevices[camada];
+      if(devs.length===0) continue;
+      const terminals = devs.map(s=> grid.nearestVertex({x:s.x,y:s.y}));
+      const tree = buildSharedTree(grid.adj, [qdcVertex], terminals);
+      tree.treeEdges.forEach(ductId=>{
+        const {a,b} = grid.edgeCoords(ductId);
+        newDucts.push({ id: nextId++, x1:a.x, y1:a.y, x2:b.x, y2:b.y, camada });
+      });
+      if(tree.unreachable.length>0){
+        showToast(`${tree.unreachable.length} dispositivo(s) da camada ${camada} ficaram fora do alcance da grade — ajuste manualmente.`);
+      }
+    }
+    ducts = mergeCollinearDucts(newDucts);
+    cableResult = null; materialResult = null; selected = null;
+    draw(); updateStats();
+    showToast('Rede de eletrodutos gerada por camada — ajuste manualmente onde precisar.');
+  }
+
+  function distributeCables(){
+    const { adj, anchorIndex } = buildDuctGraph();
+    const qdcs = symbols.filter(s=>s.type==='qdc');
+    const qdcVertices = qdcs.map(q=>anchorIndex[q.id]);
+    const cableTags = {};
+    function tagPath(ductIds, cabo){
+      for(const id of ductIds){
+        if(!cableTags[id]) cableTags[id]=[];
+        cableTags[id].push({cabo});
+      }
+    }
+    const report = [];
+    const circuitBackbones = []; // {groupType, circuitKey, horizontal, devices:[{symbolId,altura?}]}
+    const devicePaths = []; // interruptores (individuais) — {type, circuitKey, kinds:[...], horizontal}
+
+    if(qdcs.length===0){
+      showToast('Coloque um QDC na planta antes de distribuir os cabos.');
+      return null;
+    }
+
+    // agrupa tomadas e luzes por circuito — o mesmo circuito compartilha um
+    // único tronco de fase/neutro (e terra, no caso da tomada), em vez de um
+    // par de cabos por dispositivo
+    function groupBy(type){
+      const groups = {};
+      for(const s of symbols){
+        if(s.type!==type) continue;
+        const key = String(s.props.circuito);
+        if(!groups[key]) groups[key] = [];
+        groups[key].push(s);
+      }
+      return groups;
+    }
+
+    for(const [groupType, kinds] of [['tomada',['F','N','T']], ['luz',['F','N']]]){
+      const groups = groupBy(groupType);
+      for(const circuitKey in groups){
+        const devs = groups[circuitKey];
+        const terminals = devs.map(s=>anchorIndex[s.id]);
+        const tree = buildSharedTree(adj, qdcVertices, terminals);
+        for(const kind of kinds) tagPath([...tree.treeEdges], `${kind}-${circuitKey}`);
+        const horizontal = Object.values(tree.distancePerTerminal).reduce((a,b)=>a+b,0);
+        const reachedDevs = [];
+        devs.forEach(s=>{
+          const v = anchorIndex[s.id];
+          const label = groupType==='tomada' ? `Tomada ${s.props.circuito} (${s.props.altura})` : `Luz ${s.props.circuito}${s.props.letra}`;
+          if(tree.unreachable.includes(v)){
+            report.push({ device: label, erro: 'sem eletroduto até o tronco do circuito '+circuitKey });
+          } else {
+            report.push({ device: label, distancia: +(tree.distancePerTerminal[v]||0).toFixed(2) });
+            reachedDevs.push(groupType==='tomada' ? { altura:s.props.altura } : {});
+          }
+        });
+        if(reachedDevs.length>0){
+          circuitBackbones.push({ groupType, circuitKey, horizontal, devices:reachedDevs });
+        }
+      }
+    }
+
+    for(const s of symbols){
+      if(s.type==='interruptor'){
+        const lamp = symbols.find(x=>x.type==='luz' && String(x.props.circuito)===String(s.props.circuito) && x.props.letra===s.props.letra);
+        if(!lamp){
+          report.push({ device: `Interruptor ${s.props.circuito}${s.props.letra}`, erro: 'nenhuma luminária com esse código' });
+          continue;
+        }
+        const targetSet = new Set([anchorIndex[lamp.id]]);
+        const res = dijkstra(adj, anchorIndex[s.id], targetSet);
+        if(res){
+          tagPath(res.ductIds, `F-${s.props.circuito}${s.props.letra}`);
+          tagPath(res.ductIds, `R-${s.props.circuito}${s.props.letra}`);
+          report.push({ device: `Interruptor ${s.props.circuito}${s.props.letra}`, distancia: +res.distance.toFixed(2) });
+          devicePaths.push({ type:'interruptor', circuitKey:s.props.circuito+s.props.letra, kinds:['F','R'], horizontal:res.distance });
+        } else {
+          report.push({ device: `Interruptor ${s.props.circuito}${s.props.letra}`, erro: 'sem eletroduto até a luminária' });
+        }
+      }
+    }
+    return { cableTags, report, circuitBackbones, devicePaths };
+  }
+
+  document.getElementById('btnRoute').addEventListener('click', ()=>{
+    const result = distributeCables();
+    if(result){
+      cableResult = result;
+      materialResult = null;
+      const erros = result.report.filter(r=>r.erro).length;
+      showToast(erros>0
+        ? `Roteamento feito com ${erros} pendência(s) — veja a lista de roteamento.`
+        : `Cabos distribuídos: ${result.report.length} dispositivo(s) roteados.`);
+      draw(); updateStats();
+    }
+  });
+
+  const ALTURA_TOMADA = { baixa:0.30, media:1.10, alta:2.00 };
+
+  function calcularMaterial(){
+    if(!cableResult){
+      showToast('Distribua os cabos primeiro — o cálculo de material usa os caminhos já roteados.');
+      return null;
+    }
+    const peDireito = +document.getElementById('matPeDireito').value || 2.70;
+    const alturaQdc = +document.getElementById('matAlturaQdc').value || 1.60;
+    const alturaInt = +document.getElementById('matAlturaInt').value || 1.10;
+    const folga = +document.getElementById('matFolga').value || 0;
+    const margemPct = +document.getElementById('matMargem').value || 0;
+
+    const rows = {}; // key = kind+'|'+circuitKey -> metros
+
+    // troncos compartilhados (tomada/luz) — o trecho comum entra 1x no
+    // horizontal, mas cada dispositivo pendurado nele ainda soma sua PRÓPRIA
+    // descida/subida vertical e sua própria folga de emenda
+    for(const bb of cableResult.circuitBackbones){
+      const verticalCompartilhado = alturaQdc; // 1 descida do QDC, comum a todo o tronco
+      const verticalPorDispositivo = bb.devices.reduce((sum,d)=>{
+        return sum + (bb.groupType==='tomada' ? (ALTURA_TOMADA[d.altura] ?? 1.10) : peDireito);
+      }, 0);
+      const bruto = bb.horizontal + verticalCompartilhado + verticalPorDispositivo;
+      const comMargem = bruto*(1+margemPct/100) + folga*(bb.devices.length+1); // +1 = emenda na entrada do QDC
+      const kinds = bb.groupType==='tomada' ? ['F','N','T'] : ['F','N'];
+      for(const kind of kinds){
+        const key = kind+'|'+bb.circuitKey;
+        rows[key] = (rows[key]||0) + comMargem;
+      }
+    }
+
+    // ramais individuais (retorno do interruptor até a luminária — não é compartilhado)
+    for(const dp of cableResult.devicePaths){
+      const vertical = peDireito + alturaInt;
+      const bruto = dp.horizontal + vertical;
+      const comMargem = bruto*(1+margemPct/100) + folga;
+      for(const kind of dp.kinds){
+        const key = kind+'|'+dp.circuitKey;
+        rows[key] = (rows[key]||0) + comMargem;
+      }
+    }
+
+    const byCircuit = {};
+    const totals = { F:0, N:0, T:0, R:0 };
+    for(const key in rows){
+      const [kind, circuitKey] = key.split('|');
+      if(!byCircuit[circuitKey]) byCircuit[circuitKey] = {};
+      byCircuit[circuitKey][kind] = rows[key];
+      totals[kind] = (totals[kind]||0) + rows[key];
+    }
+    return { byCircuit, totals };
+  }
+
+  const KIND_NAME = { F:'fase', N:'neutro', T:'terra', R:'retorno' };
+
+  document.getElementById('btnMaterial').addEventListener('click', ()=>{
+    const result = calcularMaterial();
+    if(result){
+      materialResult = result;
+      draw(); updateStats();
+    }
+  });
+
+  // ---------------------------------------------------------------
+  // Zoom (roda do mouse, botões +/-) e pan (arrastar com o botão do
+  // meio), estilo AutoCAD
+  // ---------------------------------------------------------------
+  let isPanning = false;
+  let panStart = null, panOriginStart = null;
+
+  function applyZoom(factor, cx, cy){
+    const before = screenToWorld(cx, cy);
+    zoom = Math.max(0.2, Math.min(6, zoom*factor));
+    const after = worldToScreen(before.x, before.y);
+    origin.x += cx-after.x;
+    origin.y += cy-after.y;
+    updateZoomLabel();
+    draw();
+  }
+
+  canvas.addEventListener('wheel', (e)=>{
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.clientX-rect.left, cy = e.clientY-rect.top;
+    const factor = e.deltaY < 0 ? 1.12 : 1/1.12;
+    applyZoom(factor, cx, cy);
+  }, { passive:false });
+
+  document.getElementById('btnZoomIn').addEventListener('click', ()=>{
+    applyZoom(1.25, canvas.width/2, canvas.height/2);
+  });
+  document.getElementById('btnZoomOut').addEventListener('click', ()=>{
+    applyZoom(1/1.25, canvas.width/2, canvas.height/2);
+  });
+
+  canvas.addEventListener('mousedown', (e)=>{
+    if(e.button===1){
+      e.preventDefault();
+      isPanning = true;
+      panStart = { x:e.clientX, y:e.clientY };
+      panOriginStart = { x:origin.x, y:origin.y };
+      canvas.style.cursor = 'grabbing';
+    }
+  });
+  window.addEventListener('mousemove', (e)=>{
+    if(isPanning){
+      origin.x = panOriginStart.x + (e.clientX-panStart.x);
+      origin.y = panOriginStart.y + (e.clientY-panStart.y);
+      draw();
+    }
+  });
+  window.addEventListener('mouseup', (e)=>{
+    if(e.button===1 && isPanning){
+      isPanning = false;
+      canvas.style.cursor = 'crosshair';
+    }
+  });
+  function updateZoomLabel(){
+    const el = document.getElementById('zoomLabel');
+    if(el) el.textContent = Math.round(zoom*100)+'%';
+  }
+  document.getElementById('btnResetView').addEventListener('click', ()=>{
+    zoom = 1; origin.x = 80; origin.y = 80;
+    updateZoomLabel(); draw();
+  });
+  document.getElementById('symbolScaleInput').addEventListener('input', (e)=>{
+    const v = parseFloat(e.target.value);
+    symbolScale = (v && v>0) ? v : 1.5;
+    draw();
+  });
+
+  // ---------------------------------------------------------------
+  // Biblioteca de blocos: grade de blocos disponíveis (padrão +
+  // personalizados) e o modal pra criar blocos novos com propriedades
+  // próprias — é o que torna cada símbolo "editável e recriável".
+  // ---------------------------------------------------------------
+  function renderBlockLibrary(){
+    const grid = document.getElementById('blockLibraryGrid');
+    grid.innerHTML = '';
+    blockLibrary.forEach(b=>{
+      const btn = document.createElement('button');
+      btn.className = 'tool-btn';
+      if(tool==='block' && activeBlockId===b.id) btn.classList.add('active');
+      btn.innerHTML = `<span class="swatch" style="background:${resolveColor(b.cor)}"></span>${b.nome}`;
+      btn.title = b.builtin ? 'Bloco padrão' : 'Bloco personalizado — clique com o botão direito pra remover da biblioteca';
+      btn.addEventListener('click', ()=>{
+        tool = 'block'; activeBlockId = b.id;
+        chainStart=null; ductChainStart=null; selected=null; hoverDuct=null;
+        removeOpenModals();
+        document.querySelectorAll('.tool-btn[data-tool]').forEach(x=>x.classList.remove('active'));
+        hintBox.textContent = `Clique na planta para posicionar: ${b.nome}.`;
+        renderBlockLibrary();
+        draw(); updateStats();
+      });
+      if(!b.builtin){
+        btn.addEventListener('contextmenu', (e)=>{
+          e.preventDefault();
+          if(confirm(`Remover o bloco "${b.nome}" da biblioteca? Os símbolos já colocados na planta continuam existindo.`)){
+            blockLibrary = blockLibrary.filter(x=>x.id!==b.id);
+            if(activeBlockId===b.id){
+              activeBlockId=null; tool='select';
+              document.querySelectorAll('.tool-btn[data-tool]').forEach(x=>x.classList.remove('active'));
+              const selBtn = document.querySelector('.tool-btn[data-tool="select"]');
+              if(selBtn) selBtn.classList.add('active');
+            }
+            renderBlockLibrary();
+            draw(); updateStats();
+          }
+        });
+      }
+      grid.appendChild(btn);
+    });
+  }
+
+  function slugKey(str, idx){
+    const base = str.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'');
+    return 'p'+idx+'_'+base.slice(0,14);
+  }
+
+  function openNewBlockModal(){
+    removeOpenModals();
+    const modal = document.createElement('div');
+    modal.className = 'mini-modal';
+    modal.style.left = '50%'; modal.style.top='60px'; modal.style.transform='translateX(-50%)';
+    modal.style.width = '320px';
+    modal.innerHTML = `
+      <label>Nome do bloco<input type="text" id="nbNome" placeholder="Ex: Sensor de presença" maxlength="30"></label>
+      <div class="field-row">
+        <label style="flex:1">Cor<input type="color" id="nbCor" value="#c98fe0"></label>
+        <label style="flex:1">Forma
+          <select id="nbForma">
+            <option value="circulo">Círculo</option>
+            <option value="quadrado">Quadrado</option>
+            <option value="triangulo">Triângulo</option>
+            <option value="cruz">Cruz</option>
+          </select>
+        </label>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px;">Propriedades editáveis (opcional)</div>
+      <div id="nbPropsList" style="display:flex;flex-direction:column;gap:6px;"></div>
+      <button id="nbAddProp" type="button" style="align-self:flex-start;padding:5px 9px;border-radius:5px;border:1px solid var(--panel-border);background:#23282e;color:var(--text);font-size:11.5px;cursor:pointer;">+ Propriedade</button>
+      <div class="buttons">
+        <button class="cancel">Cancelar</button>
+        <button class="ok">Criar bloco</button>
+      </div>
+    `;
+    canvas.parentElement.appendChild(modal);
+
+    function addPropRow(){
+      const row = document.createElement('div');
+      row.className = 'np-row';
+      row.innerHTML = `
+        <div class="field-row">
+          <input type="text" placeholder="Nome da propriedade" class="np-label" style="flex:2;">
+          <select class="np-tipo" style="flex:1;">
+            <option value="text">Texto</option>
+            <option value="number">Número</option>
+            <option value="select">Opções</option>
+          </select>
+          <button class="np-del" type="button" style="padding:5px 8px;">✕</button>
+        </div>
+        <input type="text" class="np-opts" placeholder="opções separadas por vírgula (ex: liga,desliga)" style="display:none;">
+      `;
+      row.querySelector('.np-tipo').addEventListener('change', (e)=>{
+        row.querySelector('.np-opts').style.display = e.target.value==='select' ? 'block' : 'none';
+      });
+      row.querySelector('.np-del').addEventListener('click', ()=>row.remove());
+      modal.querySelector('#nbPropsList').appendChild(row);
+    }
+    modal.querySelector('#nbAddProp').addEventListener('click', addPropRow);
+    addPropRow();
+
+    function confirmIt(){
+      const nome = modal.querySelector('#nbNome').value.trim();
+      if(!nome){ showToast('Dê um nome ao bloco.'); return; }
+      const cor = modal.querySelector('#nbCor').value;
+      const forma = modal.querySelector('#nbForma').value;
+      const rows = [...modal.querySelectorAll('#nbPropsList .np-row')];
+      const properties = rows.map((row, idx)=>{
+        const label = row.querySelector('.np-label').value.trim();
+        if(!label) return null;
+        const type = row.querySelector('.np-tipo').value;
+        const key = slugKey(label, idx);
+        if(type==='select'){
+          const raw = row.querySelector('.np-opts').value.trim();
+          const options = raw.split(',').map(x=>x.trim()).filter(Boolean).map(v=>({value:v,label:v}));
+          return { key, label, type, options: options.length?options:[{value:'',label:'(sem opções)'}], default: options[0]?options[0].value:'' };
+        }
+        return { key, label, type, default: type==='number'?0:'' };
+      }).filter(Boolean);
+
+      const id = 'blk-custom-'+(nextBlockId++);
+      blockLibrary.push({ id, tipo:'custom', nome, cor, builtin:false, shape:forma, properties });
+      modal.remove();
+      renderBlockLibrary();
+      showToast(`Bloco "${nome}" adicionado à biblioteca.`);
+    }
+    modal.querySelector('.ok').addEventListener('click', confirmIt);
+    modal.querySelector('.cancel').addEventListener('click', ()=>modal.remove());
+    modal.addEventListener('keydown', (ev)=>{ if(ev.key==='Escape') modal.remove(); });
+  }
+  document.getElementById('btnNewBlock').addEventListener('click', openNewBlockModal);
+
+  // ---------------------------------------------------------------
+  // Interação: cliques, modais de atributo, seleção e exclusão
+  // ---------------------------------------------------------------
+  let hoverDuct = null;
+  canvas.addEventListener('mousemove', (e)=>{
+    if(isPanning) return;
+    const rect = canvas.getBoundingClientRect();
+    mouseWorld = screenToWorld(e.clientX-rect.left, e.clientY-rect.top);
+    const snapped = snapPoint(mouseWorld);
+    coordsBox.textContent = `X: ${snapped.x.toFixed(2)} m   Y: ${snapped.y.toFixed(2)} m`;
+    hoverDuct = (tool==='select') ? findDuctNear(mouseWorld, 0.15) : null;
+    draw();
+  });
+
+  canvas.addEventListener('click', (e)=>{
+    const rect = canvas.getBoundingClientRect();
+    const world = screenToWorld(e.clientX-rect.left, e.clientY-rect.top);
+    const snapped = snapPoint(world);
+
+    if(tool==='wall'){
+      if(!chainStart){
+        chainStart = snapped;
+      } else {
+        if(dist(chainStart, snapped) > 0.05){
+          walls.push({ id: nextId++, x1: chainStart.x, y1: chainStart.y, x2: snapped.x, y2: snapped.y });
+        }
+        chainStart = snapped;
+      }
+    } else if(tool==='door' || tool==='window'){
+      const near = findWallNear(world, 0.3);
+      if(near){
+        openings.push({ id: nextId++, wallId: near.wall.id, type: tool, t: near.t, widthM: tool==='door'?0.8:1.2 });
+      }
+    } else if(tool==='room'){
+      const faces = computeRoomFaces();
+      const face = findFaceContaining(world, faces);
+      if(!face){
+        showToast('Esse cômodo ainda não está fechado — verifique se todas as paredes ao redor estão conectadas.');
+      } else {
+        openRoomModal(e.clientX, e.clientY, world);
+      }
+    } else if(tool==='block'){
+      const blockDef = findBlockDef(activeBlockId);
+      if(blockDef){
+        if(!blockDef.properties || blockDef.properties.length===0){
+          symbols.push({ id: nextId++, blockId: blockDef.id, type: blockDef.tipo, x: snapped.x, y: snapped.y, props:{} });
+          cableResult = null; materialResult = null;
+        } else {
+          openAttrModal(e.clientX, e.clientY, blockDef, snapped);
+        }
+      }
+    } else if(tool==='eletroduto'){
+      const onSymbol = findSymbolNear(world, 0.14*symbolScale);
+      if(!onSymbol){
+        showToast('O eletroduto só pode começar ou terminar exatamente em cima de um símbolo (tomada, interruptor, luz, QDC ou bloco personalizado).');
+      } else {
+        const exact = { x: onSymbol.x, y: onSymbol.y };
+        if(!ductChainStart){
+          ductChainStart = exact;
+        } else {
+          if(dist(ductChainStart, exact) > 0.05){
+            ducts.push({ id: nextId++, x1: ductChainStart.x, y1: ductChainStart.y, x2: exact.x, y2: exact.y });
+            cableResult = null;
+            materialResult = null;
+          }
+          ductChainStart = exact;
+        }
+      }
+    } else if(tool==='select'){
+      const nearSymbol = findSymbolNear(world, 0.13*symbolScale);
+      const nearWall = findWallNear(world, 0.15);
+      const nearDuct = findDuctNear(world, 0.12);
+      if(nearSymbol){
+        selected = {kind:'symbol', id: nearSymbol.id};
+      } else if(nearDuct){
+        selected = {kind:'duct', id: nearDuct.id};
+        const tags = cableResult ? (cableResult.cableTags[nearDuct.id]||[]) : [];
+        if(tags.length>0) showToast('Cabos neste trecho: '+tags.map(t=>t.cabo).join(', '));
+      } else if(nearWall){
+        selected = {kind:'wall', id: nearWall.wall.id};
+      } else {
+        const faces = computeRoomFaces();
+        let hitRoom = null;
+        for(const r of rooms){
+          const face = findFaceContaining(r.seed, faces);
+          if(face && pointInPoly(world, face.rawPoly, face.vertices)) { hitRoom = r; break; }
+        }
+        selected = hitRoom ? {kind:'room', id: hitRoom.id} : null;
+      }
+    }
+    draw();
+    updateStats();
+  });
+
+  function findDuctNear(worldPt, tolM){
+    function distToSeg(p,a,b){
+      const dx=b.x-a.x, dy=b.y-a.y, len2=dx*dx+dy*dy || 1e-9;
+      let t=((p.x-a.x)*dx+(p.y-a.y)*dy)/len2;
+      t=Math.max(0,Math.min(1,t));
+      const proj={x:a.x+dx*t, y:a.y+dy*t};
+      return Math.hypot(p.x-proj.x, p.y-proj.y);
+    }
+    let best=null, bestD=Infinity;
+    for(const d of ducts){
+      const dd = distToSeg(worldPt, {x:d.x1,y:d.y1}, {x:d.x2,y:d.y2});
+      if(dd<bestD){ bestD=dd; best=d; }
+    }
+    return (best && bestD<=tolM) ? best : null;
+  }
+
+  function showToast(msg){
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.style.display = 'block';
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(()=>{ el.style.display='none'; }, 3600);
+  }
+
+  function removeOpenModals(){
+    document.querySelectorAll('.mini-modal, .rules-modal').forEach(m=>m.remove());
+  }
+
+  function openRoomModal(screenX, screenY, worldPt){
+    removeOpenModals();
+    const modal = document.createElement('div');
+    modal.className = 'mini-modal inline';
+    const rect = canvas.getBoundingClientRect();
+    modal.style.left = (screenX - rect.left + 10) + 'px';
+    modal.style.top = (screenY - rect.top + 10) + 'px';
+    modal.innerHTML = `
+      <input type="text" placeholder="Nome do cômodo (ex: Quarto 1)" maxlength="30" />
+      <button class="ok">OK</button>
+      <button class="cancel">Cancelar</button>
+    `;
+    canvas.parentElement.appendChild(modal);
+    const input = modal.querySelector('input');
+    input.focus();
+    function confirmIt(){
+      const name = input.value.trim();
+      if(name){ rooms.push({ id: nextId++, name, seed: worldPt }); draw(); updateStats(); }
+      modal.remove();
+    }
+    modal.querySelector('.ok').addEventListener('click', confirmIt);
+    modal.querySelector('.cancel').addEventListener('click', ()=>modal.remove());
+    input.addEventListener('keydown', (ev)=>{
+      if(ev.key==='Enter') confirmIt();
+      if(ev.key==='Escape') modal.remove();
+    });
+  }
+
+  function renderRulesList(container){
+    container.innerHTML = '';
+    ductRules.forEach(r=>{
+      const row = document.createElement('div');
+      row.className = 'rule-row';
+      const checkboxId = 'rulechk'+r.id;
+      row.innerHTML = `
+        <input type="checkbox" id="${checkboxId}" ${r.ativo?'checked':''}>
+        <label for="${checkboxId}">${r.label}</label>
+        <button data-rid="${r.id}" class="rule-del" title="Remover regra" style="padding:3px 7px;">✕</button>
+      `;
+      row.querySelector('input').addEventListener('change', (e)=>{ r.ativo = e.target.checked; });
+      row.querySelector('.rule-del').addEventListener('click', ()=>{
+        ductRules = ductRules.filter(x=>x.id!==r.id);
+        renderRulesList(container);
+      });
+      container.appendChild(row);
+    });
+  }
+
+  function openRulesModal(screenX, screenY){
+    removeOpenModals();
+    const modal = document.createElement('div');
+    modal.className = 'rules-modal';
+    const rect = canvas.getBoundingClientRect();
+    modal.style.left = Math.min(screenX-rect.left, canvas.width-360) + 'px';
+    modal.style.top = (screenY-rect.top) + 'px';
+    modal.innerHTML = `
+      <h3>Regras de distribuição por camada</h3>
+      <div style="font-size:11px;color:var(--muted);">Marque/desmarque regras, ou crie as suas. A primeira regra ativa que combinar com o dispositivo decide a camada; sem regra aplicável, cai no piso.</div>
+      <div id="rulesListContainer"></div>
+      <div class="new-rule-form">
+        <select id="newRuleTipo">
+          <option value="tomada">Tomada</option>
+          <option value="interruptor">Interruptor</option>
+          <option value="luz">Luz</option>
+        </select>
+        <select id="newRuleAltura">
+          <option value="">Qualquer altura</option>
+          <option value="baixa">Baixa</option>
+          <option value="media">Média</option>
+          <option value="alta">Alta</option>
+        </select>
+        <select id="newRuleCamada">
+          <option value="teto">Teto</option>
+          <option value="piso">Piso</option>
+          <option value="parede">Parede</option>
+        </select>
+        <button id="btnAddRule" class="ok" style="white-space:nowrap;">+ Regra</button>
+      </div>
+      <div class="buttons" style="margin-top:4px;">
+        <button class="cancel">Fechar</button>
+        <button class="ok" id="btnGenerateAuto">Gerar automaticamente</button>
+      </div>
+    `;
+    canvas.parentElement.appendChild(modal);
+    renderRulesList(modal.querySelector('#rulesListContainer'));
+
+    modal.querySelector('#btnAddRule').addEventListener('click', ()=>{
+      const tipo = modal.querySelector('#newRuleTipo').value;
+      const altura = modal.querySelector('#newRuleAltura').value || null;
+      const camada = modal.querySelector('#newRuleCamada').value;
+      const label = `${tipo}${altura?' ('+altura+')':''} → ${camada}`;
+      ductRules.push({ id: nextRuleId++, tipo, altura, camada, ativo:true, label });
+      renderRulesList(modal.querySelector('#rulesListContainer'));
+    });
+    modal.querySelector('.cancel').addEventListener('click', ()=>modal.remove());
+    modal.querySelector('#btnGenerateAuto').addEventListener('click', ()=>{
+      modal.remove();
+      generateAutoDucts();
+    });
+  }
+
+  document.getElementById('btnAutoRules').addEventListener('click', (e)=>{
+    openRulesModal(e.clientX, e.clientY);
+  });
+
+  function openAttrModal(screenX, screenY, blockDef, worldPt){
+    removeOpenModals();
+    const modal = document.createElement('div');
+    modal.className = 'mini-modal';
+    const rect = canvas.getBoundingClientRect();
+    modal.style.left = (screenX - rect.left + 10) + 'px';
+    modal.style.top = (screenY - rect.top + 10) + 'px';
+
+    const fieldsHtml = blockDef.properties.map(p=>propFieldHtml(p, p.default)).join('');
+    modal.innerHTML = fieldsHtml + `
+      <div class="buttons">
+        <button class="cancel">Cancelar</button>
+        <button class="ok">OK</button>
+      </div>`;
+    canvas.parentElement.appendChild(modal);
+    const firstInput = modal.querySelector('input,select');
+    if(firstInput) firstInput.focus();
+
+    function confirmIt(){
+      const props = {};
+      blockDef.properties.forEach(p=>{
+        const el = modal.querySelector(`[data-propkey="${p.key}"]`);
+        let v = el.value;
+        if(p.type==='number') v = v===''? null : +v;
+        if(p.type==='text') v = v.trim() || p.default;
+        props[p.key] = v;
+      });
+      symbols.push({ id: nextId++, blockId: blockDef.id, type: blockDef.tipo, x: worldPt.x, y: worldPt.y, props });
+      cableResult = null;
+      materialResult = null;
+      modal.remove();
+      draw(); updateStats();
+    }
+    modal.querySelector('.ok').addEventListener('click', confirmIt);
+    modal.querySelector('.cancel').addEventListener('click', ()=>modal.remove());
+    modal.addEventListener('keydown', (ev)=>{
+      if(ev.key==='Enter') confirmIt();
+      if(ev.key==='Escape') modal.remove();
+    });
+  }
+
+  canvas.addEventListener('contextmenu', (e)=>{
+    e.preventDefault();
+    chainStart = null;
+    ductChainStart = null;
+    draw();
+    updateStats();
+  });
+
+  window.addEventListener('keydown', (e)=>{
+    const activeTag = document.activeElement && document.activeElement.tagName;
+    const isEditingField = activeTag==='INPUT' || activeTag==='SELECT' || activeTag==='TEXTAREA';
+    if(e.key === 'Escape'){ chainStart = null; ductChainStart = null; removeOpenModals(); draw(); updateStats(); }
+    if((e.key === 'Delete' || e.key === 'Backspace') && !isEditingField){
+      if(!document.querySelector('.mini-modal')) deleteSelected();
+    }
+  });
+
+  document.querySelectorAll('.tool-btn[data-tool]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      tool = btn.dataset.tool;
+      activeBlockId = null;
+      chainStart = null;
+      ductChainStart = null;
+      selected = null;
+      hoverDuct = null;
+      removeOpenModals();
+      renderBlockLibrary();
+      const hints = {
+        wall: 'Clique para começar a desenhar uma parede. Cada clique adiciona um trecho. Clique direito ou Esc encerra a corrente.',
+        door: 'Clique sobre uma parede existente para inserir uma porta (0,80 m).',
+        window: 'Clique sobre uma parede existente para inserir uma janela (1,20 m).',
+        room: 'Clique no meio de um cômodo já fechado por paredes para nomeá-lo e calcular área e perímetro.',
+        eletroduto: 'Clique exatamente em cima de um símbolo pra começar, depois no próximo símbolo (o círculo laranja mostra onde vai ancorar). Fora de um símbolo, não registra. Depois use "Distribuir cabos".',
+        select: 'Clique numa parede, bloco, eletroduto ou cômodo pra selecionar — as propriedades aparecem no painel da direita. Delete remove.'
+      };
+      hintBox.textContent = hints[tool] || '';
+      draw(); updateStats();
+    });
+  });
+
+  function deleteSelected(){
+    if(!selected) return;
+    if(selected.kind==='wall'){
+      walls = walls.filter(w=>w.id!==selected.id);
+      openings = openings.filter(o=>o.wallId!==selected.id);
+    } else if(selected.kind==='room'){
+      rooms = rooms.filter(r=>r.id!==selected.id);
+    } else if(selected.kind==='symbol'){
+      symbols = symbols.filter(s=>s.id!==selected.id);
+      cableResult = null;
+      materialResult = null;
+    } else if(selected.kind==='duct'){
+      ducts = ducts.filter(d=>d.id!==selected.id);
+      cableResult = null;
+      materialResult = null;
+    }
+    selected = null;
+    draw(); updateStats();
+  }
+  document.getElementById('btnDelete').addEventListener('click', deleteSelected);
+
+  document.getElementById('btnClear').addEventListener('click', ()=>{
+    if(confirm('Apagar toda a planta atual?')){
+      walls = []; openings = []; rooms = []; symbols = []; ducts = [];
+      cableResult = null; materialResult = null; selected = null; chainStart = null; ductChainStart = null;
+      draw(); updateStats();
+    }
+  });
+
+  function buildComodosPayload(){
+    const faces = computeRoomFaces();
+    return rooms.map(r=>{
+      const face = findFaceContaining(r.seed, faces);
+      return {
+        id: r.id, nome: r.name,
+        area_m2: face ? +face.area.toFixed(2) : null,
+        perimetro_m: face ? +face.perimeter.toFixed(2) : null,
+        fechado: !!face
+      };
+    });
+  }
+
+  document.getElementById('btnSendRooms').addEventListener('click', ()=>{
+    const comodos = buildComodosPayload();
+    const fechados = comodos.filter(c=>c.fechado);
+    if(fechados.length===0){
+      showToast('Nenhum cômodo fechado ainda — desenhe as paredes ao redor e use "Nomear cômodo" antes de enviar.');
+      return;
+    }
+    window.parent.postMessage({ type:'eletrodim:floorplan-rooms', comodos: fechados }, window.location.origin==='null' ? '*' : window.location.origin);
+    showToast(`${fechados.length} cômodo(s) enviado(s) para o projeto.`);
+  });
+
+  document.getElementById('btnExport').addEventListener('click', ()=>{
+    const data = {
+      unidade: 'metros',
+      blocos: blockLibrary.map(b=>({
+        id: b.id, nome: b.nome, tipo: b.tipo, builtin: !!b.builtin, cor: b.cor, forma: b.shape, properties: b.properties
+      })),
+      paredes: walls.map(w=>({
+        id: w.id,
+        inicio: { x: +w.x1.toFixed(2), y: +w.y1.toFixed(2) },
+        fim: { x: +w.x2.toFixed(2), y: +w.y2.toFixed(2) },
+        comprimento_m: +wallLenM(w).toFixed(2)
+      })),
+      aberturas: openings.map(o=>({
+        id: o.id, parede_id: o.wallId,
+        tipo: o.type==='door'?'porta':'janela',
+        posicao_relativa: +o.t.toFixed(3), largura_m: o.widthM
+      })),
+      comodos: buildComodosPayload(),
+      simbolos: symbols.map(s=>{
+        const blockDef = findBlockDef(s.blockId);
+        return {
+          id: s.id,
+          tipo: s.type,
+          bloco_id: s.blockId,
+          bloco_nome: blockDef ? blockDef.nome : null,
+          posicao: { x:+s.x.toFixed(2), y:+s.y.toFixed(2) },
+          props: s.props
+        };
+      }),
+      eletrodutos: ducts.map(d=>({
+        id: d.id,
+        camada: d.camada || 'manual',
+        inicio: { x:+d.x1.toFixed(2), y:+d.y1.toFixed(2) },
+        fim: { x:+d.x2.toFixed(2), y:+d.y2.toFixed(2) },
+        comprimento_m: +ductLenM(d).toFixed(2),
+        cabos: cableResult ? (cableResult.cableTags[d.id]||[]).map(t=>t.cabo) : null
+      })),
+      roteamento: cableResult ? cableResult.report : null,
+      materiais: materialResult ? {
+        por_circuito: materialResult.byCircuit,
+        total: materialResult.totals
+      } : null
+    };
+    const box = document.getElementById('jsonOut');
+    box.value = JSON.stringify(data, null, 2);
+    box.classList.add('show');
+  });
+
+  renderBlockLibrary();
+  resize();
+  updateStats();
+})();
+</script>
+</body>
+</html>
