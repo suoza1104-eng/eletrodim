@@ -1246,6 +1246,8 @@ class ProjectWizard extends Component
             // Effective TUG from Step 2
             $tugVa  = 0;
             $tugQty = 0;
+            $qty600 = 0;
+            $qty100 = 0;
             if (!empty($room['use_manual_tug_qty'])) {
                 $qty600 = (($room['tug_qty_600_manual'] ?? '') !== '') ? (int)$room['tug_qty_600_manual'] : (int)($room['tug_qty_600_calculated'] ?? 0);
                 $qty100 = (($room['tug_qty_100_manual'] ?? '') !== '') ? (int)$room['tug_qty_100_manual'] : (int)($room['tug_qty_100_calculated'] ?? 0);
@@ -1254,6 +1256,8 @@ class ProjectWizard extends Component
             } elseif (($room['tug_va_calculated'] ?? null) !== null) {
                 $tugVa  = (int)$room['tug_va_calculated'];
                 $tugQty = (int)($room['tug_qty_calculated'] ?? 0);
+                $qty600 = (int)($room['tug_qty_600_calculated'] ?? 0);
+                $qty100 = (int)($room['tug_qty_100_calculated'] ?? 0);
             }
             $tugUnitVa = ($tugQty > 0 && $tugVa > 0) ? (int)round($tugVa / $tugQty) : 0;
 
@@ -1304,7 +1308,13 @@ class ProjectWizard extends Component
 
             // TUG
             if ($tugVa > 0 && $tugQty > 0) {
-                $tugDesc  = "TUG ({$tugQty}× {$tugUnitVa}VA)";
+                $parts = [];
+                if ($qty600 > 0) $parts[] = "{$qty600}× 600VA";
+                if ($qty100 > 0) $parts[] = "{$qty100}× 100VA";
+                if (empty($parts)) {
+                    $parts[] = "{$tugQty}× {$tugUnitVa}VA";
+                }
+                $tugDesc  = "TUG (" . implode(' + ', $parts) . ")";
                 $existing = $existingAutoLoads["{$rid}_TUG"] ?? null;
                 $load = $existing ? array_merge($existing, [
                     'room_id'     => $roomId,
