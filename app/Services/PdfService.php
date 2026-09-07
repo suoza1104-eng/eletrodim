@@ -45,6 +45,7 @@ class PdfService
             'report_type' => 'pdf',
             'file_path' => $path,
             'generated_at' => now(),
+            'created_at' => now(),
         ]);
 
         return $path;
@@ -68,6 +69,7 @@ class PdfService
             'report_type' => 'share',
             'share_token' => $token,
             'generated_at' => now(),
+            'created_at' => now(),
         ]);
 
         $project->update(['share_token' => $token]);

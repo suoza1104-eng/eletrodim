@@ -41,6 +41,7 @@ class AuthController extends Controller
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
                 'status'     => 'success',
+                'created_at' => now(),
             ]);
 
             $isFirstLogin = $user->first_login_at === null;
@@ -81,7 +82,8 @@ class AuthController extends Controller
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
             'status'     => 'failed',
-            'email_attempted' => $request->input('email'),
+            'email'      => $request->input('email'),
+            'created_at' => now(),
         ]);
 
         return back()->withErrors([
