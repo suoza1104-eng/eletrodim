@@ -1780,18 +1780,27 @@ class ProjectWizard extends Component
                 }
             }
 
-            if (count($createdLightingCircuits) < $targetMinLighting && count($lightingIndices) > count($createdLightingCircuits)) {
-                $expandedCircuits = [];
-                foreach ($createdLightingCircuits as $circ) {
-                    if (count($circ) > 1 && (count($expandedCircuits) + count($circ)) <= $targetMinLighting) {
-                        foreach ($circ as $li) {
-                            $expandedCircuits[] = [$li];
-                        }
-                    } else {
-                        $expandedCircuits[] = $circ;
+            while (count($createdLightingCircuits) < $targetMinLighting) {
+                $maxLoadCount = 1;
+                $targetIdx = -1;
+                foreach ($createdLightingCircuits as $idx => $circ) {
+                    if (count($circ) > $maxLoadCount) {
+                        $maxLoadCount = count($circ);
+                        $targetIdx = $idx;
                     }
                 }
-                $createdLightingCircuits = $expandedCircuits;
+
+                if ($targetIdx === -1) {
+                    break;
+                }
+
+                $circToSplit = $createdLightingCircuits[$targetIdx];
+                $half = (int) ceil(count($circToSplit) / 2);
+                $part1 = array_slice($circToSplit, 0, $half);
+                $part2 = array_slice($circToSplit, $half);
+
+                $createdLightingCircuits[$targetIdx] = $part1;
+                $createdLightingCircuits[] = $part2;
             }
 
             foreach ($createdLightingCircuits as $circ) {
@@ -1844,18 +1853,27 @@ class ProjectWizard extends Component
                 }
             }
 
-            if (count($createdTugCircuits) < $targetMinTug && count($tugIndices) > count($createdTugCircuits)) {
-                $expandedCircuits = [];
-                foreach ($createdTugCircuits as $circ) {
-                    if (count($circ) > 1 && (count($expandedCircuits) + count($circ)) <= $targetMinTug) {
-                        foreach ($circ as $li) {
-                            $expandedCircuits[] = [$li];
-                        }
-                    } else {
-                        $expandedCircuits[] = $circ;
+            while (count($createdTugCircuits) < $targetMinTug) {
+                $maxLoadCount = 1;
+                $targetIdx = -1;
+                foreach ($createdTugCircuits as $idx => $circ) {
+                    if (count($circ) > $maxLoadCount) {
+                        $maxLoadCount = count($circ);
+                        $targetIdx = $idx;
                     }
                 }
-                $createdTugCircuits = $expandedCircuits;
+
+                if ($targetIdx === -1) {
+                    break;
+                }
+
+                $circToSplit = $createdTugCircuits[$targetIdx];
+                $half = (int) ceil(count($circToSplit) / 2);
+                $part1 = array_slice($circToSplit, 0, $half);
+                $part2 = array_slice($circToSplit, $half);
+
+                $createdTugCircuits[$targetIdx] = $part1;
+                $createdTugCircuits[] = $part2;
             }
 
             foreach ($createdTugCircuits as $circ) {
