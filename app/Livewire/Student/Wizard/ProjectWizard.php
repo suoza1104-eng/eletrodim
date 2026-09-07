@@ -1464,6 +1464,10 @@ class ProjectWizard extends Component
             $tB = $typeOrder[$b['load_type'] ?? ''] ?? 99;
             if ($tA !== $tB) return $tA <=> $tB;
 
+            $vA = (int)($a['voltage_v'] ?? 127);
+            $vB = (int)($b['voltage_v'] ?? 127);
+            if ($vA !== $vB) return $vA <=> $vB;
+
             $circA = (int)($a['circuit_number'] ?? 0);
             $circB = (int)($b['circuit_number'] ?? 0);
             if ($circA > 0 && $circB > 0 && $circA !== $circB) return $circA <=> $circB;
@@ -1850,6 +1854,7 @@ class ProjectWizard extends Component
         $this->showDistributeModal = false;
 
         foreach (array_keys($this->loads) as $li) {
+            $this->loads[$li]['load_type'] = mb_strtoupper(trim((string)($this->loads[$li]['load_type'] ?? 'ILUMINAÇÃO')));
             $this->loads[$li]['circuit_number'] = null;
         }
 
@@ -1871,6 +1876,17 @@ class ProjectWizard extends Component
             return $roomFloors[$rid] ?? 1;
         };
 
+        $sortGroups = function (array &$groups) {
+            uksort($groups, function ($keyA, $keyB) {
+                [$vA, $phA, $flA] = array_map('intval', explode('_', $keyA));
+                [$vB, $phB, $flB] = array_map('intval', explode('_', $keyB));
+
+                if ($vA !== $vB) return $vA <=> $vB;
+                if ($phA !== $phB) return $phA <=> $phB;
+                return $flA <=> $flB;
+            });
+        };
+
         // 1. ILUMINAÇÃO (Sequência 1 em diante)
         $lightingIndices = [];
         foreach ($this->loads as $li => $load) {
@@ -1883,9 +1899,11 @@ class ProjectWizard extends Component
             $lightingGroups = [];
             foreach ($lightingIndices as $li) {
                 $l = $this->loads[$li];
-                $key = ($l['voltage_v'] ?? 127) . '_' . ($l['phases'] ?? 1) . '_' . $getFloor($l);
+                $key = ((int)($l['voltage_v'] ?? 127)) . '_' . ((int)($l['phases'] ?? 1)) . '_' . $getFloor($l);
                 $lightingGroups[$key][] = $li;
             }
+
+            $sortGroups($lightingGroups);
 
             $createdLightingCircuits = [];
             foreach ($lightingGroups as $group) {
@@ -1956,9 +1974,11 @@ class ProjectWizard extends Component
             $tugGroups = [];
             foreach ($tugIndices as $li) {
                 $l = $this->loads[$li];
-                $key = ($l['voltage_v'] ?? 127) . '_' . ($l['phases'] ?? 1) . '_' . $getFloor($l);
+                $key = ((int)($l['voltage_v'] ?? 127)) . '_' . ((int)($l['phases'] ?? 1)) . '_' . $getFloor($l);
                 $tugGroups[$key][] = $li;
             }
+
+            $sortGroups($tugGroups);
 
             $createdTugCircuits = [];
             foreach ($tugGroups as $group) {
@@ -2017,12 +2037,44 @@ class ProjectWizard extends Component
             }
         }
 
-        // 3. TUE (Sequência final - cada TUE em circuito exclusivo)
-        foreach (array_keys($this->loads) as $li) {
-            if (($this->loads[$li]['load_type'] ?? '') === 'TUE') {
+        // 3. TUE (Sequência final - cada TUE em circuito exclusivo, 127V primeiro e 220V depois)
+        $tueIndices = [];
+        foreach ($this->loads as $li => $load) {
+            if (($load['load_type'] ?? '') === 'TUE') {
+                $tueIndices[] = $li;
+            }
+        }
+
+        if (!empty($tueIndices)) {
+            usort($tueIndices, function($a, $b) use ($getFloor) {
+                $vA = (int)($this->loads[$a]['voltage_v'] ?? 127);
+                $vB = (int)($this->loads[$b]['voltage_v'] ?? 127);
+                if ($vA !== $vB) return $vA <=> $vB;
+
+                $phA = (int)($this->loads[$a]['phases'] ?? 1);
+                $phB = (int)($this->loads[$b]['phases'] ?? 1);
+                if ($phA !== $phB) return $phA <=> $phB;
+
+                $flA = $getFloor($this->loads[$a]);
+                $flB = $getFloor($this->loads[$b]);
+                if ($flA !== $flB) return $flA <=> $flB;
+
+                return (int)($this->loads[$a]['sort_order'] ?? 0) <=> (int)($this->loads[$b]['sort_order'] ?? 0);
+            });
+
+            foreach ($tueIndices as $li) {
                 $this->loads[$li]['circuit_number'] = $nextCircuit++;
             }
         }
+
+        // Leftover loads fallback safety
+        foreach (array_keys($this->loads) as $li) {
+            if (($this->loads[$li]['circuit_number'] ?? null) === null || (int)$this->loads[$li]['circuit_number'] <= 0) {
+                $this->loads[$li]['circuit_number'] = $nextCircuit++;
+            }
+        }
+
+        $this->sortLoadsBySequence();
 
         $this->successMessage = 'Circuitos distribuídos automaticamente (Iluminação → TUG → TUE).';
         $this->dispatch('toast', type: 'success', message: 'Circuitos atribuídos automaticamente!');
