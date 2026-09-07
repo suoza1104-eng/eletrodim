@@ -1018,16 +1018,20 @@ class ProjectWizard extends Component
                 ->orderBy('sort_order')
                 ->get();
 
+            $this->loads = [];
             foreach ($rows as $row) {
                 $roomIndex = 0;
+                $roomLabel = '';
                 foreach ($this->rooms as $ri => $room) {
                     if (($room['id'] ?? null) == $row->room_id) {
                         $roomIndex = $ri;
+                        $roomLabel = trim(($room['room_type'] ?? '') . ': ' . ($room['description'] ?? ''), ': ');
                         break;
                     }
                 }
                 $desc = $row->description ?? '';
                 if ($row->load_type === 'TUG' && (bool)$row->is_auto) {
+                    $room = $this->rooms[$roomIndex] ?? [];
                     if (empty($desc) || str_contains($desc, '400VA') || str_contains($desc, '350VA') || preg_match('/^TUG\s*\(\d+[\s×]*\d+VA\)$/i', $desc)) {
                         $desc = $this->formatTugDescription($room, (int)$row->quantity, (int)$row->power_va);
                     }
@@ -1063,7 +1067,9 @@ class ProjectWizard extends Component
                     'split_original_description' => isset($row->split_original_description) && $row->split_original_description !== null ? (string)$row->split_original_description : null,
                 ];
             }
-        } catch (\Throwable) {}
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error loading loads from DB: ' . $e->getMessage());
+        }
     }
 
     private function loadCircuitOverrides(): void
@@ -1312,6 +1318,59 @@ class ProjectWizard extends Component
         // Separate existing TUEs (manual) and auto loads
         $existingTues     = [];
         $existingAutoLoads = [];
+
+        if (empty($this->loads) && $this->projectId) {
+            try {
+                $dbTues = DB::table('project_loads')
+                    ->where('project_id', $this->projectId)
+                    ->where(function($q) {
+                        $q->where('is_auto', 0)
+                          ->orWhere('load_type', 'TUE');
+                    })
+                    ->get();
+                foreach ($dbTues as $tRow) {
+                    $rid = (string)$tRow->room_id;
+                    $roomIndex = 0;
+                    $roomLabel = '';
+                    foreach ($this->rooms as $ri => $room) {
+                        if (($room['id'] ?? null) == $tRow->room_id) {
+                            $roomIndex = $ri;
+                            $roomLabel = trim(($room['room_type'] ?? '') . ': ' . ($room['description'] ?? ''), ': ');
+                            break;
+                        }
+                    }
+                    $existingTues[$rid][] = [
+                        'id'                  => $tRow->id,
+                        'room_id'             => $tRow->room_id,
+                        'room_index'          => $roomIndex,
+                        'room_label'          => $roomLabel,
+                        'load_type'           => $tRow->load_type ?: 'TUE',
+                        'description'         => $tRow->description ?? '',
+                        'quantity'            => (int)($tRow->quantity ?? 1),
+                        'power_va'            => (int)($tRow->power_va ?? 0),
+                        'unit_va'             => (int)($tRow->unit_va ?? 0),
+                        'is_auto'             => false,
+                        'sort_order'          => (int)($tRow->sort_order ?? 10),
+                        'phases'              => (int)($tRow->phases ?? $this->defaultPhases),
+                        'voltage_v'           => (int)($tRow->voltage_v ?? $this->defaultVoltage),
+                        'installation_method' => $tRow->installation_method ?? $this->defaultInstallationMethod,
+                        'temperature_c'       => (int)($tRow->temperature_c ?? $this->defaultTemperatureC),
+                        'grouped_circuits'    => (int)($tRow->grouped_circuits ?? 1),
+                        'fp'                  => (float)($tRow->fp ?? 1.0),
+                        'power_w'             => $tRow->power_w !== null ? (float)$tRow->power_w : null,
+                        'current_a'           => $tRow->current_a !== null ? (float)$tRow->current_a : null,
+                        'grouping_factor'     => $tRow->grouping_factor !== null ? (float)$tRow->grouping_factor : null,
+                        'temperature_factor'  => $tRow->temperature_factor !== null ? (float)$tRow->temperature_factor : null,
+                        'corrected_current_a' => $tRow->corrected_current_a !== null ? (float)$tRow->corrected_current_a : null,
+                        'use_manual_va'              => (bool)($tRow->use_manual_va ?? false),
+                        'manual_va'                  => $tRow->manual_va !== null ? (string)$tRow->manual_va : '',
+                        'circuit_number'             => isset($tRow->circuit_number) && $tRow->circuit_number !== null ? (int)$tRow->circuit_number : null,
+                        'split_original_va'          => isset($tRow->split_original_va) && $tRow->split_original_va !== null ? (int)$tRow->split_original_va : null,
+                        'split_original_description' => isset($tRow->split_original_description) && $tRow->split_original_description !== null ? (string)$tRow->split_original_description : null,
+                    ];
+                }
+            } catch (\Throwable) {}
+        }
 
         foreach ($this->loads as $load) {
             $rid = (string)($load['room_id'] ?? '');
