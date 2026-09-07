@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProjectIdr extends Model
 {
+    protected $table = 'project_idr';
+
     protected $fillable = [
         'project_id',
         'idr_number',

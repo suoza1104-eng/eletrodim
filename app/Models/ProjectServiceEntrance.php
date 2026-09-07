@@ -9,24 +9,27 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProjectServiceEntrance extends Model
 {
+    protected $table = 'project_service_entrance';
+
     protected $fillable = [
         'project_id',
-        'supply_voltage',
+        'installed_load_kw',
+        'probable_demand_kva',
         'phases',
-        'total_demand_va',
-        'total_demand_w',
-        'total_demand_kva',
-        'total_demand_kw',
-        'power_factor',
-        'entry_current_a',
-        'entry_conductor_section_mm2',
-        'entry_conductor_qty',
-        'neutral_conductor_section_mm2',
-        'pe_conductor_section_mm2',
-        'entry_breaker_a',
-        'entry_conduit_diameter_mm',
-        'entry_conduit_type',
-        'short_circuit_current_ka',
+        'pole_position',
+        'supply_type',
+        'supply_range',
+        'wires',
+        'breaker_a',
+        'phase_conductor_mm2',
+        'protection_conductor_mm2',
+        'pvc_conduit_mm',
+        'steel_conduit_mm',
+        'grounding_conductor',
+        'grounding_electrodes',
+        'concrete_pole_type',
+        'steel_pole_type',
+        'pontalete_type',
         'notes',
     ];
 
