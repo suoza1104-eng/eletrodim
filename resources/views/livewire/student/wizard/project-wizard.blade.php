@@ -1,3 +1,4 @@
+<div class="max-w-6xl mx-auto" x-data="{}">
 <div class="max-w-6xl mx-auto" x-data="{
         toastShow: false,
         toastType: 'success',
@@ -173,6 +174,17 @@
                     <input type="text" wire:model="state" placeholder="SP" maxlength="2"
                         class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 uppercase focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition">
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Número de Andares da Residência</label>
+                    <select wire:model="floorsCount"
+                        class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition">
+                        <option value="1">1 Andar (Térreo / Único)</option>
+                        <option value="2">2 Andares (Térreo + 1º Andar)</option>
+                        <option value="3">3 Andares (Térreo + 2 Andares)</option>
+                        <option value="4">4 Andares</option>
+                        <option value="5">5 Andares</option>
+                    </select>
+                </div>
             </div>
             <div class="mt-5">
                 <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Observações</label>
@@ -246,7 +258,22 @@
 
                 <div class="p-4">
                     {{-- Input fields --}}
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Andar / Localização <span class="text-red-500">*</span></label>
+                            <select wire:model="rooms.{{ $i }}.floor_number"
+                                class="w-full border rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow border-gray-300 dark:border-gray-600">
+                                @for($f = 1; $f <= max(1, (int)$floorsCount); $f++)
+                                    <option value="{{ $f }}">
+                                        @if($floorsCount > 1)
+                                            {{ $f }}º Andar {{ $f === 1 ? '(Térreo)' : '' }}
+                                        @else
+                                            1º Andar (Térreo / Único)
+                                        @endif
+                                    </option>
+                                @endfor
+                            </select>
+                        </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Tipo de Cômodo <span class="text-red-500">*</span></label>
                             <select wire:model="rooms.{{ $i }}.room_type"
@@ -780,16 +807,9 @@
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Agrupe as cargas em circuitos. Cada carga precisa de um número de circuito.</p>
                 </div>
                 @if(!empty($loads))
-                <button wire:click="autoAssignCircuits"
-                    wire:loading.attr="disabled"
-                    wire:target="autoAssignCircuits"
-                    class="inline-flex items-center gap-2 bg-brand-yellow hover:bg-brand-yellow-hover text-brand-black font-bold text-sm px-4 py-2.5 rounded-lg transition disabled:opacity-60">
-                    <span wire:loading.remove wire:target="autoAssignCircuits">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-                    </span>
-                    <span wire:loading wire:target="autoAssignCircuits">
-                        <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                    </span>
+                <button wire:click="openDistributeModal"
+                    class="inline-flex items-center gap-2 bg-brand-yellow hover:bg-brand-yellow-hover text-brand-black font-bold text-sm px-4 py-2.5 rounded-lg transition shadow-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
                     Distribuir automaticamente
                 </button>
                 @endif
@@ -1889,5 +1909,67 @@
         </div>
 
     </div>{{-- fim card --}}
+
+    {{-- ══════════════════════════════════════════════════════════
+         MODAL DE CONFIGURAÇÃO DA DISTRIBUIÇÃO AUTOMÁTICA DE CIRCUITOS
+    ══════════════════════════════════════════════════════════ --}}
+    @if($showDistributeModal)
+    <div class="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 max-w-md w-full overflow-hidden transform transition-all" @click.away="$wire.closeDistributeModal()">
+            <div class="bg-brand-yellow px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-2 text-brand-black font-bold text-base">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    Configurar Distribuição Automática
+                </div>
+                <button wire:click="closeDistributeModal" class="text-brand-black/70 hover:text-brand-black transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                    O sistema agrupará as cargas respeitando a localização por andar e os limites de corrente, na seguinte sequência estrita: 
+                    <span class="font-bold text-blue-600 dark:text-blue-400">1. Iluminação (C1...)</span> → 
+                    <span class="font-bold text-green-600 dark:text-green-400">2. Tomadas TUG</span> → 
+                    <span class="font-bold text-orange-600 dark:text-orange-400">3. TUEs</span>.
+                </p>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-200 mb-1">
+                        Número Mínimo de Circuitos de Iluminação
+                    </label>
+                    <input type="number" min="1" max="20" wire:model="autoDistributeMinLighting"
+                        class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-center font-bold text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
+                    <p class="text-[11px] text-gray-400 mt-0.5">Quantidade mínima de circuitos que o sistema deve gerar para Iluminação.</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-200 mb-1">
+                        Número Mínimo de Circuitos de Tomadas TUG
+                    </label>
+                    <input type="number" min="1" max="30" wire:model="autoDistributeMinTug"
+                        class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-center font-bold text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
+                    <p class="text-[11px] text-gray-400 mt-0.5">Quantidade mínima de circuitos que o sistema deve gerar para Tomadas TUG.</p>
+                </div>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-900/50 px-6 py-3.5 flex items-center justify-end gap-3 border-t border-gray-200 dark:border-gray-700">
+                <button wire:click="closeDistributeModal" class="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition">
+                    Cancelar
+                </button>
+                <button wire:click="autoAssignCircuits"
+                    wire:loading.attr="disabled"
+                    wire:target="autoAssignCircuits"
+                    class="bg-brand-yellow hover:bg-brand-yellow-hover text-brand-black font-bold text-xs px-5 py-2.5 rounded-lg transition shadow-sm flex items-center gap-2">
+                    <span wire:loading.remove wire:target="autoAssignCircuits">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    </span>
+                    <span wire:loading wire:target="autoAssignCircuits">
+                        <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    </span>
+                    Distribuir Circuitos
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
 
 </div>{{-- fim componente --}}

@@ -17,6 +17,7 @@ class ProjectRoom extends Model
         'area_m2',
         'perimeter_m',
         'sort_order',
+        'floor_number',
         'lighting_va_calculated',
         'lighting_va_manual',
         'use_manual_lighting',

@@ -73,6 +73,12 @@ class ProjectWizard extends Component
     public string $city          = '';
     public string $state         = '';
     public string $observations  = '';
+    public int    $floorsCount   = 1;
+
+    // Step 4 — auto distribution modal
+    public bool $showDistributeModal          = false;
+    public int  $autoDistributeMinLighting    = 1;
+    public int  $autoDistributeMinTug         = 1;
 
     // Step 2 — project defaults
     public int    $defaultVoltage             = 127;
@@ -124,6 +130,7 @@ class ProjectWizard extends Component
     {
         foreach ($this->rooms as &$room) {
             // Step 2 — min load fields
+            $room['floor_number']                ??= 1;
             $room['lighting_va_calculated']      ??= null;
             $room['lighting_rule_description']   ??= '';
             $room['tug_rule_group']              ??= '';
@@ -211,6 +218,7 @@ class ProjectWizard extends Component
             $this->city         = $project->city         ?? '';
             $this->state        = $project->state        ?? '';
             $this->observations = $project->observations ?? '';
+            $this->floorsCount  = (int)($project->floors_count ?? 1);
 
             if ($project->settings) {
                 $s = $project->settings;
@@ -237,6 +245,7 @@ class ProjectWizard extends Component
                     'area_m2'      => $room->area_m2     ?? '',
                     'perimeter_m'  => $room->perimeter_m ?? '',
                     'sort_order'   => $room->sort_order,
+                    'floor_number' => (int)($room->floor_number ?? 1),
 
                     // Step 2 — min load fields (from DB)
                     'lighting_va_calculated'     => $room->lighting_va_calculated,
@@ -567,6 +576,7 @@ class ProjectWizard extends Component
             'city'         => $this->city        ?: null,
             'state'        => $this->state       ?: null,
             'observations' => $this->observations ?: null,
+            'floors_count' => max(1, (int)$this->floorsCount),
             'status'       => 'in_progress',
         ];
 
@@ -593,6 +603,7 @@ class ProjectWizard extends Component
                     'area_m2'      => $room['area_m2']    !== '' ? (float)$room['area_m2']    : null,
                     'perimeter_m'  => $room['perimeter_m'] !== '' ? (float)$room['perimeter_m'] : null,
                     'sort_order'   => $i,
+                    'floor_number' => max(1, (int)($room['floor_number'] ?? 1)),
 
                     'lighting_va_calculated'     => $room['lighting_va_calculated'],
                     'lighting_va_manual'         => ($room['use_manual_lighting'] && $room['lighting_va_manual'] !== '') ? (int)$room['lighting_va_manual'] : null,
@@ -1247,6 +1258,7 @@ class ProjectWizard extends Component
             $tugUnitVa = ($tugQty > 0 && $tugVa > 0) ? (int)round($tugVa / $tugQty) : 0;
 
             $defaults = [
+                'floor_number'        => (int)($room['floor_number'] ?? 1),
                 'phases'              => $this->defaultPhases,
                 'voltage_v'           => $this->defaultVoltage,
                 'installation_method' => $this->defaultInstallationMethod,
@@ -1688,38 +1700,181 @@ class ProjectWizard extends Component
         return $previews;
     }
 
+    public function openDistributeModal(): void
+    {
+        $this->showDistributeModal = true;
+    }
+
+    public function closeDistributeModal(): void
+    {
+        $this->showDistributeModal = false;
+    }
+
     public function autoAssignCircuits(): void
     {
         $this->clearMessages();
         $this->pushHistory();
+        $this->showDistributeModal = false;
 
         foreach (array_keys($this->loads) as $li) {
             $this->loads[$li]['circuit_number'] = null;
         }
 
         $nextCircuit = 1;
+        $targetMinLighting = max(1, (int)$this->autoDistributeMinLighting);
+        $targetMinTug      = max(1, (int)$this->autoDistributeMinTug);
 
-        // TUE: each gets its own exclusive circuit
+        // Map room floors for quick lookup if needed
+        $roomFloors = [];
+        foreach ($this->rooms as $r) {
+            if (isset($r['id'])) {
+                $roomFloors[(string)$r['id']] = (int)($r['floor_number'] ?? 1);
+            }
+        }
+
+        $getFloor = function(array $load) use ($roomFloors): int {
+            if (isset($load['floor_number'])) return (int)$load['floor_number'];
+            $rid = (string)($load['room_id'] ?? '');
+            return $roomFloors[$rid] ?? 1;
+        };
+
+        // 1. ILUMINAÇÃO (Sequência 1 em diante)
+        $lightingIndices = [];
+        foreach ($this->loads as $li => $load) {
+            if (($load['load_type'] ?? '') === 'ILUMINAÇÃO') {
+                $lightingIndices[] = $li;
+            }
+        }
+
+        if (!empty($lightingIndices)) {
+            $lightingGroups = [];
+            foreach ($lightingIndices as $li) {
+                $l = $this->loads[$li];
+                $key = ($l['voltage_v'] ?? 127) . '_' . ($l['phases'] ?? 1) . '_' . $getFloor($l);
+                $lightingGroups[$key][] = $li;
+            }
+
+            $createdLightingCircuits = [];
+            foreach ($lightingGroups as $group) {
+                $currentCircuit = [];
+                $currentI = 0.0;
+                foreach ($group as $li) {
+                    $l = $this->loads[$li];
+                    $va = ($l['use_manual_va'] ?? false) && ($l['manual_va'] ?? '') !== ''
+                        ? (int)$l['manual_va']
+                        : (int)($l['power_va'] ?? 0);
+                    $v = max(1, (int)($l['voltage_v'] ?? 127));
+                    $ph = (int)($l['phases'] ?? 1);
+                    $loadI = $ph === 3 ? $va / (sqrt(3) * $v) : $va / $v;
+
+                    if (!empty($currentCircuit) && ($currentI + $loadI) > 10.0) {
+                        $createdLightingCircuits[] = $currentCircuit;
+                        $currentCircuit = [];
+                        $currentI = 0.0;
+                    }
+                    $currentCircuit[] = $li;
+                    $currentI += $loadI;
+                }
+                if (!empty($currentCircuit)) {
+                    $createdLightingCircuits[] = $currentCircuit;
+                }
+            }
+
+            if (count($createdLightingCircuits) < $targetMinLighting && count($lightingIndices) > count($createdLightingCircuits)) {
+                $expandedCircuits = [];
+                foreach ($createdLightingCircuits as $circ) {
+                    if (count($circ) > 1 && (count($expandedCircuits) + count($circ)) <= $targetMinLighting) {
+                        foreach ($circ as $li) {
+                            $expandedCircuits[] = [$li];
+                        }
+                    } else {
+                        $expandedCircuits[] = $circ;
+                    }
+                }
+                $createdLightingCircuits = $expandedCircuits;
+            }
+
+            foreach ($createdLightingCircuits as $circ) {
+                foreach ($circ as $li) {
+                    $this->loads[$li]['circuit_number'] = $nextCircuit;
+                }
+                $nextCircuit++;
+            }
+        }
+
+        // 2. TUG (Sequência logo após Iluminação)
+        $tugIndices = [];
+        foreach ($this->loads as $li => $load) {
+            if (($load['load_type'] ?? '') === 'TUG') {
+                $tugIndices[] = $li;
+            }
+        }
+
+        if (!empty($tugIndices)) {
+            $tugGroups = [];
+            foreach ($tugIndices as $li) {
+                $l = $this->loads[$li];
+                $key = ($l['voltage_v'] ?? 127) . '_' . ($l['phases'] ?? 1) . '_' . $getFloor($l);
+                $tugGroups[$key][] = $li;
+            }
+
+            $createdTugCircuits = [];
+            foreach ($tugGroups as $group) {
+                $currentCircuit = [];
+                $currentI = 0.0;
+                foreach ($group as $li) {
+                    $l = $this->loads[$li];
+                    $va = ($l['use_manual_va'] ?? false) && ($l['manual_va'] ?? '') !== ''
+                        ? (int)$l['manual_va']
+                        : (int)($l['power_va'] ?? 0);
+                    $v = max(1, (int)($l['voltage_v'] ?? 127));
+                    $ph = (int)($l['phases'] ?? 1);
+                    $loadI = $ph === 3 ? $va / (sqrt(3) * $v) : $va / $v;
+
+                    if (!empty($currentCircuit) && ($currentI + $loadI) > 10.0) {
+                        $createdTugCircuits[] = $currentCircuit;
+                        $currentCircuit = [];
+                        $currentI = 0.0;
+                    }
+                    $currentCircuit[] = $li;
+                    $currentI += $loadI;
+                }
+                if (!empty($currentCircuit)) {
+                    $createdTugCircuits[] = $currentCircuit;
+                }
+            }
+
+            if (count($createdTugCircuits) < $targetMinTug && count($tugIndices) > count($createdTugCircuits)) {
+                $expandedCircuits = [];
+                foreach ($createdTugCircuits as $circ) {
+                    if (count($circ) > 1 && (count($expandedCircuits) + count($circ)) <= $targetMinTug) {
+                        foreach ($circ as $li) {
+                            $expandedCircuits[] = [$li];
+                        }
+                    } else {
+                        $expandedCircuits[] = $circ;
+                    }
+                }
+                $createdTugCircuits = $expandedCircuits;
+            }
+
+            foreach ($createdTugCircuits as $circ) {
+                foreach ($circ as $li) {
+                    $this->loads[$li]['circuit_number'] = $nextCircuit;
+                }
+                $nextCircuit++;
+            }
+        }
+
+        // 3. TUE (Sequência final - cada TUE em circuito exclusivo)
         foreach (array_keys($this->loads) as $li) {
             if (($this->loads[$li]['load_type'] ?? '') === 'TUE') {
                 $this->loads[$li]['circuit_number'] = $nextCircuit++;
             }
         }
 
-        // Group ILUMINAÇÃO and TUG separately by (type, voltage_v, phases)
-        $groups = [];
-        foreach (array_keys($this->loads) as $li) {
-            $type = $this->loads[$li]['load_type'] ?? '';
-            if ($type === 'TUE') continue;
-            $key = $type . '_' . ($this->loads[$li]['voltage_v'] ?? 127) . '_' . ($this->loads[$li]['phases'] ?? 1);
-            $groups[$key][] = $li;
-        }
-
-        foreach ($groups as $indices) {
-            $this->groupLoadsIntoCircuits($indices, $nextCircuit, 10.0);
-        }
-
-        $this->successMessage = 'Circuitos distribuídos automaticamente. Revise e ajuste se necessário.';
+        $this->successMessage = 'Circuitos distribuídos automaticamente (Iluminação → TUG → TUE).';
+        $this->dispatch('toast', type: 'success', message: 'Circuitos atribuídos automaticamente!');
     }
 
     public function mergeLoadParts(int $li): void
@@ -2074,6 +2229,7 @@ class ProjectWizard extends Component
             'area_m2'                     => '',
             'perimeter_m'                 => '',
             'sort_order'                  => $sortOrder,
+            'floor_number'                => 1,
             // Step 2
             'lighting_va_calculated'      => null,
             'lighting_rule_description'   => '',

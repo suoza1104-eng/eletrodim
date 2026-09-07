@@ -22,6 +22,7 @@ class Project extends Model
         'city',
         'state',
         'observations',
+        'floors_count',
         'status',
         'progress_step',
         'progress_percent',
