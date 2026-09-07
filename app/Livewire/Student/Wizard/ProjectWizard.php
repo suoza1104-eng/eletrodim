@@ -164,6 +164,39 @@ class ProjectWizard extends Component
         unset($room);
     }
 
+    private function formatTugDescription(array $room, int $fallbackQty = 0, int $fallbackVa = 0): string
+    {
+        $qty600 = 0;
+        $qty100 = 0;
+        if (!empty($room['use_manual_tug_qty'])) {
+            $qty600 = (($room['tug_qty_600_manual'] ?? '') !== '') ? (int)$room['tug_qty_600_manual'] : (int)($room['tug_qty_600_calculated'] ?? 0);
+            $qty100 = (($room['tug_qty_100_manual'] ?? '') !== '') ? (int)$room['tug_qty_100_manual'] : (int)($room['tug_qty_100_calculated'] ?? 0);
+        } elseif (($room['tug_va_calculated'] ?? null) !== null) {
+            $qty600 = (int)($room['tug_qty_600_calculated'] ?? 0);
+            $qty100 = (int)($room['tug_qty_100_calculated'] ?? 0);
+        } else {
+            $type  = (string)($room['room_type'] ?? '');
+            $area  = (float)($room['area_m2'] ?? 0);
+            $perim = (float)($room['perimeter_m'] ?? 0);
+            if ($perim > 0 || $area > 0) {
+                $calc   = $this->calcMinTugData($type, $area, $perim);
+                $qty600 = $calc['qty_600'] ?? 0;
+                $qty100 = $calc['qty_100'] ?? 0;
+            }
+        }
+
+        $parts = [];
+        if ($qty600 > 0) $parts[] = "{$qty600}× 600VA";
+        if ($qty100 > 0) $parts[] = "{$qty100}× 100VA";
+
+        if (empty($parts) && $fallbackQty > 0) {
+            $unitVa  = $fallbackQty > 0 ? (int)round($fallbackVa / $fallbackQty) : 0;
+            $parts[] = "{$fallbackQty}× {$unitVa}VA";
+        }
+
+        return "TUG (" . (empty($parts) ? "100VA" : implode(' + ', $parts)) . ")";
+    }
+
     private function normalizeLoads(): void
     {
         foreach ($this->loads as &$load) {
@@ -194,6 +227,13 @@ class ProjectWizard extends Component
             $load['circuit_number']           ??= null;
             $load['split_original_va']        ??= null;
             $load['split_original_description'] ??= null;
+
+            if (($load['load_type'] ?? '') === 'TUG' && (bool)($load['is_auto'] ?? false)) {
+                $room = $this->rooms[$load['room_index'] ?? 0] ?? [];
+                if (empty($load['description']) || str_contains($load['description'], '400VA') || str_contains($load['description'], '350VA') || preg_match('/^TUG\s*\(\d+[\s×]*\d+VA\)$/i', $load['description'])) {
+                    $load['description'] = $this->formatTugDescription($room, (int)($load['quantity'] ?? 0), (int)($load['power_va'] ?? 0));
+                }
+            }
         }
         unset($load);
     }
@@ -940,8 +980,12 @@ class ProjectWizard extends Component
                         break;
                     }
                 }
-                $room      = $this->rooms[$roomIndex] ?? [];
-                $roomLabel = trim(($room['room_type'] ?? '') . ': ' . ($room['description'] ?? ''), ': ');
+                $desc = $row->description ?? '';
+                if ($row->load_type === 'TUG' && (bool)$row->is_auto) {
+                    if (empty($desc) || str_contains($desc, '400VA') || str_contains($desc, '350VA') || preg_match('/^TUG\s*\(\d+[\s×]*\d+VA\)$/i', $desc)) {
+                        $desc = $this->formatTugDescription($room, (int)$row->quantity, (int)$row->power_va);
+                    }
+                }
 
                 $this->loads[] = [
                     'id'                  => $row->id,
@@ -949,7 +993,7 @@ class ProjectWizard extends Component
                     'room_index'          => $roomIndex,
                     'room_label'          => $roomLabel,
                     'load_type'           => $row->load_type,
-                    'description'         => $row->description ?? '',
+                    'description'         => $desc,
                     'quantity'            => (int)$row->quantity,
                     'power_va'            => (int)$row->power_va,
                     'unit_va'             => (int)($row->unit_va ?? 0),
