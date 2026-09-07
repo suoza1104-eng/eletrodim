@@ -1,6 +1,8 @@
 Options -MultiViews -Indexes
 RewriteEngine On
 
-# Redireciona tudo para /public
-RewriteCond %{REQUEST_URI} !^/public
-RewriteRule ^(.*)$ /public/$1 [L,QSA]
+# Redireciona tudo para /public (funciona na raiz do domínio ou em qualquer subpasta,
+# ex.: dominio.com/eletrodim/). Usa REDIRECT_STATUS para evitar loop, em vez de
+# comparar com "/public" absoluto, que só funciona quando o projeto está na raiz.
+RewriteCond %{ENV:REDIRECT_STATUS} ^$
+RewriteRule ^(.*)$ public/$1 [L,QSA]
