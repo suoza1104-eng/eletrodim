@@ -1124,9 +1124,9 @@
                             {{-- Loads in this circuit --}}
                             <div class="flex flex-wrap gap-1 mb-3">
                                 @foreach($s4P['loads'] as $s4PLoad)
-                                <span class="text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 truncate max-w-[120px]"
+                                <span class="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-medium whitespace-nowrap"
                                       title="{{ $s4PLoad['description'] ?: $s4PLoad['load_type'] }}">
-                                    {{ \Illuminate\Support\Str::limit($s4PLoad['description'] ?: $s4PLoad['load_type'], 18) }}
+                                    {{ $s4PLoad['description'] ?: $s4PLoad['load_type'] }}
                                 </span>
                                 @endforeach
                             </div>

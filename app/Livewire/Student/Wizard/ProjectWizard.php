@@ -1350,38 +1350,116 @@ class ProjectWizard extends Component
                 $newLoads[] = $load;
             }
 
+    private function sortLoadsBySequence(): void
+    {
+        usort($this->loads, function ($a, $b) {
+            $typeOrder = ['ILUMINAÇÃO' => 1, 'TUG' => 2, 'TUE' => 3];
+            $tA = $typeOrder[$a['load_type'] ?? ''] ?? 99;
+            $tB = $typeOrder[$b['load_type'] ?? ''] ?? 99;
+            if ($tA !== $tB) return $tA <=> $tB;
+
+            $circA = (int)($a['circuit_number'] ?? 0);
+            $circB = (int)($b['circuit_number'] ?? 0);
+            if ($circA > 0 && $circB > 0 && $circA !== $circB) return $circA <=> $circB;
+
+            $flA = (int)($a['floor_number'] ?? 1);
+            $flB = (int)($b['floor_number'] ?? 1);
+            if ($flA !== $flB) return $flA <=> $flB;
+
+            $rA = (int)($a['room_index'] ?? 0);
+            $rB = (int)($b['room_index'] ?? 0);
+            if ($rA !== $rB) return $rA <=> $rB;
+
+            return (int)($a['sort_order'] ?? 0) <=> (int)($b['sort_order'] ?? 0);
+        });
+    }
+
             // TUG
             if ($tugVa > 0 && $tugQty > 0) {
-                $parts = [];
-                if ($qty600 > 0) $parts[] = "{$qty600}× 600VA";
-                if ($qty100 > 0) $parts[] = "{$qty100}× 100VA";
-                if (empty($parts)) {
-                    $parts[] = "{$tugQty}× {$tugUnitVa}VA";
+                if ($qty600 > 0 && $qty100 > 0) {
+                    // 1. TUG 600VA
+                    $desc600 = "TUG ({$qty600}× 600VA)";
+                    $existing600 = $existingAutoLoads["{$rid}_TUG_600"] ?? $existingAutoLoads["{$rid}_TUG"] ?? null;
+                    $load600 = $existing600 ? array_merge($existing600, [
+                        'room_id'     => $roomId,
+                        'room_index'  => $ri,
+                        'room_label'  => $roomLabel,
+                        'power_va'    => $qty600 * 600,
+                        'unit_va'     => 600,
+                        'quantity'    => $qty600,
+                        'description' => $desc600,
+                    ]) : array_merge($defaults, [
+                        'id'          => null,
+                        'room_id'     => $roomId,
+                        'room_index'  => $ri,
+                        'room_label'  => $roomLabel,
+                        'load_type'   => 'TUG',
+                        'description' => $desc600,
+                        'quantity'    => $qty600,
+                        'power_va'    => $qty600 * 600,
+                        'unit_va'     => 600,
+                        'is_auto'     => true,
+                        'sort_order'  => 1,
+                    ]);
+                    $newLoads[] = $load600;
+
+                    // 2. TUG 100VA
+                    $desc100 = "TUG ({$qty100}× 100VA)";
+                    $existing100 = $existingAutoLoads["{$rid}_TUG_100"] ?? null;
+                    $load100 = $existing100 ? array_merge($existing100, [
+                        'room_id'     => $roomId,
+                        'room_index'  => $ri,
+                        'room_label'  => $roomLabel,
+                        'power_va'    => $qty100 * 100,
+                        'unit_va'     => 100,
+                        'quantity'    => $qty100,
+                        'description' => $desc100,
+                    ]) : array_merge($defaults, [
+                        'id'          => null,
+                        'room_id'     => $roomId,
+                        'room_index'  => $ri,
+                        'room_label'  => $roomLabel,
+                        'load_type'   => 'TUG',
+                        'description' => $desc100,
+                        'quantity'    => $qty100,
+                        'power_va'    => $qty100 * 100,
+                        'unit_va'     => 100,
+                        'is_auto'     => true,
+                        'sort_order'  => 2,
+                    ]);
+                    $newLoads[] = $load100;
+                } else {
+                    $parts = [];
+                    if ($qty600 > 0) $parts[] = "{$qty600}× 600VA";
+                    if ($qty100 > 0) $parts[] = "{$qty100}× 100VA";
+                    if (empty($parts)) {
+                        $parts[] = "{$tugQty}× {$tugUnitVa}VA";
+                    }
+                    $tugDesc  = "TUG (" . implode(' + ', $parts) . ")";
+                    $existing = $existingAutoLoads["{$rid}_TUG"] ?? null;
+                    $load = $existing ? array_merge($existing, [
+                        'room_id'     => $roomId,
+                        'room_index'  => $ri,
+                        'room_label'  => $roomLabel,
+                        'power_va'    => $tugVa,
+                        'unit_va'     => $qty600 > 0 ? 600 : 100,
+                        'quantity'    => $tugQty,
+                        'description' => $tugDesc,
+                    ]) : array_merge($defaults, [
+                        'id'          => null,
+                        'room_id'     => $roomId,
+                        'room_index'  => $ri,
+                        'room_label'  => $roomLabel,
+                        'load_type'   => 'TUG',
+                        'description' => $tugDesc,
+                        'quantity'    => $tugQty,
+                        'power_va'    => $tugVa,
+                        'unit_va'     => $qty600 > 0 ? 600 : 100,
+                        'is_auto'     => true,
+                        'sort_order'  => 1,
+                    ]);
+                    $newLoads[] = $load;
                 }
-                $tugDesc  = "TUG (" . implode(' + ', $parts) . ")";
-                $existing = $existingAutoLoads["{$rid}_TUG"] ?? null;
-                $load = $existing ? array_merge($existing, [
-                    'room_id'     => $roomId,
-                    'room_index'  => $ri,
-                    'room_label'  => $roomLabel,
-                    'power_va'    => $tugVa,
-                    'unit_va'     => $tugUnitVa,
-                    'quantity'    => $tugQty,
-                    'description' => $tugDesc,
-                ]) : array_merge($defaults, [
-                    'id'          => null,
-                    'room_id'     => $roomId,
-                    'room_index'  => $ri,
-                    'room_label'  => $roomLabel,
-                    'load_type'   => 'TUG',
-                    'description' => $tugDesc,
-                    'quantity'    => $tugQty,
-                    'power_va'    => $tugVa,
-                    'unit_va'     => $tugUnitVa,
-                    'is_auto'     => true,
-                    'sort_order'  => 1,
-                ]);
-                $newLoads[] = $load;
             }
 
             // Preserve existing TUEs for this room
@@ -1393,6 +1471,7 @@ class ProjectWizard extends Component
         }
 
         $this->loads = $newLoads;
+        $this->sortLoadsBySequence();
 
         foreach (array_keys($this->loads) as $li) {
             $this->calculateLoad($li);
