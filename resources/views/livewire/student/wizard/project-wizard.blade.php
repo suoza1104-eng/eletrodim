@@ -3,7 +3,7 @@
     {{-- ══════════════════════════════════════════════════════════
          PROGRESS BAR
     ══════════════════════════════════════════════════════════ --}}
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 mb-6">
         @php
             $pbMax = $projectId
                 ? min((\App\Models\Project::find($projectId)?->progress_step ?? 1) + 1, \App\Livewire\Student\Wizard\ProjectWizard::TOTAL_STEPS)
@@ -17,22 +17,22 @@
                     $pbClickable = $step <= $pbMax && !$pbCurrent;
                 @endphp
                 @if($step > 1)
-                    <div class="flex-1 h-1 rounded-full {{ $pbPast || $pbCurrent ? 'bg-brand-yellow' : 'bg-gray-200' }}"></div>
+                    <div class="flex-1 h-1 rounded-full {{ $pbPast || $pbCurrent ? 'bg-brand-yellow' : 'bg-gray-200 dark:bg-gray-700' }}"></div>
                 @endif
                 @if($pbCurrent)
                     <div class="w-8 h-8 rounded-full text-sm font-black bg-brand-yellow text-brand-black flex items-center justify-center ring-2 ring-yellow-300 ring-offset-1 flex-none relative z-10">{{ $step }}</div>
                 @elseif($pbClickable)
                     <button wire:click="goToStep({{ $step }})" title="{{ $label }}"
                         class="w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center flex-none transition
-                            {{ $pbPast ? 'bg-brand-yellow text-brand-black hover:bg-brand-yellow-hover' : 'bg-gray-200 text-gray-500 hover:bg-gray-300' }}">{{ $step }}</button>
+                            {{ $pbPast ? 'bg-brand-yellow text-brand-black hover:bg-brand-yellow-hover' : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-300' }}">{{ $step }}</button>
                 @else
-                    <div class="w-6 h-6 rounded-full text-xs font-bold bg-gray-100 text-gray-400 flex items-center justify-center flex-none">{{ $step }}</div>
+                    <div class="w-6 h-6 rounded-full text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 flex items-center justify-center flex-none">{{ $step }}</div>
                 @endif
             @endforeach
         </div>
         <div class="mt-3 flex items-center justify-between text-sm">
-            <span class="font-semibold text-gray-700">{{ \App\Livewire\Student\Wizard\ProjectWizard::STEP_LABELS[$currentStep] }}</span>
-            <span class="text-gray-400">Step {{ $currentStep }} de {{ \App\Livewire\Student\Wizard\ProjectWizard::TOTAL_STEPS }}</span>
+            <span class="font-semibold text-gray-700 dark:text-gray-300">{{ \App\Livewire\Student\Wizard\ProjectWizard::STEP_LABELS[$currentStep] }}</span>
+            <span class="text-gray-400 dark:text-gray-500">Step {{ $currentStep }} de {{ \App\Livewire\Student\Wizard\ProjectWizard::TOTAL_STEPS }}</span>
         </div>
     </div>
 
@@ -40,13 +40,13 @@
          MENSAGENS FLASH
     ══════════════════════════════════════════════════════════ --}}
     @if($successMessage)
-        <div class="mb-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-center gap-2 text-sm">
-            <svg class="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <div class="mb-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 px-4 py-3 rounded-lg flex items-center gap-2 text-sm">
+            <svg class="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             {{ $successMessage }}
         </div>
     @endif
     @if($errorMessage)
-        <div class="mb-4 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg flex items-center gap-2 text-sm">
+        <div class="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 px-4 py-3 rounded-lg flex items-center gap-2 text-sm">
             <svg class="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             {{ $errorMessage }}
         </div>
@@ -54,14 +54,14 @@
 
     {{-- ── DESFAZER ─────────────────────────────────────────── --}}
     @if(!empty($history))
-    <div class="mb-4 flex items-center justify-between gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
-        <div class="flex items-center gap-2 text-xs text-gray-500">
-            <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    <div class="mb-4 flex items-center justify-between gap-3 bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5">
+        <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <svg class="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             {{ count($history) }} ação(ões) disponível(is) para desfazer
         </div>
         <button wire:click="undo"
             wire:loading.attr="disabled" wire:target="undo"
-            class="inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 hover:text-brand-black bg-white border border-gray-300 hover:border-gray-500 rounded-lg px-3 py-1.5 transition disabled:opacity-50">
+            class="inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 hover:text-brand-black bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:border-gray-500 dark:hover:border-gray-400 rounded-lg px-3 py-1.5 transition disabled:opacity-50">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6M3 10l6-6"/></svg>
             Desfazer
         </button>
@@ -71,56 +71,56 @@
     {{-- ══════════════════════════════════════════════════════════
          CARD DE CONTEÚDO
     ══════════════════════════════════════════════════════════ --}}
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
 
         {{-- ─── STEP 1 — Dados do Projeto ─── --}}
         @if($currentStep === 1)
         <div class="p-6 md:p-8">
-            <h3 class="text-lg font-bold text-gray-800 mb-6">Dados do Projeto</h3>
+            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-6">Dados do Projeto</h3>
             <div class="mb-5">
-                <label class="block text-sm font-medium text-gray-600 mb-1">Nome do Projeto <span class="text-red-500">*</span></label>
+                <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Nome do Projeto <span class="text-red-500">*</span></label>
                 <input type="text" wire:model="name" placeholder="Ex: Residência João da Silva"
-                    class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition @error('name') border-red-400 bg-red-50 @enderror">
-                @error('name')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition @error('name') border-red-400 bg-red-50 dark:bg-red-900/20 @enderror">
+                @error('name')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">Nome do Cliente</label>
+                    <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Nome do Cliente</label>
                     <input type="text" wire:model="clientName" placeholder="Nome completo"
-                        class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition">
+                        class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">Telefone</label>
+                    <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Telefone</label>
                     <input type="text" wire:model="clientPhone" placeholder="(00) 00000-0000"
-                        class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition @error('clientPhone') border-red-400 bg-red-50 @enderror">
-                    @error('clientPhone')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                        class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition @error('clientPhone') border-red-400 bg-red-50 dark:bg-red-900/20 @enderror">
+                    @error('clientPhone')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">E-mail do Cliente</label>
+                    <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">E-mail do Cliente</label>
                     <input type="email" wire:model="clientEmail" placeholder="cliente@email.com"
-                        class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition @error('clientEmail') border-red-400 bg-red-50 @enderror">
-                    @error('clientEmail')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                        class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition @error('clientEmail') border-red-400 bg-red-50 dark:bg-red-900/20 @enderror">
+                    @error('clientEmail')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">Endereço</label>
+                    <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Endereço</label>
                     <input type="text" wire:model="address" placeholder="Rua, número, bairro"
-                        class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition">
+                        class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">Cidade</label>
+                    <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Cidade</label>
                     <input type="text" wire:model="city" placeholder="Cidade"
-                        class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition">
+                        class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">Estado (UF)</label>
+                    <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Estado (UF)</label>
                     <input type="text" wire:model="state" placeholder="SP" maxlength="2"
-                        class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 uppercase focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition">
+                        class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 uppercase focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition">
                 </div>
             </div>
             <div class="mt-5">
-                <label class="block text-sm font-medium text-gray-600 mb-1">Observações</label>
+                <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Observações</label>
                 <textarea wire:model="observations" rows="3" placeholder="Informações adicionais sobre o projeto..."
-                    class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition resize-none"></textarea>
+                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition resize-none"></textarea>
             </div>
         </div>
         @endif
@@ -130,8 +130,8 @@
         <div class="p-4 md:p-8">
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
                 <div>
-                    <h3 class="text-lg font-bold text-gray-800">Cadastro dos Cômodos e Cargas Mínimas</h3>
-                    <p class="text-sm text-gray-500 mt-0.5">Cadastre os ambientes da instalação. O EletroDIM calcula automaticamente a iluminação e as tomadas mínimas conforme a NBR 5410.</p>
+                    <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200">Cadastro dos Cômodos e Cargas Mínimas</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Cadastre os ambientes da instalação. O EletroDIM calcula automaticamente a iluminação e as tomadas mínimas conforme a NBR 5410.</p>
                 </div>
                 <button wire:click="addRoom"
                     class="inline-flex items-center gap-1.5 bg-brand-yellow hover:bg-brand-yellow-hover text-brand-black text-sm font-bold px-4 py-2.5 rounded-lg transition flex-shrink-0 whitespace-nowrap">
@@ -140,7 +140,7 @@
                 </button>
             </div>
 
-            @error('rooms')<p class="text-sm text-red-600 mb-4 bg-red-50 border border-red-200 rounded px-3 py-2">{{ $message }}</p>@enderror
+            @error('rooms')<p class="text-sm text-red-600 dark:text-red-400 mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded px-3 py-2">{{ $message }}</p>@enderror
 
             @forelse($rooms as $i => $room)
             @php
@@ -156,26 +156,26 @@
                 $totalVa = $effectiveLightingVa + $effectiveTugVa;
                 $hasCalc = ($room['lighting_va_calculated'] ?? null) !== null || ($room['tug_qty_calculated'] ?? null) !== null;
             @endphp
-            <div class="border border-gray-200 rounded-xl overflow-hidden mb-4 shadow-sm" wire:key="room2-{{ $i }}">
+            <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden mb-4 shadow-sm" wire:key="room2-{{ $i }}">
 
                 {{-- Card header --}}
-                <div class="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+                <div class="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-900/40 border-b border-gray-200 dark:border-gray-700">
                     <div class="flex items-center gap-2 min-w-0">
                         <span class="flex-shrink-0 w-6 h-6 rounded-full bg-brand-yellow text-brand-black text-xs font-bold flex items-center justify-center">{{ $i + 1 }}</span>
-                        <span class="text-sm font-semibold text-gray-700 truncate">
+                        <span class="text-sm font-semibold text-gray-700 dark:text-gray-300 truncate">
                             @if($room['room_type'] ?? '')
-                                {{ $room['room_type'] }}@if($room['description'] ?? ''): <span class="font-normal text-gray-500">{{ $room['description'] }}</span>@endif
+                                {{ $room['room_type'] }}@if($room['description'] ?? ''): <span class="font-normal text-gray-500 dark:text-gray-400">{{ $room['description'] }}</span>@endif
                             @else
                                 Novo cômodo
                             @endif
                         </span>
                         @if($hasCalc && $totalVa > 0)
-                            <span class="flex-shrink-0 text-xs font-semibold text-green-700 bg-green-100 border border-green-200 px-2 py-0.5 rounded-full">{{ number_format($totalVa, 0, ',', '.') }} VA</span>
+                            <span class="flex-shrink-0 text-xs font-semibold text-green-700 dark:text-green-300 bg-green-100 border border-green-200 dark:border-green-800 px-2 py-0.5 rounded-full">{{ number_format($totalVa, 0, ',', '.') }} VA</span>
                         @endif
                     </div>
                     @if(count($rooms) > 1)
                     <button wire:click="removeRoom({{ $i }})" wire:confirm="Remover este cômodo e todos os seus dados?"
-                        class="flex-shrink-0 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition ml-2" title="Remover cômodo">
+                        class="flex-shrink-0 p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:text-red-400 hover:bg-red-50 dark:bg-red-900/20 rounded-lg transition ml-2" title="Remover cômodo">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                     </button>
                     @endif
@@ -185,39 +185,39 @@
                     {{-- Input fields --}}
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de Cômodo <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Tipo de Cômodo <span class="text-red-500">*</span></label>
                             <select wire:model="rooms.{{ $i }}.room_type"
                                 wire:change="calculateRoomLoads({{ $i }})"
-                                class="w-full border rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow @error('rooms.'.$i.'.room_type') border-red-400 bg-red-50 @else border-gray-300 @enderror">
+                                class="w-full border rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow @error('rooms.'.$i.'.room_type') border-red-400 bg-red-50 dark:bg-red-900/20 @else border-gray-300 dark:border-gray-600 @enderror">
                                 <option value="">Selecione...</option>
                                 @foreach(\App\Livewire\Student\Wizard\ProjectWizard::ROOM_TYPES as $rt)
                                     <option value="{{ $rt }}">{{ $rt }}</option>
                                 @endforeach
                             </select>
-                            @error('rooms.'.$i.'.room_type')<p class="mt-0.5 text-xs text-red-600">{{ $message }}</p>@enderror
+                            @error('rooms.'.$i.'.room_type')<p class="mt-0.5 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Descrição <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Descrição <span class="text-red-500">*</span></label>
                             <input type="text" wire:model="rooms.{{ $i }}.description"
                                 placeholder="Ex: Sala de estar"
-                                class="w-full border rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow @error('rooms.'.$i.'.description') border-red-400 bg-red-50 @else border-gray-300 @enderror">
-                            @error('rooms.'.$i.'.description')<p class="mt-0.5 text-xs text-red-600">{{ $message }}</p>@enderror
+                                class="w-full border rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow @error('rooms.'.$i.'.description') border-red-400 bg-red-50 dark:bg-red-900/20 @else border-gray-300 dark:border-gray-600 @enderror">
+                            @error('rooms.'.$i.'.description')<p class="mt-0.5 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Área (m²) <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Área (m²) <span class="text-red-500">*</span></label>
                             <input type="number" wire:model="rooms.{{ $i }}.area_m2"
                                 wire:change="calculateRoomLoads({{ $i }})"
                                 min="0.01" step="0.01" placeholder="m²"
-                                class="w-full border rounded-lg px-3 py-2 text-sm text-gray-800 text-center focus:outline-none focus:ring-2 focus:ring-brand-yellow @error('rooms.'.$i.'.area_m2') border-red-400 bg-red-50 @else border-gray-300 @enderror">
-                            @error('rooms.'.$i.'.area_m2')<p class="mt-0.5 text-xs text-red-600">{{ $message }}</p>@enderror
+                                class="w-full border rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 text-center focus:outline-none focus:ring-2 focus:ring-brand-yellow @error('rooms.'.$i.'.area_m2') border-red-400 bg-red-50 dark:bg-red-900/20 @else border-gray-300 dark:border-gray-600 @enderror">
+                            @error('rooms.'.$i.'.area_m2')<p class="mt-0.5 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Perímetro (m) <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Perímetro (m) <span class="text-red-500">*</span></label>
                             <input type="number" wire:model="rooms.{{ $i }}.perimeter_m"
                                 wire:change="calculateRoomLoads({{ $i }})"
                                 min="0.01" step="0.01" placeholder="m"
-                                class="w-full border rounded-lg px-3 py-2 text-sm text-gray-800 text-center focus:outline-none focus:ring-2 focus:ring-brand-yellow @error('rooms.'.$i.'.perimeter_m') border-red-400 bg-red-50 @else border-gray-300 @enderror">
-                            @error('rooms.'.$i.'.perimeter_m')<p class="mt-0.5 text-xs text-red-600">{{ $message }}</p>@enderror
+                                class="w-full border rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 text-center focus:outline-none focus:ring-2 focus:ring-brand-yellow @error('rooms.'.$i.'.perimeter_m') border-red-400 bg-red-50 dark:bg-red-900/20 @else border-gray-300 dark:border-gray-600 @enderror">
+                            @error('rooms.'.$i.'.perimeter_m')<p class="mt-0.5 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                         </div>
                     </div>
 
@@ -226,38 +226,38 @@
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
 
                         {{-- Card: Iluminação --}}
-                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3">
                             <div class="flex items-center gap-1.5 mb-2">
-                                <svg class="w-4 h-4 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-                                <span class="text-xs font-bold text-blue-800 uppercase tracking-wide">Iluminação</span>
+                                <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                                <span class="text-xs font-bold text-blue-800 dark:text-blue-300 uppercase tracking-wide">Iluminação</span>
                             </div>
-                            <div class="text-2xl font-black text-blue-900">
+                            <div class="text-2xl font-black text-blue-900 dark:text-blue-200">
                                 {{ $effectiveLightingVa }} VA
                             </div>
                             @if($room['use_manual_lighting'] ?? false)
-                                <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mt-1 inline-block">Ajustado manualmente</p>
+                                <p class="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded px-1.5 py-0.5 mt-1 inline-block">Ajustado manualmente</p>
                                 <p class="text-xs text-blue-500 mt-0.5 line-through opacity-70">Cálculo: {{ $room['lighting_va_calculated'] ?? '—' }} VA</p>
                             @else
-                                <p class="text-xs text-blue-600 mt-1 leading-snug">{{ $room['lighting_rule_description'] ?? '' }}</p>
+                                <p class="text-xs text-blue-600 dark:text-blue-400 mt-1 leading-snug">{{ $room['lighting_rule_description'] ?? '' }}</p>
                             @endif
                             {{-- Override --}}
-                            <div class="mt-2 pt-2 border-t border-blue-200">
+                            <div class="mt-2 pt-2 border-t border-blue-200 dark:border-blue-800">
                                 <label class="flex items-center gap-2 cursor-pointer">
                                     <input type="checkbox" wire:model="rooms.{{ $i }}.use_manual_lighting"
                                         wire:change="calculateRoomLoads({{ $i }})"
                                         class="w-3.5 h-3.5 accent-blue-600">
-                                    <span class="text-xs text-blue-700 font-medium">Ajustar manualmente</span>
+                                    <span class="text-xs text-blue-700 dark:text-blue-300 font-medium">Ajustar manualmente</span>
                                 </label>
                                 @if($room['use_manual_lighting'] ?? false)
                                 <div class="mt-1.5 flex items-center gap-1.5">
                                     <input type="number" wire:model="rooms.{{ $i }}.lighting_va_manual"
                                         wire:change="calculateRoomLoads({{ $i }})"
                                         min="1" step="1" placeholder="VA"
-                                        class="flex-1 border border-blue-300 bg-white rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-400">
-                                    <span class="text-xs text-blue-600 font-medium">VA</span>
+                                        class="flex-1 border border-blue-300 bg-white dark:bg-gray-800 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-400">
+                                    <span class="text-xs text-blue-600 dark:text-blue-400 font-medium">VA</span>
                                 </div>
                                 <button wire:click="resetRoomManual({{ $i }}, 'use_manual_lighting')"
-                                    class="mt-1.5 text-xs text-blue-500 hover:text-blue-700 underline font-medium">
+                                    class="mt-1.5 text-xs text-blue-500 hover:text-blue-700 dark:text-blue-300 underline font-medium">
                                     ↺ Restaurar automático
                                 </button>
                                 @endif
@@ -265,56 +265,56 @@
                         </div>
 
                         {{-- Card: Tomadas TUG --}}
-                        <div class="bg-green-50 border border-green-200 rounded-xl p-3">
+                        <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-3">
                             <div class="flex items-center gap-1.5 mb-2">
-                                <svg class="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                                <span class="text-xs font-bold text-green-800 uppercase tracking-wide">Tomadas TUG</span>
+                                <svg class="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                <span class="text-xs font-bold text-green-800 dark:text-green-300 uppercase tracking-wide">Tomadas TUG</span>
                             </div>
                             <div class="text-lg font-black text-green-900">{{ $effectiveTugQty }} tomada{{ $effectiveTugQty !== 1 ? 's' : '' }}</div>
                             <div class="text-lg font-black text-green-900">{{ number_format($effectiveTugVa, 0, ',', '.') }} VA</div>
                             @if(($room['use_manual_tug_qty'] ?? false) || ($room['use_manual_tug_va'] ?? false))
-                                <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mt-1 inline-block">Ajustado manualmente</p>
+                                <p class="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded px-1.5 py-0.5 mt-1 inline-block">Ajustado manualmente</p>
                             @else
-                                <p class="text-xs text-green-600 mt-1 leading-snug">{{ $room['tug_rule_description'] ?? '' }}</p>
+                                <p class="text-xs text-green-600 dark:text-green-400 mt-1 leading-snug">{{ $room['tug_rule_description'] ?? '' }}</p>
                             @endif
-                            <div class="mt-2 pt-2 border-t border-green-200 space-y-1.5">
+                            <div class="mt-2 pt-2 border-t border-green-200 dark:border-green-800 space-y-1.5">
                                 <label class="flex items-center gap-2 cursor-pointer">
                                     <input type="checkbox" wire:model="rooms.{{ $i }}.use_manual_tug_qty"
                                         wire:change="calculateRoomLoads({{ $i }})"
                                         class="w-3.5 h-3.5 accent-green-600">
-                                    <span class="text-xs text-green-700 font-medium">Ajustar quantidade</span>
+                                    <span class="text-xs text-green-700 dark:text-green-300 font-medium">Ajustar quantidade</span>
                                 </label>
                                 @if($room['use_manual_tug_qty'] ?? false)
                                 <div class="flex items-center gap-1.5">
                                     <input type="number" wire:model="rooms.{{ $i }}.tug_qty_manual"
                                         wire:change="calculateRoomLoads({{ $i }})"
                                         min="1" step="1" placeholder="Qtd"
-                                        class="w-20 border border-green-300 bg-white rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-green-400">
-                                    <span class="text-xs text-green-600 font-medium">tomadas</span>
-                                    <button wire:click="resetRoomManual({{ $i }}, 'use_manual_tug_qty')" class="text-xs text-green-500 hover:text-green-700 underline">↺</button>
+                                        class="w-20 border border-green-300 bg-white dark:bg-gray-800 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-green-400">
+                                    <span class="text-xs text-green-600 dark:text-green-400 font-medium">tomadas</span>
+                                    <button wire:click="resetRoomManual({{ $i }}, 'use_manual_tug_qty')" class="text-xs text-green-500 hover:text-green-700 dark:text-green-300 underline">↺</button>
                                 </div>
                                 @endif
                                 <label class="flex items-center gap-2 cursor-pointer">
                                     <input type="checkbox" wire:model="rooms.{{ $i }}.use_manual_tug_va"
                                         wire:change="calculateRoomLoads({{ $i }})"
                                         class="w-3.5 h-3.5 accent-green-600">
-                                    <span class="text-xs text-green-700 font-medium">Ajustar potência (VA)</span>
+                                    <span class="text-xs text-green-700 dark:text-green-300 font-medium">Ajustar potência (VA)</span>
                                 </label>
                                 @if($room['use_manual_tug_va'] ?? false)
                                 <div class="flex items-center gap-1.5">
                                     <input type="number" wire:model="rooms.{{ $i }}.tug_va_manual"
                                         wire:change="calculateRoomLoads({{ $i }})"
                                         min="1" step="1" placeholder="VA"
-                                        class="flex-1 border border-green-300 bg-white rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-green-400">
-                                    <span class="text-xs text-green-600 font-medium">VA</span>
-                                    <button wire:click="resetRoomManual({{ $i }}, 'use_manual_tug_va')" class="text-xs text-green-500 hover:text-green-700 underline">↺</button>
+                                        class="flex-1 border border-green-300 bg-white dark:bg-gray-800 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-green-400">
+                                    <span class="text-xs text-green-600 dark:text-green-400 font-medium">VA</span>
+                                    <button wire:click="resetRoomManual({{ $i }}, 'use_manual_tug_va')" class="text-xs text-green-500 hover:text-green-700 dark:text-green-300 underline">↺</button>
                                 </div>
                                 @endif
                             </div>
                         </div>
 
                         {{-- Card: Total do cômodo --}}
-                        <div class="bg-yellow-50 border border-yellow-300 rounded-xl p-3">
+                        <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 rounded-xl p-3">
                             <div class="flex items-center gap-1.5 mb-2">
                                 <svg class="w-4 h-4 text-yellow-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                                 <span class="text-xs font-bold text-yellow-800 uppercase tracking-wide">Total Mínimo</span>
@@ -348,7 +348,7 @@
                         Calcular cargas mínimas (NBR 5410)
                     </button>
                     @else
-                    <div class="bg-gray-50 border border-dashed border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-400 text-center">
+                    <div class="bg-gray-50 dark:bg-gray-900/40 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-sm text-gray-400 dark:text-gray-500 text-center">
                         Preencha o tipo de cômodo, área e perímetro para calcular as cargas mínimas.
                     </div>
                     @endif
@@ -356,7 +356,7 @@
                 </div>
             </div>
             @empty
-            <div class="text-center py-12 text-gray-400 text-sm">
+            <div class="text-center py-12 text-gray-400 dark:text-gray-500 text-sm">
                 Nenhum cômodo cadastrado. Clique em "+ Adicionar Cômodo" para começar.
             </div>
             @endforelse
@@ -369,7 +369,7 @@
                     + Adicionar outro cômodo
                 </button>
                 <button wire:click="recalculateAllRooms"
-                    class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition">
+                    class="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                     Recalcular todos
                 </button>
@@ -385,8 +385,8 @@
             {{-- Header --}}
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
                 <div>
-                    <h3 class="text-lg font-bold text-gray-800">Levantamento das Cargas</h3>
-                    <p class="text-sm text-gray-500 mt-0.5">Parametrize cada carga eletricamente. O sistema calcula a corrente de projeto corrigida (Ic) pelos fatores de agrupamento e temperatura.</p>
+                    <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200">Levantamento das Cargas</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Parametrize cada carga eletricamente. O sistema calcula a corrente de projeto corrigida (Ic) pelos fatores de agrupamento e temperatura.</p>
                 </div>
                 <div class="flex gap-2 flex-shrink-0">
                     <button wire:click="generateLoadsFromRooms"
@@ -396,7 +396,7 @@
                     </button>
                     @if(!empty($loads))
                     <button wire:click="recalculateAllLoads"
-                        class="inline-flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm font-semibold px-3 py-2.5 rounded-lg transition whitespace-nowrap">
+                        class="inline-flex items-center gap-1.5 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 text-sm font-semibold px-3 py-2.5 rounded-lg transition whitespace-nowrap">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                         Recalcular todas
                     </button>
@@ -406,9 +406,9 @@
 
             @if(empty($loads))
             {{-- Empty state --}}
-            <div class="text-center py-16 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50">
-                <svg class="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                <p class="text-gray-500 text-sm mb-4">Nenhuma carga cadastrada ainda.<br>Clique no botão abaixo para gerar automaticamente a partir dos cômodos da Etapa 2.</p>
+            <div class="text-center py-16 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl bg-gray-50 dark:bg-gray-900/40">
+                <svg class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                <p class="text-gray-500 dark:text-gray-400 text-sm mb-4">Nenhuma carga cadastrada ainda.<br>Clique no botão abaixo para gerar automaticamente a partir dos cômodos da Etapa 2.</p>
                 <button wire:click="generateLoadsFromRooms"
                     class="inline-flex items-center gap-2 bg-brand-yellow hover:bg-brand-yellow-hover text-brand-black text-sm font-bold px-5 py-2.5 rounded-lg transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
@@ -425,21 +425,21 @@
                 $tueCount   = count(array_filter($loads, fn($l) => ($l['load_type'] ?? '') === 'TUE'));
             @endphp
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-                <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
-                    <div class="text-2xl font-black text-gray-800">{{ count($roomIdsS3) }}</div>
-                    <div class="text-xs text-gray-500 font-medium uppercase tracking-wide">Cômodos</div>
+                <div class="bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-center">
+                    <div class="text-2xl font-black text-gray-800 dark:text-gray-200">{{ count($roomIdsS3) }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Cômodos</div>
                 </div>
-                <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
-                    <div class="text-2xl font-black text-gray-800">{{ $totalLoads }}</div>
-                    <div class="text-xs text-gray-500 font-medium uppercase tracking-wide">Cargas</div>
+                <div class="bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-center">
+                    <div class="text-2xl font-black text-gray-800 dark:text-gray-200">{{ $totalLoads }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Cargas</div>
                 </div>
-                <div class="bg-orange-50 border border-orange-200 rounded-xl p-3 text-center">
-                    <div class="text-2xl font-black text-orange-800">{{ $tueCount }}</div>
-                    <div class="text-xs text-orange-600 font-medium uppercase tracking-wide">TUEs</div>
+                <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-3 text-center">
+                    <div class="text-2xl font-black text-orange-800 dark:text-orange-300">{{ $tueCount }}</div>
+                    <div class="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wide">TUEs</div>
                 </div>
-                <div class="bg-yellow-50 border border-yellow-300 rounded-xl p-3 text-center">
+                <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 rounded-xl p-3 text-center">
                     <div class="text-xl font-black text-brand-black tabular-nums">{{ number_format($totalVaS3, 0, ',', '.') }}</div>
-                    <div class="text-xs text-gray-600 font-medium uppercase tracking-wide">VA Total</div>
+                    <div class="text-xs text-gray-600 dark:text-gray-300 font-medium uppercase tracking-wide">VA Total</div>
                 </div>
             </div>
 
@@ -459,20 +459,20 @@
                 $roomIdxS3    = $firstLoad['room_index'] ?? 0;
                 $roomTotalVaS3= array_sum(array_map(fn($rl) => (int)($rl['data']['power_va'] ?? 0), $roomLoads));
             @endphp
-            <div class="bg-white border border-gray-200 rounded-2xl shadow-sm mb-7 overflow-hidden" wire:key="rg-{{ $roomKey }}">
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm mb-7 overflow-hidden" wire:key="rg-{{ $roomKey }}">
 
                 {{-- Room card header --}}
-                <div class="flex items-center justify-between px-5 py-4 bg-gray-50 border-b border-gray-200">
+                <div class="flex items-center justify-between px-5 py-4 bg-gray-50 dark:bg-gray-900/40 border-b border-gray-200 dark:border-gray-700">
                     <div class="flex items-center gap-3">
                         <span class="w-7 h-7 rounded-full bg-brand-yellow text-brand-black text-xs font-black flex items-center justify-center flex-shrink-0">{{ $loop->iteration }}</span>
                         <div>
-                            <div class="text-sm font-bold text-gray-900 leading-tight">{{ $roomLabelS3 }}</div>
-                            <div class="text-xs text-gray-500 mt-0.5">{{ count($roomLoads) }} carga{{ count($roomLoads) !== 1 ? 's' : '' }}</div>
+                            <div class="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight">{{ $roomLabelS3 }}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ count($roomLoads) }} carga{{ count($roomLoads) !== 1 ? 's' : '' }}</div>
                         </div>
                     </div>
                     <div class="text-right">
-                        <div class="text-lg font-black text-gray-800 tabular-nums leading-none">{{ number_format($roomTotalVaS3, 0, ',', '.') }} <span class="text-sm font-semibold text-gray-500">VA</span></div>
-                        <div class="text-xs text-gray-400 mt-0.5">total do cômodo</div>
+                        <div class="text-lg font-black text-gray-800 dark:text-gray-200 tabular-nums leading-none">{{ number_format($roomTotalVaS3, 0, ',', '.') }} <span class="text-sm font-semibold text-gray-500 dark:text-gray-400">VA</span></div>
+                        <div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">total do cômodo</div>
                     </div>
                 </div>
 
@@ -486,21 +486,21 @@
                         ? (int)$load['manual_va']
                         : (int)($load['power_va'] ?? 0);
                     $typeColorClass = match($load['load_type'] ?? '') {
-                        'ILUMINAÇÃO' => 'bg-blue-100 text-blue-800',
-                        'TUG'        => 'bg-green-100 text-green-800',
-                        default      => 'bg-orange-100 text-orange-800',
+                        'ILUMINAÇÃO' => 'bg-blue-100 text-blue-800 dark:text-blue-300',
+                        'TUG'        => 'bg-green-100 text-green-800 dark:text-green-300',
+                        default      => 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300',
                     };
                 @endphp
-                <div class="border border-gray-200 rounded-xl mb-2 overflow-hidden shadow-sm" wire:key="load-{{ $li }}"
+                <div class="border border-gray-200 dark:border-gray-700 rounded-xl mb-2 overflow-hidden shadow-sm" wire:key="load-{{ $li }}"
                      x-data="{ open: false }">
 
                     {{-- Compact header --}}
-                    <div class="flex items-center gap-2 px-3 py-2.5 bg-white cursor-pointer hover:bg-gray-50 transition select-none"
+                    <div class="flex items-center gap-2 px-3 py-2.5 bg-white dark:bg-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition select-none"
                          @click="open = !open">
                         <span class="flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded-full {{ $typeColorClass }}">
                             {{ $load['load_type'] ?? '' }}
                         </span>
-                        <span class="text-sm text-gray-700 flex-1 min-w-0 truncate">
+                        <span class="text-sm text-gray-700 dark:text-gray-300 flex-1 min-w-0 truncate">
                             @if(($load['load_type'] ?? '') === 'ILUMINAÇÃO')
                                 Iluminação
                             @elseif(($load['load_type'] ?? '') === 'TUG')
@@ -512,19 +512,19 @@
                                 <span class="text-xs text-amber-600 ml-1">*ajustado</span>
                             @endif
                         </span>
-                        <span class="flex-shrink-0 text-sm font-bold tabular-nums text-gray-800">{{ number_format($effectiveVaLoad, 0, ',', '.') }} VA</span>
+                        <span class="flex-shrink-0 text-sm font-bold tabular-nums text-gray-800 dark:text-gray-200">{{ number_format($effectiveVaLoad, 0, ',', '.') }} VA</span>
                         @if(($load['corrected_current_a'] ?? null) !== null)
-                        <span class="flex-shrink-0 text-xs font-mono text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded hidden sm:inline tabular-nums">
+                        <span class="flex-shrink-0 text-xs font-mono text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 px-2 py-0.5 rounded hidden sm:inline tabular-nums">
                             Ic {{ number_format((float)$load['corrected_current_a'], 2) }} A
                         </span>
                         @endif
-                        <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-200 ml-1"
+                        <svg class="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 transition-transform duration-200 ml-1"
                              :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                         @if(!($load['is_auto'] ?? true))
                         <button wire:click="removeLoad({{ $li }})" wire:confirm="Remover esta carga?"
-                            @click.stop class="flex-shrink-0 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition ml-1" title="Remover">
+                            @click.stop class="flex-shrink-0 p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:text-red-400 hover:bg-red-50 dark:bg-red-900/20 rounded transition ml-1" title="Remover">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                         </button>
                         @endif
@@ -533,45 +533,45 @@
                     {{-- Expanded edit form --}}
                     <div x-show="open" x-transition:enter="transition ease-out duration-150"
                          x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-                         class="border-t border-gray-100 p-4 bg-gray-50/50">
+                         class="border-t border-gray-100 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900/40/50">
 
                         {{-- TUE fields --}}
                         @if(($load['load_type'] ?? '') === 'TUE')
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                             <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Equipamento <span class="text-red-500">*</span></label>
+                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Equipamento <span class="text-red-500">*</span></label>
                                 <input type="text" wire:model="loads.{{ $li }}.description"
                                     placeholder="Ex: Chuveiro elétrico, Ar-condicionado..."
-                                    class="w-full border border-gray-300 bg-white rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow @error('loads.'.$li.'.description') border-red-400 bg-red-50 @enderror">
-                                @error('loads.'.$li.'.description')<p class="mt-0.5 text-xs text-red-600">{{ $message }}</p>@enderror
+                                    class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow @error('loads.'.$li.'.description') border-red-400 bg-red-50 dark:bg-red-900/20 @enderror">
+                                @error('loads.'.$li.'.description')<p class="mt-0.5 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Potência (VA) <span class="text-red-500">*</span></label>
+                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Potência (VA) <span class="text-red-500">*</span></label>
                                 <input type="number" wire:model="loads.{{ $li }}.power_va"
                                     wire:change="calculateLoad({{ $li }})"
                                     min="1" step="1" placeholder="VA"
-                                    class="w-full border border-gray-300 bg-white rounded-lg px-3 py-2 text-sm text-gray-800 text-center focus:outline-none focus:ring-2 focus:ring-brand-yellow @error('loads.'.$li.'.power_va') border-red-400 bg-red-50 @enderror">
-                                @error('loads.'.$li.'.power_va')<p class="mt-0.5 text-xs text-red-600">{{ $message }}</p>@enderror
+                                    class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 text-center focus:outline-none focus:ring-2 focus:ring-brand-yellow @error('loads.'.$li.'.power_va') border-red-400 bg-red-50 dark:bg-red-900/20 @enderror">
+                                @error('loads.'.$li.'.power_va')<p class="mt-0.5 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                             </div>
                         </div>
                         @else
                         {{-- Auto load VA override --}}
-                        <div class="flex flex-wrap items-center gap-3 mb-4 px-3 py-2 bg-blue-50/60 border border-blue-100 rounded-lg">
-                            <span class="text-xs text-gray-600">VA (Etapa 2): <strong>{{ number_format((int)($load['power_va'] ?? 0), 0, ',', '.') }} VA</strong></span>
+                        <div class="flex flex-wrap items-center gap-3 mb-4 px-3 py-2 bg-blue-50 dark:bg-blue-900/20/60 border border-blue-100 rounded-lg">
+                            <span class="text-xs text-gray-600 dark:text-gray-300">VA (Etapa 2): <strong>{{ number_format((int)($load['power_va'] ?? 0), 0, ',', '.') }} VA</strong></span>
                             <label class="flex items-center gap-1.5 cursor-pointer">
                                 <input type="checkbox" wire:model="loads.{{ $li }}.use_manual_va"
                                     wire:change="calculateLoad({{ $li }})"
                                     class="w-3.5 h-3.5 accent-amber-600">
-                                <span class="text-xs text-amber-700 font-medium">Ajustar manualmente</span>
+                                <span class="text-xs text-amber-700 dark:text-amber-300 font-medium">Ajustar manualmente</span>
                             </label>
                             @if($load['use_manual_va'] ?? false)
                             <div class="flex items-center gap-1.5">
                                 <input type="number" wire:model="loads.{{ $li }}.manual_va"
                                     wire:change="calculateLoad({{ $li }})"
                                     min="1" step="1" placeholder="VA"
-                                    class="w-24 border border-amber-300 bg-white rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-400">
-                                <span class="text-xs text-amber-700 font-medium">VA</span>
-                                <button wire:click="resetLoadManual({{ $li }})" class="text-xs text-amber-500 hover:text-amber-700 underline">↺ Restaurar</button>
+                                    class="w-24 border border-amber-300 bg-white dark:bg-gray-800 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-400">
+                                <span class="text-xs text-amber-700 dark:text-amber-300 font-medium">VA</span>
+                                <button wire:click="resetLoadManual({{ $li }})" class="text-xs text-amber-500 hover:text-amber-700 dark:text-amber-300 underline">↺ Restaurar</button>
                             </div>
                             @endif
                         </div>
@@ -580,47 +580,47 @@
                         {{-- Electrical params --}}
                         <div class="grid grid-cols-3 gap-3 mb-4">
                             <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Fases</label>
+                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Fases</label>
                                 <select wire:model="loads.{{ $li }}.phases"
                                     wire:change="calculateLoad({{ $li }})"
-                                    class="w-full border border-gray-300 bg-white rounded-lg px-2 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
+                                    class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-2 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
                                     <option value="1">1F</option>
                                     <option value="2">2F</option>
                                     <option value="3">3F</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Tensão (V)</label>
+                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Tensão (V)</label>
                                 <select wire:model="loads.{{ $li }}.voltage_v"
                                     wire:change="calculateLoad({{ $li }})"
-                                    class="w-full border border-gray-300 bg-white rounded-lg px-2 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
+                                    class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-2 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
                                     <option value="127">127 V</option>
                                     <option value="220">220 V</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">fp</label>
+                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">fp</label>
                                 <input type="number" wire:model="loads.{{ $li }}.fp"
                                     wire:change="calculateLoad({{ $li }})"
                                     min="0.01" max="1.00" step="0.01"
-                                    class="w-full border border-gray-300 bg-white rounded-lg px-2 py-2 text-sm text-gray-800 text-center focus:outline-none focus:ring-2 focus:ring-brand-yellow">
+                                    class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-2 py-2 text-sm text-gray-800 dark:text-gray-200 text-center focus:outline-none focus:ring-2 focus:ring-brand-yellow">
                             </div>
                         </div>
 
                         {{-- Calculation results --}}
                         @if(($load['corrected_current_a'] ?? null) !== null)
                         <div class="grid grid-cols-3 gap-2">
-                            <div class="bg-white border border-gray-200 rounded-lg p-2.5 text-center">
-                                <div class="text-xs text-gray-400 mb-0.5">P (W)</div>
-                                <div class="text-sm font-bold text-gray-800 tabular-nums">{{ number_format((float)($load['power_w'] ?? 0), 1) }}</div>
+                            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 text-center">
+                                <div class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">P (W)</div>
+                                <div class="text-sm font-bold text-gray-800 dark:text-gray-200 tabular-nums">{{ number_format((float)($load['power_w'] ?? 0), 1) }}</div>
                             </div>
-                            <div class="bg-white border border-gray-200 rounded-lg p-2.5 text-center">
-                                <div class="text-xs text-gray-400 mb-0.5">I (A)</div>
-                                <div class="text-sm font-bold text-gray-800 tabular-nums">{{ number_format((float)($load['current_a'] ?? 0), 4) }}</div>
+                            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 text-center">
+                                <div class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">I (A)</div>
+                                <div class="text-sm font-bold text-gray-800 dark:text-gray-200 tabular-nums">{{ number_format((float)($load['current_a'] ?? 0), 4) }}</div>
                             </div>
-                            <div class="bg-purple-50 border border-purple-200 rounded-lg p-2.5 text-center">
-                                <div class="text-xs text-purple-500 font-semibold mb-0.5">Ic (A)</div>
-                                <div class="text-sm font-bold text-purple-800 tabular-nums">{{ number_format((float)($load['corrected_current_a'] ?? 0), 4) }}</div>
+                            <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-2.5 text-center">
+                                <div class="text-xs text-purple-500 dark:text-purple-400 font-semibold mb-0.5">Ic (A)</div>
+                                <div class="text-sm font-bold text-purple-800 dark:text-purple-300 tabular-nums">{{ number_format((float)($load['corrected_current_a'] ?? 0), 4) }}</div>
                             </div>
                         </div>
                         @else
@@ -634,9 +634,9 @@
                 @endforeach
 
                 {{-- Add TUE button --}}
-                <div class="mt-3 pt-3 border-t border-gray-100">
+                <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
                     <button wire:click="addTueLoad({{ $roomIdxS3 }})"
-                        class="inline-flex items-center gap-1.5 text-xs text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 px-3 py-1.5 rounded-lg transition font-medium">
+                        class="inline-flex items-center gap-1.5 text-xs text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 px-3 py-1.5 rounded-lg transition font-medium">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                         + TUE neste cômodo
                     </button>
@@ -670,8 +670,8 @@
             {{-- Header --}}
             <div class="flex flex-wrap items-start justify-between gap-4 mb-6">
                 <div>
-                    <h3 class="text-lg font-bold text-gray-800">Atribuição de Circuitos</h3>
-                    <p class="text-sm text-gray-500 mt-1">Agrupe as cargas em circuitos. Cada carga precisa de um número de circuito.</p>
+                    <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200">Atribuição de Circuitos</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Agrupe as cargas em circuitos. Cada carga precisa de um número de circuito.</p>
                 </div>
                 @if(!empty($loads))
                 <button wire:click="autoAssignCircuits"
@@ -690,7 +690,7 @@
             </div>
 
             @if(empty($loads))
-                <div class="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-xl p-5 text-sm flex items-start gap-3">
+                <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-yellow-800 rounded-xl p-5 text-sm flex items-start gap-3">
                     <svg class="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     <span>Nenhuma carga cadastrada. Volte à Etapa 3 e cadastre pelo menos uma carga antes de prosseguir.</span>
                 </div>
@@ -698,29 +698,29 @@
 
             {{-- Stats bar --}}
             <div class="grid grid-cols-3 gap-3 mb-5">
-                <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
-                    <div class="text-2xl font-black text-gray-800">{{ count($loads) }}</div>
-                    <div class="text-xs text-gray-500 mt-0.5">Cargas</div>
+                <div class="bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-center">
+                    <div class="text-2xl font-black text-gray-800 dark:text-gray-200">{{ count($loads) }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Cargas</div>
                 </div>
-                <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
-                    <div class="text-2xl font-black {{ $s4UnassignedCount > 0 ? 'text-red-600' : 'text-green-600' }}">{{ count($loads) - $s4UnassignedCount }}</div>
-                    <div class="text-xs text-gray-500 mt-0.5">Atribuídas</div>
+                <div class="bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-center">
+                    <div class="text-2xl font-black {{ $s4UnassignedCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400' }}">{{ count($loads) - $s4UnassignedCount }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Atribuídas</div>
                 </div>
-                <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
+                <div class="bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-center">
                     <div class="text-2xl font-black text-brand-black">{{ count($s4Previews) }}</div>
-                    <div class="text-xs text-gray-500 mt-0.5">Circuitos</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Circuitos</div>
                 </div>
             </div>
 
             {{-- Alerts --}}
             @if($s4HasCritical)
-            <div class="mb-4 flex items-start gap-3 bg-red-50 border border-red-200 text-red-800 rounded-xl p-4 text-sm">
+            <div class="mb-4 flex items-start gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 rounded-xl p-4 text-sm">
                 <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.07 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
                 <span><strong>Erros críticos detectados.</strong> Existem circuitos com tensões ou fases mistas. Corrija antes de avançar.</span>
             </div>
             @endif
             @if($s4UnassignedCount > 0)
-            <div class="mb-4 flex items-start gap-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-xl p-4 text-sm">
+            <div class="mb-4 flex items-start gap-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-yellow-800 rounded-xl p-4 text-sm">
                 <svg class="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <span><strong>{{ $s4UnassignedCount }} carga(s) sem circuito.</strong> Atribua um número de circuito a todas as cargas antes de avançar.</span>
             </div>
@@ -728,25 +728,25 @@
 
             {{-- ══ LOAD ASSIGNMENT TABLE (grouped by room) ══ --}}
             <div class="mb-8">
-                <h4 class="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3">Atribuição por Cômodo</h4>
+                <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3">Atribuição por Cômodo</h4>
 
                 @foreach($s4LoadsByRoom as $s4RoomKey => $s4RoomLoads)
                 @php
                     $s4FirstLoad  = $s4RoomLoads[0]['load'];
                     $s4RoomLabel  = $s4FirstLoad['room_label'] ?: '—';
                 @endphp
-                <div class="bg-white border border-gray-200 rounded-2xl shadow-sm mb-4 overflow-hidden">
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm mb-4 overflow-hidden">
                     {{-- Room header --}}
-                    <div class="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-gray-200">
+                    <div class="flex items-center gap-3 px-4 py-3 bg-gray-50 dark:bg-gray-900/40 border-b border-gray-200 dark:border-gray-700">
                         <span class="w-6 h-6 rounded-full bg-brand-yellow text-brand-black text-xs font-black flex items-center justify-center flex-shrink-0">
                             {{ array_search($s4RoomKey, array_keys($s4LoadsByRoom)) + 1 }}
                         </span>
-                        <span class="text-sm font-semibold text-gray-800">{{ $s4RoomLabel }}</span>
-                        <span class="ml-auto text-xs text-gray-400">{{ count($s4RoomLoads) }} carga(s)</span>
+                        <span class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ $s4RoomLabel }}</span>
+                        <span class="ml-auto text-xs text-gray-400 dark:text-gray-500">{{ count($s4RoomLoads) }} carga(s)</span>
                     </div>
 
                     {{-- Load rows --}}
-                    <div class="divide-y divide-gray-100">
+                    <div class="divide-y divide-gray-100 dark:divide-gray-700">
                         @foreach($s4RoomLoads as $s4Item)
                         @php
                             $s4Li   = $s4Item['li'];
@@ -776,21 +776,21 @@
                              }">
 
                             {{-- Main row --}}
-                            <div class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition">
+                            <div class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
 
                                 {{-- Type badge --}}
                                 <span class="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0
-                                    {{ $s4Type === 'ILUMINAÇÃO' ? 'bg-blue-100 text-blue-700' :
-                                       ($s4Type === 'TUG' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700') }}">
+                                    {{ $s4Type === 'ILUMINAÇÃO' ? 'bg-blue-100 text-blue-700 dark:text-blue-300' :
+                                       ($s4Type === 'TUG' ? 'bg-green-100 text-green-700 dark:text-green-300' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300') }}">
                                     {{ $s4Type === 'ILUMINAÇÃO' ? 'ILUM' : $s4Type }}
                                 </span>
 
                                 {{-- Description + VA --}}
                                 <div class="flex-1 min-w-0">
-                                    <div class="text-sm font-medium text-gray-800 truncate">
+                                    <div class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
                                         {{ $s4Load['description'] ?: '—' }}
                                     </div>
-                                    <div class="text-xs text-gray-400">
+                                    <div class="text-xs text-gray-400 dark:text-gray-500">
                                         {{ number_format($s4Va, 0, ',', '.') }}VA
                                         · {{ $s4Load['voltage_v'] ?? 127 }}V
                                         · {{ $s4Load['phases'] ?? 1 }}F
@@ -802,20 +802,20 @@
 
                                 {{-- Circuit number input + split button --}}
                                 <div class="flex items-center gap-2 flex-shrink-0">
-                                    <span class="text-xs text-gray-400 hidden sm:inline">Circ.</span>
+                                    <span class="text-xs text-gray-400 dark:text-gray-500 hidden sm:inline">Circ.</span>
                                     <input type="number"
                                            wire:model.lazy="loads.{{ $s4Li }}.circuit_number"
                                            min="1"
                                            placeholder="—"
                                            class="w-14 text-center text-sm font-bold border rounded-lg py-1.5 px-2 focus:outline-none focus:ring-2 transition
                                                {{ $s4HasCircuit
-                                                   ? 'border-green-300 bg-green-50 text-green-800 focus:ring-green-300'
-                                                   : 'border-red-300 bg-red-50 text-red-600 focus:ring-red-300' }}">
+                                                   ? 'border-green-300 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 focus:ring-green-300'
+                                                   : 'border-red-300 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 focus:ring-red-300' }}">
 
                                     {{-- Split button --}}
                                     @if($s4Va > 0)
                                     <button @click="splitOpen = !splitOpen"
-                                        :class="splitOpen ? 'bg-amber-100 border-amber-300 text-amber-700' : 'border-gray-200 text-gray-400 hover:text-amber-600 hover:border-amber-300 hover:bg-amber-50'"
+                                        :class="splitOpen ? 'bg-amber-100 border-amber-300 text-amber-700 dark:text-amber-300' : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:text-amber-600 hover:border-amber-300 hover:bg-amber-50 dark:bg-amber-900/20'"
                                         title="Dividir esta carga em múltiplos circuitos"
                                         class="w-7 h-7 flex items-center justify-center rounded-lg border text-sm font-bold transition flex-shrink-0">
                                         ÷
@@ -826,7 +826,7 @@
                                     @if(preg_match('/— pt \d+\/\d+$/', $s4Load['description'] ?? ''))
                                     <button wire:click="mergeLoadParts({{ $s4Li }})"
                                         title="Reagrupar todas as partes desta divisão numa única carga"
-                                        class="w-7 h-7 flex items-center justify-center rounded-lg border border-indigo-200 text-indigo-400 hover:text-indigo-700 hover:border-indigo-400 hover:bg-indigo-50 transition flex-shrink-0 text-sm">
+                                        class="w-7 h-7 flex items-center justify-center rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-400 hover:text-indigo-700 dark:text-indigo-300 hover:border-indigo-400 hover:bg-indigo-50 dark:bg-indigo-900/20 transition flex-shrink-0 text-sm">
                                         ↩
                                     </button>
                                     @endif
@@ -841,7 +841,7 @@
                                  x-transition:leave="transition ease-in duration-100"
                                  x-transition:leave-start="opacity-100 translate-y-0"
                                  x-transition:leave-end="opacity-0 -translate-y-1"
-                                 class="mx-4 mb-3 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                                 class="mx-4 mb-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3">
 
                                 {{-- Header row: title + counter --}}
                                 <div class="flex items-center justify-between mb-3">
@@ -852,7 +852,7 @@
                                         <span class="w-5 text-center text-sm font-black text-amber-900" x-text="splitCount"></span>
                                         <button @click="splitCount = Math.min(8, splitCount + 1); updateSplitVas()"
                                             class="w-6 h-6 rounded-lg bg-amber-200 hover:bg-amber-300 text-amber-900 text-sm font-bold flex items-center justify-center transition">+</button>
-                                        <span class="text-xs text-amber-700 ml-1">partes</span>
+                                        <span class="text-xs text-amber-700 dark:text-amber-300 ml-1">partes</span>
                                     </div>
                                 </div>
 
@@ -860,12 +860,12 @@
                                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
                                     <template x-for="(va, idx) in splitVas" :key="idx">
                                         <div>
-                                            <div class="text-xs text-amber-700 mb-1" x-text="'Parte ' + (idx + 1)"></div>
+                                            <div class="text-xs text-amber-700 dark:text-amber-300 mb-1" x-text="'Parte ' + (idx + 1)"></div>
                                             <div class="flex items-center gap-1">
                                                 <input type="number"
                                                        x-model.number="splitVas[idx]"
                                                        min="1"
-                                                       class="w-full border border-amber-200 rounded-lg px-2 py-1.5 text-sm text-center font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-amber-300">
+                                                       class="w-full border border-amber-200 dark:border-amber-800 rounded-lg px-2 py-1.5 text-sm text-center font-semibold bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-300">
                                                 <span class="text-xs text-amber-600 flex-shrink-0">VA</span>
                                             </div>
                                         </div>
@@ -874,19 +874,19 @@
 
                                 {{-- Footer: total check + buttons --}}
                                 <div class="flex items-center justify-between gap-2">
-                                    <span class="text-xs transition-colors" :class="splitSum !== splitTotalVa ? 'text-red-600 font-semibold' : 'text-amber-700'">
+                                    <span class="text-xs transition-colors" :class="splitSum !== splitTotalVa ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-amber-700 dark:text-amber-300'">
                                         Soma: <strong x-text="splitSum"></strong>
                                         / <strong>{{ $s4Va }}</strong> VA
                                         <span x-show="splitSum !== splitTotalVa"> — a soma deve ser exatamente {{ $s4Va }}VA</span>
                                     </span>
                                     <div class="flex items-center gap-2">
                                         <button @click="splitOpen = false"
-                                            class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100 transition">
+                                            class="text-xs px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
                                             Cancelar
                                         </button>
                                         <button @click="if(splitSum === splitTotalVa){ $wire.splitLoad({{ $s4Li }}, splitCount, JSON.stringify(splitVas.map(v => +v || 0))); splitOpen = false; }"
                                             :disabled="splitSum !== splitTotalVa"
-                                            :class="splitSum !== splitTotalVa ? 'opacity-40 cursor-not-allowed bg-gray-200 text-gray-500' : 'bg-brand-yellow hover:bg-brand-yellow-hover text-brand-black'"
+                                            :class="splitSum !== splitTotalVa ? 'opacity-40 cursor-not-allowed bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : 'bg-brand-yellow hover:bg-brand-yellow-hover text-brand-black'"
                                             class="text-xs px-3 py-1.5 font-bold rounded-lg transition">
                                             Confirmar divisão
                                         </button>
@@ -904,7 +904,7 @@
             {{-- ══ CIRCUIT PREVIEWS ══ --}}
             @if(!empty($s4Previews))
             <div>
-                <h4 class="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3">Prévia dos Circuitos</h4>
+                <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3">Prévia dos Circuitos</h4>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     @foreach($s4Previews as $s4P)
@@ -912,21 +912,21 @@
                         $s4PStatus = $s4P['status'];
                         $s4PColorBorder = match($s4PStatus) {
                             'critical' => 'border-red-300',
-                            'severe'   => 'border-orange-300',
+                            'severe'   => 'border-orange-300 dark:border-orange-700',
                             'warning'  => 'border-yellow-300',
-                            default    => 'border-gray-200',
+                            default    => 'border-gray-200 dark:border-gray-700',
                         };
                         $s4PColorHeader = match($s4PStatus) {
-                            'critical' => 'bg-red-50 border-red-200',
-                            'severe'   => 'bg-orange-50 border-orange-200',
-                            'warning'  => 'bg-yellow-50 border-yellow-200',
-                            default    => 'bg-gray-50 border-gray-200',
+                            'critical' => 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800',
+                            'severe'   => 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800',
+                            'warning'  => 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800',
+                            default    => 'bg-gray-50 dark:bg-gray-900/40 border-gray-200 dark:border-gray-700',
                         };
                         $s4PTypeColor = match($s4P['circuit_type']) {
-                            'ILUMINAÇÃO' => 'bg-blue-100 text-blue-700',
-                            'TUG'        => 'bg-green-100 text-green-700',
-                            'TUE'        => 'bg-orange-100 text-orange-700',
-                            default      => 'bg-gray-100 text-gray-700',
+                            'ILUMINAÇÃO' => 'bg-blue-100 text-blue-700 dark:text-blue-300',
+                            'TUG'        => 'bg-green-100 text-green-700 dark:text-green-300',
+                            'TUE'        => 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
+                            default      => 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
                         };
                     @endphp
                     <div class="border {{ $s4PColorBorder }} rounded-2xl overflow-hidden shadow-sm">
@@ -941,64 +941,64 @@
                                     {{ $s4P['circuit_type'] }}
                                 </span>
                                 @if(!empty($s4P['part_label']))
-                                <span class="text-xs text-gray-500 font-medium truncate">{{ $s4P['part_label'] }}</span>
+                                <span class="text-xs text-gray-500 dark:text-gray-400 font-medium truncate">{{ $s4P['part_label'] }}</span>
                                 @endif
                             </div>
                             @if($s4PStatus !== 'ok')
                             <span class="text-xs font-bold px-2 py-0.5 rounded-full
-                                {{ $s4PStatus === 'critical' ? 'bg-red-100 text-red-700' :
-                                   ($s4PStatus === 'severe' ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700') }}">
+                                {{ $s4PStatus === 'critical' ? 'bg-red-100 text-red-700 dark:text-red-300' :
+                                   ($s4PStatus === 'severe' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' : 'bg-yellow-100 text-yellow-700') }}">
                                 {{ strtoupper($s4PStatus) }}
                             </span>
                             @else
-                            <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">OK</span>
+                            <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:text-green-300">OK</span>
                             @endif
                         </div>
 
                         {{-- Room labels strip --}}
                         @if(!empty($s4P['room_labels']))
-                        <div class="px-4 py-2 bg-white border-b border-gray-100 flex flex-wrap gap-1">
+                        <div class="px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex flex-wrap gap-1">
                             @foreach($s4P['room_labels'] as $s4RoomLbl)
-                            <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{{ $s4RoomLbl }}</span>
+                            <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">{{ $s4RoomLbl }}</span>
                             @endforeach
                         </div>
                         @endif
 
                         {{-- Card body --}}
-                        <div class="p-4 bg-white">
+                        <div class="p-4 bg-white dark:bg-gray-800">
 
                             {{-- Electrical values --}}
                             <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm mb-3">
                                 <div>
-                                    <span class="text-gray-400 text-xs">VA Total</span>
-                                    <div class="font-semibold text-gray-800">{{ number_format($s4P['total_power_va'], 0, ',', '.') }}</div>
+                                    <span class="text-gray-400 dark:text-gray-500 text-xs">VA Total</span>
+                                    <div class="font-semibold text-gray-800 dark:text-gray-200">{{ number_format($s4P['total_power_va'], 0, ',', '.') }}</div>
                                 </div>
                                 <div>
-                                    <span class="text-gray-400 text-xs">W Total</span>
-                                    <div class="font-semibold text-gray-800">{{ number_format($s4P['total_power_w'], 0, ',', '.') }}</div>
+                                    <span class="text-gray-400 dark:text-gray-500 text-xs">W Total</span>
+                                    <div class="font-semibold text-gray-800 dark:text-gray-200">{{ number_format($s4P['total_power_w'], 0, ',', '.') }}</div>
                                 </div>
                                 <div>
-                                    <span class="text-gray-400 text-xs">Tensão / Fases</span>
-                                    <div class="font-semibold text-gray-800">{{ $s4P['voltage_v'] }}V / {{ $s4P['phases'] }}F</div>
+                                    <span class="text-gray-400 dark:text-gray-500 text-xs">Tensão / Fases</span>
+                                    <div class="font-semibold text-gray-800 dark:text-gray-200">{{ $s4P['voltage_v'] }}V / {{ $s4P['phases'] }}F</div>
                                 </div>
                                 <div>
-                                    <span class="text-gray-400 text-xs">Corrente</span>
-                                    <div class="font-bold text-purple-700">{{ number_format($s4P['current_a'], 2, ',', '.') }} A</div>
+                                    <span class="text-gray-400 dark:text-gray-500 text-xs">Corrente</span>
+                                    <div class="font-bold text-purple-700 dark:text-purple-300">{{ number_format($s4P['current_a'], 2, ',', '.') }} A</div>
                                 </div>
                                 <div>
-                                    <span class="text-gray-400 text-xs">fp result.</span>
-                                    <div class="font-semibold text-gray-800">{{ number_format($s4P['resulting_fp'], 2, ',', '.') }}</div>
+                                    <span class="text-gray-400 dark:text-gray-500 text-xs">fp result.</span>
+                                    <div class="font-semibold text-gray-800 dark:text-gray-200">{{ number_format($s4P['resulting_fp'], 2, ',', '.') }}</div>
                                 </div>
                                 <div>
-                                    <span class="text-gray-400 text-xs">Cargas</span>
-                                    <div class="font-semibold text-gray-800">{{ $s4P['total_loads'] }}</div>
+                                    <span class="text-gray-400 dark:text-gray-500 text-xs">Cargas</span>
+                                    <div class="font-semibold text-gray-800 dark:text-gray-200">{{ $s4P['total_loads'] }}</div>
                                 </div>
                             </div>
 
                             {{-- Loads in this circuit --}}
                             <div class="flex flex-wrap gap-1 mb-3">
                                 @foreach($s4P['loads'] as $s4PLoad)
-                                <span class="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 truncate max-w-[120px]"
+                                <span class="text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 truncate max-w-[120px]"
                                       title="{{ $s4PLoad['description'] ?: $s4PLoad['load_type'] }}">
                                     {{ \Illuminate\Support\Str::limit($s4PLoad['description'] ?: $s4PLoad['load_type'], 18) }}
                                 </span>
@@ -1010,8 +1010,8 @@
                             <div class="space-y-1">
                                 @foreach($s4P['alerts'] as $s4Alert)
                                 <div class="flex items-start gap-1.5 text-xs rounded-lg p-2
-                                    {{ $s4Alert['level'] === 'critical' ? 'bg-red-50 text-red-700' :
-                                       ($s4Alert['level'] === 'severe' ? 'bg-orange-50 text-orange-700' : 'bg-yellow-50 text-yellow-700') }}">
+                                    {{ $s4Alert['level'] === 'critical' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300' :
+                                       ($s4Alert['level'] === 'severe' ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300' : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700') }}">
                                     <svg class="w-3.5 h-3.5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="{{ $s4Alert['level'] === 'critical'
@@ -1029,7 +1029,7 @@
                 </div>
             </div>
             @elseif(!empty($loads))
-            <div class="bg-blue-50 border border-blue-200 text-blue-800 rounded-xl p-4 text-sm flex items-start gap-3">
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 rounded-xl p-4 text-sm flex items-start gap-3">
                 <svg class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <span>Nenhum circuito atribuído ainda. Clique em <strong>"Distribuir automaticamente"</strong> ou preencha o número do circuito em cada carga.</span>
             </div>
@@ -1042,8 +1042,8 @@
         {{-- ─── STEP 5 — Conferência das Cargas ─── --}}
         @if($currentStep === 5)
         <div class="p-6 md:p-8">
-            <h3 class="text-lg font-bold text-gray-800 mb-1">Conferência das Cargas</h3>
-            <p class="text-sm text-gray-500 mb-5">Resultado do cálculo de circuitos. Verifique se há erros antes de prosseguir.</p>
+            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">Conferência das Cargas</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">Resultado do cálculo de circuitos. Verifique se há erros antes de prosseguir.</p>
 
             @php
                 $calcRows = \Illuminate\Support\Facades\DB::table('project_circuit_calculations')
@@ -1053,70 +1053,70 @@
             @endphp
 
             @if($calcRows->isEmpty())
-                <div class="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg p-4 text-sm flex items-start gap-3">
+                <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-yellow-800 rounded-lg p-4 text-sm flex items-start gap-3">
                     <svg class="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     <span>Nenhum circuito calculado. Volte ao Step 4 e clique em "Calcular Circuitos".</span>
                 </div>
             @else
-                <div class="overflow-x-auto rounded-lg border border-gray-200">
+                <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
                     <table class="w-full text-sm">
-                        <thead class="bg-gray-50 border-b border-gray-200">
+                        <thead class="bg-gray-50 dark:bg-gray-900/40 border-b border-gray-200 dark:border-gray-700">
                             <tr>
-                                <th class="px-3 py-3 text-left font-semibold text-gray-600 whitespace-nowrap">Circ.</th>
-                                <th class="px-3 py-3 text-left font-semibold text-gray-600">Ambiente / Tipo</th>
-                                <th class="px-3 py-3 text-right font-semibold text-gray-600 whitespace-nowrap">W</th>
-                                <th class="px-3 py-3 text-right font-semibold text-gray-600 whitespace-nowrap">VA</th>
-                                <th class="px-3 py-3 text-right font-semibold text-gray-600 whitespace-nowrap">A Proj.</th>
-                                <th class="px-3 py-3 text-center font-semibold text-gray-600 whitespace-nowrap">Cabo</th>
-                                <th class="px-3 py-3 text-center font-semibold text-gray-600 whitespace-nowrap">Disj.</th>
-                                <th class="px-3 py-3 text-center font-semibold text-gray-600 whitespace-nowrap">Status</th>
+                                <th class="px-3 py-3 text-left font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">Circ.</th>
+                                <th class="px-3 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Ambiente / Tipo</th>
+                                <th class="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">W</th>
+                                <th class="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">VA</th>
+                                <th class="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">A Proj.</th>
+                                <th class="px-3 py-3 text-center font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">Cabo</th>
+                                <th class="px-3 py-3 text-center font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">Disj.</th>
+                                <th class="px-3 py-3 text-center font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">Status</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-100">
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                             @foreach($calcRows as $calcRow)
-                            <tr class="hover:bg-gray-50 {{ $calcRow->calc_status === 'error' ? 'bg-red-50' : '' }}">
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 {{ $calcRow->calc_status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : '' }}">
                                 <td class="px-3 py-2.5">
                                     <span class="bg-brand-yellow text-brand-black text-xs font-black px-2 py-0.5 rounded">C{{ $calcRow->circuit_number }}</span>
                                 </td>
                                 <td class="px-3 py-2.5">
-                                    <div class="text-gray-800 font-medium text-xs">{{ $calcRow->description ?? '—' }}</div>
+                                    <div class="text-gray-800 dark:text-gray-200 font-medium text-xs">{{ $calcRow->description ?? '—' }}</div>
                                     <span class="text-xs px-1.5 py-0.5 rounded font-medium
-                                        {{ $calcRow->circuit_type === 'ILUMINAÇÃO' ? 'bg-blue-100 text-blue-700' :
-                                           ($calcRow->circuit_type === 'TUG' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700') }}">
+                                        {{ $calcRow->circuit_type === 'ILUMINAÇÃO' ? 'bg-blue-100 text-blue-700 dark:text-blue-300' :
+                                           ($calcRow->circuit_type === 'TUG' ? 'bg-green-100 text-green-700 dark:text-green-300' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300') }}">
                                         {{ $calcRow->circuit_type ?? '—' }}
                                     </span>
                                 </td>
-                                <td class="px-3 py-2.5 text-right text-gray-700 whitespace-nowrap">{{ number_format($calcRow->power_w ?? 0, 0, ',', '.') }}</td>
-                                <td class="px-3 py-2.5 text-right text-gray-700 whitespace-nowrap">{{ number_format($calcRow->power_va ?? 0, 0, ',', '.') }}</td>
-                                <td class="px-3 py-2.5 text-right font-medium text-gray-800 whitespace-nowrap">{{ number_format($calcRow->project_current_a ?? 0, 2, ',', '.') }}A</td>
-                                <td class="px-3 py-2.5 text-center font-semibold text-blue-700 whitespace-nowrap">
+                                <td class="px-3 py-2.5 text-right text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ number_format($calcRow->power_w ?? 0, 0, ',', '.') }}</td>
+                                <td class="px-3 py-2.5 text-right text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ number_format($calcRow->power_va ?? 0, 0, ',', '.') }}</td>
+                                <td class="px-3 py-2.5 text-right font-medium text-gray-800 dark:text-gray-200 whitespace-nowrap">{{ number_format($calcRow->project_current_a ?? 0, 2, ',', '.') }}A</td>
+                                <td class="px-3 py-2.5 text-center font-semibold text-blue-700 dark:text-blue-300 whitespace-nowrap">
                                     {{ $calcRow->final_conductor_calculated_mm2 ?? '—' }} mm²
                                 </td>
-                                <td class="px-3 py-2.5 text-center font-semibold text-purple-700 whitespace-nowrap">
+                                <td class="px-3 py-2.5 text-center font-semibold text-purple-700 dark:text-purple-300 whitespace-nowrap">
                                     {{ $calcRow->breaker_calculated_a ?? '—' }} A
                                 </td>
                                 <td class="px-3 py-2.5 text-center">
                                     @if($calcRow->calc_status === 'error')
-                                        <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">Erro</span>
+                                        <span class="text-xs bg-red-100 text-red-700 dark:text-red-300 px-2 py-0.5 rounded-full font-medium">Erro</span>
                                     @else
-                                        <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">OK</span>
+                                        <span class="text-xs bg-green-100 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full font-medium">OK</span>
                                     @endif
                                 </td>
                             </tr>
                             @if($calcRow->notes)
-                            <tr class="{{ $calcRow->calc_status === 'error' ? 'bg-red-50' : 'bg-yellow-50' }}">
-                                <td colspan="8" class="px-3 pb-2 text-xs text-amber-700 italic">
+                            <tr class="{{ $calcRow->calc_status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : 'bg-yellow-50 dark:bg-yellow-900/20' }}">
+                                <td colspan="8" class="px-3 pb-2 text-xs text-amber-700 dark:text-amber-300 italic">
                                     ⚠ {{ implode('; ', (array)(json_decode($calcRow->notes, true) ?? [$calcRow->notes])) }}
                                 </td>
                             </tr>
                             @endif
                             @endforeach
                         </tbody>
-                        <tfoot class="bg-gray-50 border-t border-gray-200">
+                        <tfoot class="bg-gray-50 dark:bg-gray-900/40 border-t border-gray-200 dark:border-gray-700">
                             <tr>
-                                <td colspan="2" class="px-3 py-2.5 text-sm font-semibold text-gray-600">TOTAL</td>
-                                <td class="px-3 py-2.5 text-right font-bold text-gray-800">{{ number_format($calcRows->sum('power_w'), 0, ',', '.') }}</td>
-                                <td class="px-3 py-2.5 text-right font-bold text-gray-800">{{ number_format($calcRows->sum('power_va'), 0, ',', '.') }}</td>
+                                <td colspan="2" class="px-3 py-2.5 text-sm font-semibold text-gray-600 dark:text-gray-300">TOTAL</td>
+                                <td class="px-3 py-2.5 text-right font-bold text-gray-800 dark:text-gray-200">{{ number_format($calcRows->sum('power_w'), 0, ',', '.') }}</td>
+                                <td class="px-3 py-2.5 text-right font-bold text-gray-800 dark:text-gray-200">{{ number_format($calcRows->sum('power_va'), 0, ',', '.') }}</td>
                                 <td colspan="4"></td>
                             </tr>
                         </tfoot>
@@ -1125,13 +1125,13 @@
 
                 @php $hasCalcErrors = $calcRows->where('calc_status', 'error')->count() > 0; @endphp
                 @if($hasCalcErrors)
-                <div class="mt-4 bg-red-50 border border-red-200 text-red-800 rounded-lg p-3 text-sm flex items-center gap-2">
+                <div class="mt-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 rounded-lg p-3 text-sm flex items-center gap-2">
                     <svg class="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     Há circuitos com erro. Verifique os dados no Step 3 e recalcule no Step 4.
                 </div>
                 @else
-                <div class="mt-4 bg-green-50 border border-green-200 text-green-800 rounded-lg p-3 text-sm flex items-center gap-2">
-                    <svg class="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <div class="mt-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 rounded-lg p-3 text-sm flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     Todos os {{ $calcRows->count() }} circuitos calculados com sucesso!
                 </div>
                 @endif
@@ -1142,8 +1142,8 @@
         {{-- ─── STEP 6 — Memorial de Cálculo ─── --}}
         @if($currentStep === 6)
         <div class="p-6 md:p-8">
-            <h3 class="text-lg font-bold text-gray-800 mb-1">Memorial de Cálculo</h3>
-            <p class="text-sm text-gray-500 mb-5">Detalhamento completo de todos os cálculos por circuito.</p>
+            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">Memorial de Cálculo</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">Detalhamento completo de todos os cálculos por circuito.</p>
 
             @php
                 $calcRows = \Illuminate\Support\Facades\DB::table('project_circuit_calculations')
@@ -1153,76 +1153,76 @@
             @endphp
 
             @if($calcRows->isEmpty())
-                <p class="text-sm text-gray-400 italic">Nenhum cálculo disponível.</p>
+                <p class="text-sm text-gray-400 dark:text-gray-500 italic">Nenhum cálculo disponível.</p>
             @else
                 <div class="space-y-4">
                     @foreach($calcRows as $calcRow)
-                    <div class="border border-gray-200 rounded-xl overflow-hidden">
-                        <div class="bg-gray-50 px-4 py-3 flex flex-wrap items-center gap-2 border-b border-gray-200">
+                    <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                        <div class="bg-gray-50 dark:bg-gray-900/40 px-4 py-3 flex flex-wrap items-center gap-2 border-b border-gray-200 dark:border-gray-700">
                             <span class="bg-brand-yellow text-brand-black text-xs font-black px-2.5 py-1 rounded-full">C{{ $calcRow->circuit_number }}</span>
-                            <span class="font-semibold text-gray-800 text-sm">{{ $calcRow->description ?? '—' }}</span>
+                            <span class="font-semibold text-gray-800 dark:text-gray-200 text-sm">{{ $calcRow->description ?? '—' }}</span>
                             <span class="text-xs px-2 py-0.5 rounded-full font-medium
-                                {{ $calcRow->circuit_type === 'ILUMINAÇÃO' ? 'bg-blue-100 text-blue-700' :
-                                   ($calcRow->circuit_type === 'TUG' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700') }}">
+                                {{ $calcRow->circuit_type === 'ILUMINAÇÃO' ? 'bg-blue-100 text-blue-700 dark:text-blue-300' :
+                                   ($calcRow->circuit_type === 'TUG' ? 'bg-green-100 text-green-700 dark:text-green-300' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300') }}">
                                 {{ $calcRow->circuit_type ?? '—' }}
                             </span>
-                            <span class="text-xs text-gray-400 ml-1">{{ $calcRow->phases ?? '?' }}F · {{ $calcRow->voltage ?? '?' }}V · {{ $calcRow->installation_method ?? '?' }}</span>
-                            <span class="ml-auto text-xs {{ $calcRow->calc_status === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700' }} px-2 py-0.5 rounded-full font-medium">
+                            <span class="text-xs text-gray-400 dark:text-gray-500 ml-1">{{ $calcRow->phases ?? '?' }}F · {{ $calcRow->voltage ?? '?' }}V · {{ $calcRow->installation_method ?? '?' }}</span>
+                            <span class="ml-auto text-xs {{ $calcRow->calc_status === 'error' ? 'bg-red-100 text-red-700 dark:text-red-300' : 'bg-green-100 text-green-700 dark:text-green-300' }} px-2 py-0.5 rounded-full font-medium">
                                 {{ $calcRow->calc_status === 'error' ? 'Erro' : 'OK' }}
                             </span>
                         </div>
                         <div class="p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-sm">
-                            <div class="bg-gray-50 rounded-lg p-3">
-                                <p class="text-xs text-gray-400 mb-0.5">Potência</p>
-                                <p class="font-semibold text-gray-800">{{ number_format($calcRow->power_w ?? 0, 0, ',', '.') }}W / {{ number_format($calcRow->power_va ?? 0, 0, ',', '.') }}VA</p>
+                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Potência</p>
+                                <p class="font-semibold text-gray-800 dark:text-gray-200">{{ number_format($calcRow->power_w ?? 0, 0, ',', '.') }}W / {{ number_format($calcRow->power_va ?? 0, 0, ',', '.') }}VA</p>
                             </div>
-                            <div class="bg-gray-50 rounded-lg p-3">
-                                <p class="text-xs text-gray-400 mb-0.5">Corrente de Projeto</p>
-                                <p class="font-semibold text-gray-800">{{ number_format($calcRow->project_current_a ?? 0, 2, ',', '.') }} A</p>
+                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Corrente de Projeto</p>
+                                <p class="font-semibold text-gray-800 dark:text-gray-200">{{ number_format($calcRow->project_current_a ?? 0, 2, ',', '.') }} A</p>
                             </div>
-                            <div class="bg-gray-50 rounded-lg p-3">
-                                <p class="text-xs text-gray-400 mb-0.5">Fator Temperatura</p>
-                                <p class="font-semibold text-gray-800">{{ number_format($calcRow->temperature_factor ?? 1, 3, ',', '.') }} <span class="text-gray-400 font-normal">({{ $calcRow->temperature_c ?? '—' }}°C)</span></p>
+                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Fator Temperatura</p>
+                                <p class="font-semibold text-gray-800 dark:text-gray-200">{{ number_format($calcRow->temperature_factor ?? 1, 3, ',', '.') }} <span class="text-gray-400 dark:text-gray-500 font-normal">({{ $calcRow->temperature_c ?? '—' }}°C)</span></p>
                             </div>
-                            <div class="bg-gray-50 rounded-lg p-3">
-                                <p class="text-xs text-gray-400 mb-0.5">Fator Agrupamento</p>
-                                <p class="font-semibold text-gray-800">{{ number_format($calcRow->grouping_factor ?? 1, 3, ',', '.') }} <span class="text-gray-400 font-normal">({{ $calcRow->grouped_circuits ?? 1 }} circ.)</span></p>
+                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Fator Agrupamento</p>
+                                <p class="font-semibold text-gray-800 dark:text-gray-200">{{ number_format($calcRow->grouping_factor ?? 1, 3, ',', '.') }} <span class="text-gray-400 dark:text-gray-500 font-normal">({{ $calcRow->grouped_circuits ?? 1 }} circ.)</span></p>
                             </div>
-                            <div class="bg-gray-50 rounded-lg p-3">
-                                <p class="text-xs text-gray-400 mb-0.5">Corrente Corrigida</p>
-                                <p class="font-semibold text-gray-800">{{ number_format($calcRow->corrected_current_a ?? 0, 2, ',', '.') }} A</p>
+                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Corrente Corrigida</p>
+                                <p class="font-semibold text-gray-800 dark:text-gray-200">{{ number_format($calcRow->corrected_current_a ?? 0, 2, ',', '.') }} A</p>
                             </div>
-                            <div class="bg-gray-50 rounded-lg p-3">
-                                <p class="text-xs text-gray-400 mb-0.5">Cabo Mínimo</p>
-                                <p class="font-semibold text-gray-800">{{ $calcRow->min_conductor_mm2 ?? '—' }} mm²</p>
+                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Cabo Mínimo</p>
+                                <p class="font-semibold text-gray-800 dark:text-gray-200">{{ $calcRow->min_conductor_mm2 ?? '—' }} mm²</p>
                             </div>
-                            <div class="bg-gray-50 rounded-lg p-3">
-                                <p class="text-xs text-gray-400 mb-0.5">Cabo por Ampacidade</p>
-                                <p class="font-semibold text-gray-800">{{ $calcRow->ampacity_conductor_mm2 ?? '—' }} mm²</p>
+                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Cabo por Ampacidade</p>
+                                <p class="font-semibold text-gray-800 dark:text-gray-200">{{ $calcRow->ampacity_conductor_mm2 ?? '—' }} mm²</p>
                             </div>
-                            <div class="bg-gray-50 rounded-lg p-3">
-                                <p class="text-xs text-gray-400 mb-0.5">Cabo por Queda ({{ $calcRow->voltage_drop_percent ?? '—' }}%)</p>
-                                <p class="font-semibold text-gray-800">{{ $calcRow->voltage_drop_conductor_mm2 ?? '—' }} mm² <span class="text-gray-400 font-normal">· {{ $calcRow->distance_m ?? '—' }}m</span></p>
+                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Cabo por Queda ({{ $calcRow->voltage_drop_percent ?? '—' }}%)</p>
+                                <p class="font-semibold text-gray-800 dark:text-gray-200">{{ $calcRow->voltage_drop_conductor_mm2 ?? '—' }} mm² <span class="text-gray-400 dark:text-gray-500 font-normal">· {{ $calcRow->distance_m ?? '—' }}m</span></p>
                             </div>
-                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
                                 <p class="text-xs text-blue-500 mb-0.5">Cabo Final Calculado</p>
-                                <p class="font-bold text-blue-800 text-lg">{{ $calcRow->final_conductor_calculated_mm2 ?? '—' }} mm²</p>
+                                <p class="font-bold text-blue-800 dark:text-blue-300 text-lg">{{ $calcRow->final_conductor_calculated_mm2 ?? '—' }} mm²</p>
                             </div>
-                            <div class="bg-gray-50 rounded-lg p-3">
-                                <p class="text-xs text-gray-400 mb-0.5">Iz do Cabo</p>
-                                <p class="font-semibold text-gray-800">{{ $calcRow->iz_a !== null ? number_format($calcRow->iz_a, 1, ',', '.') . ' A' : '—' }}</p>
+                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Iz do Cabo</p>
+                                <p class="font-semibold text-gray-800 dark:text-gray-200">{{ $calcRow->iz_a !== null ? number_format($calcRow->iz_a, 1, ',', '.') . ' A' : '—' }}</p>
                             </div>
-                            <div class="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                                <p class="text-xs text-purple-500 mb-0.5">Disjuntor Calculado</p>
-                                <p class="font-bold text-purple-800 text-lg">{{ $calcRow->breaker_calculated_a ?? '—' }} A</p>
+                            <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
+                                <p class="text-xs text-purple-500 dark:text-purple-400 mb-0.5">Disjuntor Calculado</p>
+                                <p class="font-bold text-purple-800 dark:text-purple-300 text-lg">{{ $calcRow->breaker_calculated_a ?? '—' }} A</p>
                             </div>
-                            <div class="bg-gray-50 rounded-lg p-3">
-                                <p class="text-xs text-gray-400 mb-0.5">Demanda (fator {{ number_format($calcRow->demand_factor_calculated ?? 1, 2, ',', '.') }})</p>
-                                <p class="font-semibold text-gray-800">{{ number_format($calcRow->demand_va_calculated ?? 0, 0, ',', '.') }} VA</p>
+                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Demanda (fator {{ number_format($calcRow->demand_factor_calculated ?? 1, 2, ',', '.') }})</p>
+                                <p class="font-semibold text-gray-800 dark:text-gray-200">{{ number_format($calcRow->demand_va_calculated ?? 0, 0, ',', '.') }} VA</p>
                             </div>
                         </div>
                         @if($calcRow->notes)
-                        <div class="px-4 pb-3 text-xs text-amber-700 italic">
+                        <div class="px-4 pb-3 text-xs text-amber-700 dark:text-amber-300 italic">
                             ⚠ {{ implode('; ', (array)(json_decode($calcRow->notes, true) ?? [$calcRow->notes])) }}
                         </div>
                         @endif
@@ -1236,8 +1236,8 @@
         {{-- ─── STEP 7 — Cabos e Disjuntores ─── --}}
         @if($currentStep === 7)
         <div class="p-6 md:p-8">
-            <h3 class="text-lg font-bold text-gray-800 mb-1">Cabos e Disjuntores</h3>
-            <p class="text-sm text-gray-500 mb-5">Revise os valores calculados. Ative "Manual" para ajustar individualmente.</p>
+            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">Cabos e Disjuntores</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">Revise os valores calculados. Ative "Manual" para ajustar individualmente.</p>
 
             @php
                 $calcRows = \Illuminate\Support\Facades\DB::table('project_circuit_calculations')
@@ -1247,7 +1247,7 @@
             @endphp
 
             @if($calcRows->isEmpty())
-                <p class="text-sm text-gray-400 italic">Nenhum circuito calculado.</p>
+                <p class="text-sm text-gray-400 dark:text-gray-500 italic">Nenhum circuito calculado.</p>
             @else
                 <div class="space-y-4">
                     @foreach($calcRows as $calcRow)
@@ -1255,62 +1255,62 @@
                         $cn  = (int) $calcRow->circuit_number;
                         $ov  = $circuitOverrides[$cn] ?? ['use_manual_conductor'=>false,'manual_conductor_mm2'=>'','use_manual_breaker'=>false,'manual_breaker_a'=>''];
                     @endphp
-                    <div class="border border-gray-200 rounded-xl p-4">
+                    <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4">
                         <div class="flex flex-wrap items-center gap-2 mb-3">
                             <span class="bg-brand-yellow text-brand-black text-xs font-black px-2.5 py-1 rounded-full">C{{ $calcRow->circuit_number }}</span>
-                            <span class="font-semibold text-gray-800 text-sm">{{ $calcRow->description ?? '—' }}</span>
-                            <span class="text-xs text-gray-400">{{ $calcRow->circuit_type ?? '' }} · {{ $calcRow->phases ?? '?' }}F · {{ $calcRow->voltage ?? '?' }}V</span>
-                            <span class="text-xs text-gray-400">| Iproj: {{ number_format($calcRow->project_current_a ?? 0, 2, ',', '.') }}A</span>
+                            <span class="font-semibold text-gray-800 dark:text-gray-200 text-sm">{{ $calcRow->description ?? '—' }}</span>
+                            <span class="text-xs text-gray-400 dark:text-gray-500">{{ $calcRow->circuit_type ?? '' }} · {{ $calcRow->phases ?? '?' }}F · {{ $calcRow->voltage ?? '?' }}V</span>
+                            <span class="text-xs text-gray-400 dark:text-gray-500">| Iproj: {{ number_format($calcRow->project_current_a ?? 0, 2, ',', '.') }}A</span>
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {{-- Cabo --}}
-                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
                                 <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm font-semibold text-blue-900">Seção do Cabo</span>
+                                    <span class="text-sm font-semibold text-blue-900 dark:text-blue-200">Seção do Cabo</span>
                                     <label class="flex items-center gap-1.5 cursor-pointer">
                                         <input type="checkbox"
                                             wire:model="circuitOverrides.{{ $cn }}.use_manual_conductor"
                                             class="w-3.5 h-3.5 rounded accent-blue-600">
-                                        <span class="text-xs text-blue-700 font-medium">Manual</span>
+                                        <span class="text-xs text-blue-700 dark:text-blue-300 font-medium">Manual</span>
                                     </label>
                                 </div>
                                 <p class="text-xs text-blue-500 mb-2">Calculado: <strong>{{ $calcRow->final_conductor_calculated_mm2 ?? '—' }} mm²</strong> | Iz: {{ $calcRow->iz_a !== null ? number_format($calcRow->iz_a, 1, ',', '.') . 'A' : '—' }}</p>
                                 @if($ov['use_manual_conductor'])
                                 <select wire:model="circuitOverrides.{{ $cn }}.manual_conductor_mm2"
-                                    class="w-full border border-blue-300 bg-white rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                                    class="w-full border border-blue-300 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400">
                                     <option value="">Selecione...</option>
                                     @foreach([1.5, 2.5, 4.0, 6.0, 10.0, 16.0, 25.0, 35.0, 50.0, 70.0, 95.0] as $mm2Val)
                                         <option value="{{ $mm2Val }}">{{ $mm2Val }} mm²</option>
                                     @endforeach
                                 </select>
                                 @else
-                                    <div class="text-xl font-bold text-blue-800">{{ $calcRow->final_conductor_calculated_mm2 ?? '—' }} mm²</div>
+                                    <div class="text-xl font-bold text-blue-800 dark:text-blue-300">{{ $calcRow->final_conductor_calculated_mm2 ?? '—' }} mm²</div>
                                 @endif
                             </div>
 
                             {{-- Disjuntor --}}
-                            <div class="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                            <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
                                 <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm font-semibold text-purple-900">Disjuntor</span>
+                                    <span class="text-sm font-semibold text-purple-900 dark:text-purple-200">Disjuntor</span>
                                     <label class="flex items-center gap-1.5 cursor-pointer">
                                         <input type="checkbox"
                                             wire:model="circuitOverrides.{{ $cn }}.use_manual_breaker"
                                             class="w-3.5 h-3.5 rounded accent-purple-600">
-                                        <span class="text-xs text-purple-700 font-medium">Manual</span>
+                                        <span class="text-xs text-purple-700 dark:text-purple-300 font-medium">Manual</span>
                                     </label>
                                 </div>
-                                <p class="text-xs text-purple-500 mb-2">Calculado: <strong>{{ $calcRow->breaker_calculated_a ?? '—' }} A</strong></p>
+                                <p class="text-xs text-purple-500 dark:text-purple-400 mb-2">Calculado: <strong>{{ $calcRow->breaker_calculated_a ?? '—' }} A</strong></p>
                                 @if($ov['use_manual_breaker'])
                                 <select wire:model="circuitOverrides.{{ $cn }}.manual_breaker_a"
-                                    class="w-full border border-purple-300 bg-white rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-400">
+                                    class="w-full border border-purple-300 dark:border-purple-700 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400">
                                     <option value="">Selecione...</option>
                                     @foreach([6, 10, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125] as $baVal)
                                         <option value="{{ $baVal }}">{{ $baVal }} A</option>
                                     @endforeach
                                 </select>
                                 @else
-                                    <div class="text-xl font-bold text-purple-800">{{ $calcRow->breaker_calculated_a ?? '—' }} A</div>
+                                    <div class="text-xl font-bold text-purple-800 dark:text-purple-300">{{ $calcRow->breaker_calculated_a ?? '—' }} A</div>
                                 @endif
                             </div>
                         </div>
@@ -1324,8 +1324,8 @@
         {{-- ─── STEP 8 — Distribuição de Fases ─── --}}
         @if($currentStep === 8)
         <div class="p-6 md:p-8">
-            <h3 class="text-lg font-bold text-gray-800 mb-1">Distribuição de Fases</h3>
-            <p class="text-sm text-gray-500 mb-4">Atribua cada circuito a uma fase (R, S ou T) para equilibrar a instalação.</p>
+            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">Distribuição de Fases</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Atribua cada circuito a uma fase (R, S ou T) para equilibrar a instalação.</p>
 
             @php
                 $calcRows = \Illuminate\Support\Facades\DB::table('project_circuit_calculations')
@@ -1355,21 +1355,21 @@
             @endphp
 
             <div class="flex flex-wrap items-center gap-3 mb-5">
-                <div class="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-center">
-                    <p class="text-xs font-bold text-red-600">R</p>
-                    <p class="font-bold text-red-800">{{ number_format($totalR, 0, ',', '.') }} VA</p>
+                <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-2 text-center">
+                    <p class="text-xs font-bold text-red-600 dark:text-red-400">R</p>
+                    <p class="font-bold text-red-800 dark:text-red-300">{{ number_format($totalR, 0, ',', '.') }} VA</p>
                 </div>
-                <div class="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2 text-center">
+                <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg px-4 py-2 text-center">
                     <p class="text-xs font-bold text-yellow-600">S</p>
                     <p class="font-bold text-yellow-800">{{ number_format($totalS, 0, ',', '.') }} VA</p>
                 </div>
-                <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-center">
-                    <p class="text-xs font-bold text-blue-600">T</p>
-                    <p class="font-bold text-blue-800">{{ number_format($totalT, 0, ',', '.') }} VA</p>
+                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-2 text-center">
+                    <p class="text-xs font-bold text-blue-600 dark:text-blue-400">T</p>
+                    <p class="font-bold text-blue-800 dark:text-blue-300">{{ number_format($totalT, 0, ',', '.') }} VA</p>
                 </div>
-                <div class="rounded-lg px-4 py-2 text-center {{ $imbPct > 20 ? 'bg-red-50 border border-red-200' : ($imbPct > 10 ? 'bg-yellow-50 border border-yellow-200' : 'bg-green-50 border border-green-200') }}">
-                    <p class="text-xs font-bold {{ $imbPct > 20 ? 'text-red-600' : ($imbPct > 10 ? 'text-yellow-600' : 'text-green-600') }}">Desequilíbrio</p>
-                    <p class="font-bold {{ $imbPct > 20 ? 'text-red-800' : ($imbPct > 10 ? 'text-yellow-800' : 'text-green-800') }}">{{ number_format($imbPct, 1, ',', '.') }}%</p>
+                <div class="rounded-lg px-4 py-2 text-center {{ $imbPct > 20 ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800' : ($imbPct > 10 ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800' : 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800') }}">
+                    <p class="text-xs font-bold {{ $imbPct > 20 ? 'text-red-600 dark:text-red-400' : ($imbPct > 10 ? 'text-yellow-600' : 'text-green-600 dark:text-green-400') }}">Desequilíbrio</p>
+                    <p class="font-bold {{ $imbPct > 20 ? 'text-red-800 dark:text-red-300' : ($imbPct > 10 ? 'text-yellow-800' : 'text-green-800 dark:text-green-300') }}">{{ number_format($imbPct, 1, ',', '.') }}%</p>
                 </div>
                 <button wire:click="autoAssignPhases" wire:loading.attr="disabled" wire:target="autoAssignPhases"
                     class="ml-auto inline-flex items-center gap-2 bg-brand-yellow hover:bg-brand-yellow-hover text-brand-black font-bold text-sm px-4 py-2.5 rounded-lg transition disabled:opacity-60">
@@ -1379,39 +1379,39 @@
             </div>
 
             @if($calcRows->isEmpty())
-                <p class="text-sm text-gray-400 italic">Nenhum circuito calculado.</p>
+                <p class="text-sm text-gray-400 dark:text-gray-500 italic">Nenhum circuito calculado.</p>
             @else
-            <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 border-b border-gray-200">
+                    <thead class="bg-gray-50 dark:bg-gray-900/40 border-b border-gray-200 dark:border-gray-700">
                         <tr>
-                            <th class="px-3 py-3 text-left font-semibold text-gray-600">Circ.</th>
-                            <th class="px-3 py-3 text-left font-semibold text-gray-600">Ambiente</th>
-                            <th class="px-3 py-3 text-right font-semibold text-gray-600">VA</th>
-                            <th class="px-3 py-3 text-center font-semibold text-gray-600">Fases</th>
+                            <th class="px-3 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Circ.</th>
+                            <th class="px-3 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Ambiente</th>
+                            <th class="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">VA</th>
+                            <th class="px-3 py-3 text-center font-semibold text-gray-600 dark:text-gray-300">Fases</th>
                             <th class="px-3 py-3 text-center font-semibold text-red-500">R</th>
                             <th class="px-3 py-3 text-center font-semibold text-yellow-500">S</th>
                             <th class="px-3 py-3 text-center font-semibold text-blue-500">T</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100">
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                         @foreach($calcRows as $calcRow)
                         @php
                             $cn8   = (int) $calcRow->circuit_number;
                             $ph8   = (int) ($calcRow->phases ?? 1);
                             $asgn8 = $phaseAssignments[$cn8] ?? 'r';
                         @endphp
-                        <tr class="hover:bg-gray-50">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <td class="px-3 py-2.5">
                                 <span class="bg-brand-yellow text-brand-black text-xs font-black px-2 py-0.5 rounded">C{{ $calcRow->circuit_number }}</span>
                             </td>
-                            <td class="px-3 py-2.5 text-gray-700 text-xs">{{ $calcRow->description ?? '—' }}</td>
-                            <td class="px-3 py-2.5 text-right text-gray-700">{{ number_format($calcRow->power_va ?? 0, 0, ',', '.') }}</td>
+                            <td class="px-3 py-2.5 text-gray-700 dark:text-gray-300 text-xs">{{ $calcRow->description ?? '—' }}</td>
+                            <td class="px-3 py-2.5 text-right text-gray-700 dark:text-gray-300">{{ number_format($calcRow->power_va ?? 0, 0, ',', '.') }}</td>
                             <td class="px-3 py-2.5 text-center">
-                                <span class="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-medium">{{ $ph8 }}F</span>
+                                <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded font-medium">{{ $ph8 }}F</span>
                             </td>
                             @if($ph8 === 3)
-                                <td colspan="3" class="px-3 py-2.5 text-center text-xs text-gray-400 italic">Trifásico — R+S+T automático</td>
+                                <td colspan="3" class="px-3 py-2.5 text-center text-xs text-gray-400 dark:text-gray-500 italic">Trifásico — R+S+T automático</td>
                             @else
                                 <td class="px-3 py-2.5 text-center">
                                     <input type="radio" name="ph-{{ $cn8 }}" value="r"
@@ -1441,8 +1441,8 @@
         {{-- ─── STEP 9 — Eletrodutos / DPS / IDR ─── --}}
         @if($currentStep === 9)
         <div class="p-6 md:p-8">
-            <h3 class="text-lg font-bold text-gray-800 mb-1">Eletrodutos / DPS / IDR</h3>
-            <p class="text-sm text-gray-500 mb-5">Dimensionamento do eletroduto principal, dispositivo de proteção contra surtos e interruptor diferencial-residual.</p>
+            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">Eletrodutos / DPS / IDR</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">Dimensionamento do eletroduto principal, dispositivo de proteção contra surtos e interruptor diferencial-residual.</p>
 
             @php
                 $calcRows9 = \Illuminate\Support\Facades\DB::table('project_circuit_calculations')
@@ -1476,44 +1476,44 @@
             @endphp
 
             {{-- Parâmetros gerais --}}
-            <div class="bg-gray-50 rounded-xl border border-gray-200 p-4 mb-5">
-                <h4 class="text-sm font-bold text-gray-700 mb-3">Parâmetros de Entrada</h4>
+            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-5">
+                <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Parâmetros de Entrada</h4>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Icc (kA)</label>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Icc (kA)</label>
                         <input type="number" wire:model.lazy="shortCircuitKa" min="1" max="100" step="0.5"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
+                            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Fases (IDR)</label>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Fases (IDR)</label>
                         <select wire:model.lazy="sePhases"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
+                            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
                             @foreach([1, 2, 3] as $phOpt)
                                 <option value="{{ $phOpt }}">{{ $phOpt }} fase{{ $phOpt > 1 ? 's' : '' }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Neutro?</label>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Neutro?</label>
                         <select wire:model.lazy="hasNeutral"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
+                            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
                             <option value="SIM">Sim</option>
                             <option value="NÃO">Não</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Tensão DPS (V)</label>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tensão DPS (V)</label>
                         <select wire:model.lazy="dpsVoltage"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
+                            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
                             @foreach([127, 220, 380] as $vOpt)
                                 <option value="{{ $vOpt }}">{{ $vOpt }}V</option>
                             @endforeach
                         </select>
                     </div>
                     <div class="col-span-2 sm:col-span-4">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Localização DPS</label>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Localização DPS</label>
                         <select wire:model.lazy="dpsLocationType"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
+                            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
                             <option value="Descargas diretas">Descargas Diretas (Classe I)</option>
                             <option value="Descargas Indiretas">Descargas Indiretas (Classe II)</option>
                             <option value="Proteção Individual Complementar">Proteção Individual Complementar (Classe III)</option>
@@ -1526,25 +1526,25 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 
                 {{-- Eletroduto --}}
-                <div class="border border-gray-200 rounded-xl overflow-hidden">
+                <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
                     <div class="bg-gray-700 text-white px-4 py-2.5 flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                         <span class="font-semibold text-sm">Eletroduto</span>
                     </div>
                     <div class="p-4 space-y-2 text-sm">
                         <div class="flex justify-between">
-                            <span class="text-gray-500">Cabos totais</span>
+                            <span class="text-gray-500 dark:text-gray-400">Cabos totais</span>
                             <span class="font-semibold">{{ $conduitResult9['total_cables'] }}</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-gray-500">Diâmetro</span>
-                            <span class="font-bold text-gray-800 text-base">
+                            <span class="text-gray-500 dark:text-gray-400">Diâmetro</span>
+                            <span class="font-bold text-gray-800 dark:text-gray-200 text-base">
                                 {{ $conduitResult9['dimension_mm'] ? $conduitResult9['dimension_mm'] . ' mm (' . $conduitResult9['dimension_inch'] . ')' : 'N/D' }}
                             </span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-gray-500">Ocupação</span>
-                            <span class="font-semibold {{ $conduitResult9['used_conduit'] > 40 ? 'text-red-600' : 'text-green-600' }}">
+                            <span class="text-gray-500 dark:text-gray-400">Ocupação</span>
+                            <span class="font-semibold {{ $conduitResult9['used_conduit'] > 40 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400' }}">
                                 {{ number_format($conduitResult9['used_conduit'], 1, ',', '.') }}% / 40%
                             </span>
                         </div>
@@ -1555,63 +1555,63 @@
                 </div>
 
                 {{-- DPS --}}
-                <div class="border border-gray-200 rounded-xl overflow-hidden">
+                <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
                     <div class="bg-orange-600 text-white px-4 py-2.5 flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                         <span class="font-semibold text-sm">DPS — Classe {{ $dpsResult9['dps_class'] }}</span>
                     </div>
                     <div class="p-4 space-y-2 text-sm">
                         <div class="flex justify-between">
-                            <span class="text-gray-500">Up máx.</span>
+                            <span class="text-gray-500 dark:text-gray-400">Up máx.</span>
                             <span class="font-semibold">{{ $dpsResult9['min_up'] }} kV</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-gray-500">Uc</span>
+                            <span class="text-gray-500 dark:text-gray-400">Uc</span>
                             <span class="font-semibold">{{ $dpsResult9['uc_v'] }} V</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-gray-500">In</span>
+                            <span class="text-gray-500 dark:text-gray-400">In</span>
                             <span class="font-semibold">{{ $dpsResult9['in_value'] }} kA</span>
                         </div>
                         @if($dpsResult9['iimp'])
                         <div class="flex justify-between">
-                            <span class="text-gray-500">Iimp</span>
+                            <span class="text-gray-500 dark:text-gray-400">Iimp</span>
                             <span class="font-semibold">{{ number_format($dpsResult9['iimp'] / 1000, 1, ',', '.') }} kA</span>
                         </div>
                         @endif
                         <div class="flex justify-between">
-                            <span class="text-gray-500">Icc selecionado</span>
+                            <span class="text-gray-500 dark:text-gray-400">Icc selecionado</span>
                             <span class="font-semibold">{{ $dpsResult9['icc'] }} kA</span>
                         </div>
                     </div>
                 </div>
 
                 {{-- IDR --}}
-                <div class="border border-gray-200 rounded-xl overflow-hidden">
+                <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
                     <div class="bg-indigo-600 text-white px-4 py-2.5 flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                         <span class="font-semibold text-sm">IDR</span>
                     </div>
                     <div class="p-4 space-y-2 text-sm">
                         <div class="flex justify-between">
-                            <span class="text-gray-500">In</span>
-                            <span class="font-bold text-gray-800 text-base">{{ $idrResult9['nominal_current_a'] ?? '—' }} A</span>
+                            <span class="text-gray-500 dark:text-gray-400">In</span>
+                            <span class="font-bold text-gray-800 dark:text-gray-200 text-base">{{ $idrResult9['nominal_current_a'] ?? '—' }} A</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-gray-500">Polos</span>
+                            <span class="text-gray-500 dark:text-gray-400">Polos</span>
                             <span class="font-semibold">{{ $idrResult9['poles'] }}</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-gray-500">Corrente residual</span>
+                            <span class="text-gray-500 dark:text-gray-400">Corrente residual</span>
                             <span class="font-semibold">{{ $idrResult9['residual_current'] }}</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-gray-500">Icc selecionado</span>
+                            <span class="text-gray-500 dark:text-gray-400">Icc selecionado</span>
                             <span class="font-semibold">{{ $idrResult9['icc'] }} kA</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-gray-500">Status</span>
-                            <span class="text-xs font-semibold {{ $idrResult9['idr_status'] === 'OK' ? 'text-green-700' : 'text-red-700' }}">
+                            <span class="text-gray-500 dark:text-gray-400">Status</span>
+                            <span class="text-xs font-semibold {{ $idrResult9['idr_status'] === 'OK' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300' }}">
                                 {{ $idrResult9['idr_status'] }}
                             </span>
                         </div>
@@ -1619,15 +1619,15 @@
                 </div>
             </div>
 
-            <p class="text-xs text-gray-400 mt-4 italic">* Os valores são recalculados automaticamente ao alterar os parâmetros. Clique em "Próximo" para salvar.</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-4 italic">* Os valores são recalculados automaticamente ao alterar os parâmetros. Clique em "Próximo" para salvar.</p>
         </div>
         @endif
 
         {{-- ─── STEP 10 — Padrão de Entrada ─── --}}
         @if($currentStep === 10)
         <div class="p-6 md:p-8">
-            <h3 class="text-lg font-bold text-gray-800 mb-1">Padrão de Entrada</h3>
-            <p class="text-sm text-gray-500 mb-5">Resumo final da instalação com carga instalada e demanda provável.</p>
+            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">Padrão de Entrada</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">Resumo final da instalação com carga instalada e demanda provável.</p>
 
             @php
                 $calcRows10 = \Illuminate\Support\Facades\DB::table('project_circuit_calculations')
@@ -1644,53 +1644,53 @@
             {{-- Totais calculados --}}
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                 <div class="bg-brand-yellow/10 border border-brand-yellow rounded-xl p-4 text-center">
-                    <p class="text-xs text-gray-500 mb-1">Circuitos</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Circuitos</p>
                     <p class="text-2xl font-black text-brand-black">{{ $numCirc10 }}</p>
                 </div>
-                <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
-                    <p class="text-xs text-gray-500 mb-1">Carga Instalada</p>
-                    <p class="text-2xl font-black text-blue-800">{{ number_format($instKw10, 2, ',', '.') }}</p>
+                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 text-center">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Carga Instalada</p>
+                    <p class="text-2xl font-black text-blue-800 dark:text-blue-300">{{ number_format($instKw10, 2, ',', '.') }}</p>
                     <p class="text-xs text-blue-500 font-medium">kW</p>
                 </div>
-                <div class="bg-purple-50 border border-purple-200 rounded-xl p-4 text-center">
-                    <p class="text-xs text-gray-500 mb-1">Demanda Provável</p>
-                    <p class="text-2xl font-black text-purple-800">{{ number_format($demKva10, 2, ',', '.') }}</p>
-                    <p class="text-xs text-purple-500 font-medium">kVA</p>
+                <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-4 text-center">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Demanda Provável</p>
+                    <p class="text-2xl font-black text-purple-800 dark:text-purple-300">{{ number_format($demKva10, 2, ',', '.') }}</p>
+                    <p class="text-xs text-purple-500 dark:text-purple-400 font-medium">kVA</p>
                 </div>
-                <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
-                    <p class="text-xs text-gray-500 mb-1">Corrente Total Est.</p>
+                <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 text-center">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Corrente Total Est.</p>
                     @php
                         $vSE = $defaultVoltage ?: 127;
                         $iEst = $vSE > 0 ? round(($demVa10 / $vSE), 1) : 0;
                     @endphp
-                    <p class="text-2xl font-black text-green-800">{{ $iEst }}</p>
+                    <p class="text-2xl font-black text-green-800 dark:text-green-300">{{ $iEst }}</p>
                     <p class="text-xs text-green-500 font-medium">A ({{ $vSE }}V)</p>
                 </div>
             </div>
 
             {{-- Configurações do padrão --}}
-            <div class="bg-gray-50 rounded-xl border border-gray-200 p-5">
-                <h4 class="text-sm font-bold text-gray-700 mb-4">Configurações do Padrão de Entrada</h4>
+            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+                <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-4">Configurações do Padrão de Entrada</h4>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Fases do Padrão</label>
+                        <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Fases do Padrão</label>
                         <select wire:model="sePhases"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
+                            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
                             <option value="1">Monofásico</option>
                             <option value="2">Bifásico</option>
                             <option value="3">Trifásico</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Posição do Poste</label>
+                        <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Posição do Poste</label>
                         <input type="text" wire:model="sePolePosition" placeholder="Ex: Poste concreto 11m"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
+                            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
                     </div>
                     <div class="sm:col-span-1"></div>
                     <div class="sm:col-span-3">
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Observações do Padrão</label>
+                        <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Observações do Padrão</label>
                         <textarea wire:model="seNotes" rows="3" placeholder="Anotações técnicas sobre o padrão de entrada..."
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-yellow resize-none"></textarea>
+                            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow resize-none"></textarea>
                     </div>
                 </div>
             </div>
@@ -1702,28 +1702,28 @@
                 $tueCount  = $calcRows10->where('circuit_type', 'TUE')->count();
             @endphp
             <div class="mt-5 grid grid-cols-3 gap-3 text-sm text-center">
-                <div class="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 rounded-lg p-3">
                     <p class="text-xs text-blue-500 font-semibold mb-0.5">Iluminação</p>
-                    <p class="text-xl font-black text-blue-800">{{ $ilumCount }}</p>
+                    <p class="text-xl font-black text-blue-800 dark:text-blue-300">{{ $ilumCount }}</p>
                     <p class="text-xs text-blue-400">circuitos</p>
                 </div>
-                <div class="bg-green-50 border border-green-100 rounded-lg p-3">
+                <div class="bg-green-50 dark:bg-green-900/20 border border-green-100 rounded-lg p-3">
                     <p class="text-xs text-green-500 font-semibold mb-0.5">TUG</p>
-                    <p class="text-xl font-black text-green-800">{{ $tugCount }}</p>
+                    <p class="text-xl font-black text-green-800 dark:text-green-300">{{ $tugCount }}</p>
                     <p class="text-xs text-green-400">circuitos</p>
                 </div>
-                <div class="bg-orange-50 border border-orange-100 rounded-lg p-3">
+                <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 rounded-lg p-3">
                     <p class="text-xs text-orange-500 font-semibold mb-0.5">TUE</p>
-                    <p class="text-xl font-black text-orange-800">{{ $tueCount }}</p>
+                    <p class="text-xl font-black text-orange-800 dark:text-orange-300">{{ $tueCount }}</p>
                     <p class="text-xs text-orange-400">circuitos</p>
                 </div>
             </div>
 
-            <div class="mt-5 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
-                <svg class="w-6 h-6 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div class="mt-5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 flex items-center gap-3">
+                <svg class="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <div>
-                    <p class="font-semibold text-green-800 text-sm">Dimensionamento concluído!</p>
-                    <p class="text-green-700 text-xs mt-0.5">Clique em "Concluir" para finalizar o projeto e salvar todas as informações.</p>
+                    <p class="font-semibold text-green-800 dark:text-green-300 text-sm">Dimensionamento concluído!</p>
+                    <p class="text-green-700 dark:text-green-300 text-xs mt-0.5">Clique em "Concluir" para finalizar o projeto e salvar todas as informações.</p>
                 </div>
             </div>
         </div>
@@ -1732,11 +1732,11 @@
         {{-- ══════════════════════════════════════════════════════════
              RODAPÉ DE NAVEGAÇÃO
         ══════════════════════════════════════════════════════════ --}}
-        <div class="border-t border-gray-200 bg-gray-50 px-6 py-4 flex items-center justify-between rounded-b-xl">
+        <div class="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-6 py-4 flex items-center justify-between rounded-b-xl">
             <div>
                 @if($currentStep > 1)
                 <button wire:click="prevStep" wire:loading.attr="disabled" wire:target="prevStep"
-                    class="inline-flex items-center gap-2 bg-white border border-gray-300 hover:border-gray-400 text-gray-700 font-medium text-sm px-5 py-2.5 rounded-lg transition disabled:opacity-60">
+                    class="inline-flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300 font-medium text-sm px-5 py-2.5 rounded-lg transition disabled:opacity-60">
                     <span wire:loading.remove wire:target="prevStep">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                     </span>
@@ -1750,8 +1750,8 @@
                 @endif
             </div>
 
-            <span class="text-sm text-gray-500 font-medium hidden sm:block">
-                Step <span class="font-bold text-gray-700">{{ $currentStep }}</span> de {{ \App\Livewire\Student\Wizard\ProjectWizard::TOTAL_STEPS }}
+            <span class="text-sm text-gray-500 dark:text-gray-400 font-medium hidden sm:block">
+                Step <span class="font-bold text-gray-700 dark:text-gray-300">{{ $currentStep }}</span> de {{ \App\Livewire\Student\Wizard\ProjectWizard::TOTAL_STEPS }}
             </span>
 
             <div>

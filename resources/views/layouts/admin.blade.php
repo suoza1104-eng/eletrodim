@@ -4,9 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Admin') — EletroDIM</title>
+    <script>
+        // Aplica o tema salvo antes da renderização, evitando flash de tela clara/escura errada.
+        (function () {
+            const saved = localStorage.getItem('eletrodim-theme');
+            const isDark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (isDark) document.documentElement.classList.add('dark');
+        })();
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
@@ -25,14 +34,43 @@
     @livewireStyles
     @stack('styles')
 </head>
-<body class="bg-brand-bg min-h-screen flex">
+<body
+    class="bg-brand-bg dark:bg-gray-900 min-h-screen transition-colors duration-200"
+    x-data="{
+        sidebarOpen: JSON.parse(localStorage.getItem('eletrodim-sidebar-open') ?? 'true'),
+        darkMode: document.documentElement.classList.contains('dark'),
+        toggleTheme() {
+            this.darkMode = !this.darkMode;
+            document.documentElement.classList.toggle('dark', this.darkMode);
+            localStorage.setItem('eletrodim-theme', this.darkMode ? 'dark' : 'light');
+        }
+    }"
+    x-init="$watch('sidebarOpen', v => localStorage.setItem('eletrodim-sidebar-open', JSON.stringify(v)))"
+>
 
-    <!-- Sidebar Admin -->
-    <aside class="w-64 bg-brand-dark min-h-screen flex flex-col fixed left-0 top-0 z-30">
+    <!-- Overlay (mobile, ou quando o menu está sobre o conteúdo) -->
+    <div
+        x-show="sidebarOpen"
+        x-transition.opacity
+        @click="sidebarOpen = false"
+        class="fixed inset-0 bg-black/50 z-20 lg:hidden"
+        style="display:none"
+    ></div>
+
+    <!-- Sidebar Admin retrátil -->
+    <aside
+        :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+        class="w-64 bg-brand-dark min-h-screen flex flex-col fixed left-0 top-0 z-30 transition-transform duration-200 ease-in-out"
+    >
         <!-- Logo -->
-        <div class="p-6 border-b border-gray-700">
-            <h1 class="text-2xl font-black text-brand-yellow">EletroDIM</h1>
-            <p class="text-orange-400 text-xs font-semibold mt-0.5 uppercase tracking-widest">Administrador</p>
+        <div class="p-6 border-b border-gray-700 flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-black text-brand-yellow">EletroDIM</h1>
+                <p class="text-orange-400 text-xs font-semibold mt-0.5 uppercase tracking-widest">Administrador</p>
+            </div>
+            <button @click="sidebarOpen = false" class="text-gray-400 hover:text-white p-1">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
         </div>
 
         <!-- Nav Admin -->
@@ -83,14 +121,25 @@
     </aside>
 
     <!-- Main content -->
-    <div class="ml-64 flex-1 flex flex-col min-h-screen">
+    <div :class="sidebarOpen ? 'lg:ml-64' : 'lg:ml-0'" class="flex-1 flex flex-col min-h-screen transition-all duration-200">
         <!-- Top bar -->
-        <header class="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between">
-            <div>
-                <h2 class="text-xl font-semibold text-gray-800">@yield('page-title', 'Painel Admin')</h2>
-                <p class="text-sm text-gray-500">@yield('page-subtitle', '')</p>
+        <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-8 py-4 flex items-center justify-between transition-colors duration-200">
+            <div class="flex items-center gap-3">
+                <!-- Sanduíche: abre/fecha o menu em qualquer tamanho de tela -->
+                <button @click="sidebarOpen = !sidebarOpen" class="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition -ml-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">@yield('page-title', 'Painel Admin')</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">@yield('page-subtitle', '')</p>
+                </div>
             </div>
             <div class="flex items-center gap-3">
+                <!-- Toggle de tema claro/escuro -->
+                <button @click="toggleTheme()" class="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition" title="Alternar tema">
+                    <svg x-show="!darkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                    <svg x-show="darkMode" style="display:none" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
                 <span class="bg-orange-500 text-white text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">Admin</span>
             </div>
         </header>
@@ -98,13 +147,13 @@
         <!-- Content -->
         <main class="flex-1 p-8">
             @if(session('success'))
-                <div class="mb-6 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-center gap-2">
-                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <div class="mb-6 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 px-4 py-3 rounded-lg flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     {{ session('success') }}
                 </div>
             @endif
             @if(session('error'))
-                <div class="mb-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+                <div class="mb-6 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 px-4 py-3 rounded-lg">
                     {{ session('error') }}
                 </div>
             @endif
