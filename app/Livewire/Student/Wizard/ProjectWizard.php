@@ -1350,30 +1350,6 @@ class ProjectWizard extends Component
                 $newLoads[] = $load;
             }
 
-    private function sortLoadsBySequence(): void
-    {
-        usort($this->loads, function ($a, $b) {
-            $typeOrder = ['ILUMINAÇÃO' => 1, 'TUG' => 2, 'TUE' => 3];
-            $tA = $typeOrder[$a['load_type'] ?? ''] ?? 99;
-            $tB = $typeOrder[$b['load_type'] ?? ''] ?? 99;
-            if ($tA !== $tB) return $tA <=> $tB;
-
-            $circA = (int)($a['circuit_number'] ?? 0);
-            $circB = (int)($b['circuit_number'] ?? 0);
-            if ($circA > 0 && $circB > 0 && $circA !== $circB) return $circA <=> $circB;
-
-            $flA = (int)($a['floor_number'] ?? 1);
-            $flB = (int)($b['floor_number'] ?? 1);
-            if ($flA !== $flB) return $flA <=> $flB;
-
-            $rA = (int)($a['room_index'] ?? 0);
-            $rB = (int)($b['room_index'] ?? 0);
-            if ($rA !== $rB) return $rA <=> $rB;
-
-            return (int)($a['sort_order'] ?? 0) <=> (int)($b['sort_order'] ?? 0);
-        });
-    }
-
             // TUG
             if ($tugVa > 0 && $tugQty > 0) {
                 if ($qty600 > 0 && $qty100 > 0) {
@@ -1478,6 +1454,30 @@ class ProjectWizard extends Component
         }
 
         $this->successMessage = 'Cargas atualizadas a partir dos cômodos.';
+    }
+
+    private function sortLoadsBySequence(): void
+    {
+        usort($this->loads, function ($a, $b) {
+            $typeOrder = ['ILUMINAÇÃO' => 1, 'TUG' => 2, 'TUE' => 3];
+            $tA = $typeOrder[$a['load_type'] ?? ''] ?? 99;
+            $tB = $typeOrder[$b['load_type'] ?? ''] ?? 99;
+            if ($tA !== $tB) return $tA <=> $tB;
+
+            $circA = (int)($a['circuit_number'] ?? 0);
+            $circB = (int)($b['circuit_number'] ?? 0);
+            if ($circA > 0 && $circB > 0 && $circA !== $circB) return $circA <=> $circB;
+
+            $flA = (int)($a['floor_number'] ?? 1);
+            $flB = (int)($b['floor_number'] ?? 1);
+            if ($flA !== $flB) return $flA <=> $flB;
+
+            $rA = (int)($a['room_index'] ?? 0);
+            $rB = (int)($b['room_index'] ?? 0);
+            if ($rA !== $rB) return $rA <=> $rB;
+
+            return (int)($a['sort_order'] ?? 0) <=> (int)($b['sort_order'] ?? 0);
+        });
     }
 
     public function addTueLoad(int $roomIndex): void
