@@ -2074,6 +2074,7 @@ class ProjectWizard extends Component
             }
         }
 
+        $this->renumberCircuitsBySequence();
         $this->sortLoadsBySequence();
 
         $this->successMessage = 'Circuitos distribuídos automaticamente (Iluminação → TUG → TUE).';
@@ -2201,6 +2202,72 @@ class ProjectWizard extends Component
         }
     }
 
+    private function loadTypeSequenceOrder(string $type): int
+    {
+        $type = mb_strtoupper(trim($type));
+
+        if (str_contains($type, 'ILUM')) return 1;
+        if (str_contains($type, 'TUG')) return 2;
+        if (str_contains($type, 'TUE')) return 3;
+
+        return 99;
+    }
+
+    private function renumberCircuitsBySequence(): void
+    {
+        $circuits = [];
+
+        foreach ($this->loads as $li => $load) {
+            $circNum = (int)($load['circuit_number'] ?? 0);
+            if ($circNum <= 0) continue;
+
+            if (!isset($circuits[$circNum])) {
+                $circuits[$circNum] = [
+                    'old_circuit' => $circNum,
+                    'type_order'  => 99,
+                    'voltage'     => PHP_INT_MAX,
+                    'phases'      => PHP_INT_MAX,
+                    'floor'       => PHP_INT_MAX,
+                    'room'        => PHP_INT_MAX,
+                    'sort'        => PHP_INT_MAX,
+                ];
+            }
+
+            $circuits[$circNum]['type_order'] = min(
+                $circuits[$circNum]['type_order'],
+                $this->loadTypeSequenceOrder((string)($load['load_type'] ?? ''))
+            );
+            $circuits[$circNum]['voltage'] = min($circuits[$circNum]['voltage'], (int)($load['voltage_v'] ?? 127));
+            $circuits[$circNum]['phases']  = min($circuits[$circNum]['phases'], (int)($load['phases'] ?? 1));
+            $circuits[$circNum]['floor']   = min($circuits[$circNum]['floor'], (int)($load['floor_number'] ?? 1));
+            $circuits[$circNum]['room']    = min($circuits[$circNum]['room'], (int)($load['room_index'] ?? $li));
+            $circuits[$circNum]['sort']    = min($circuits[$circNum]['sort'], (int)($load['sort_order'] ?? 0));
+        }
+
+        if (empty($circuits)) return;
+
+        usort($circuits, function (array $a, array $b) {
+            foreach (['type_order', 'voltage', 'phases', 'floor', 'room', 'sort', 'old_circuit'] as $field) {
+                if ($a[$field] !== $b[$field]) return $a[$field] <=> $b[$field];
+            }
+
+            return 0;
+        });
+
+        $circuitMap = [];
+        $nextCircuit = 1;
+        foreach ($circuits as $circuit) {
+            $circuitMap[$circuit['old_circuit']] = $nextCircuit++;
+        }
+
+        foreach (array_keys($this->loads) as $li) {
+            $oldCircuit = (int)($this->loads[$li]['circuit_number'] ?? 0);
+            if ($oldCircuit > 0 && isset($circuitMap[$oldCircuit])) {
+                $this->loads[$li]['circuit_number'] = $circuitMap[$oldCircuit];
+            }
+        }
+    }
+
     public function splitLoad(int $li, int $count, string $vasJson): void
     {
         $this->clearMessages();
@@ -2279,8 +2346,21 @@ class ProjectWizard extends Component
             if (isset($this->loads[$i])) $this->calculateLoad($i);
         }
 
-        $last = $nextCircuit + $count - 1;
-        $this->successMessage = "Carga dividida em {$count} partes → C{$nextCircuit}" . ($count > 1 ? "–C{$last}" : '') . '.';
+        $this->renumberCircuitsBySequence();
+        $partCircuits = [];
+        for ($i = $li; $i < $li + $count; $i++) {
+            if (isset($this->loads[$i])) {
+                $partCircuits[] = (int)($this->loads[$i]['circuit_number'] ?? 0);
+            }
+        }
+
+        $this->sortLoadsBySequence();
+
+        $partCircuits = array_values(array_unique(array_filter($partCircuits)));
+        sort($partCircuits);
+        $first = $partCircuits[0] ?? $nextCircuit;
+        $last  = $partCircuits[count($partCircuits) - 1] ?? $first;
+        $this->successMessage = "Carga dividida em {$count} partes → C{$first}" . ($last > $first ? "–C{$last}" : '') . '.';
     }
 
     private function validateStep4(): void
