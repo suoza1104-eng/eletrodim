@@ -1,0 +1,2 @@
+<?php
+// Blanked after use
