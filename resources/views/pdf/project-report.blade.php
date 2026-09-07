@@ -201,9 +201,12 @@
         </div>
         <div class="data-row">
             <span class="data-label">Descrição:</span>
-            <span class="data-value">{{ $project->description ?? '—' }}</span>
+            <span class="data-value">{{ $project->observations ?? '—' }}</span>
             <span class="data-label">Status:</span>
-            <span class="data-value">{{ ucfirst($project->status ?? '—') }}</span>
+            @php
+                $statusLabels = ['draft' => 'Rascunho', 'in_progress' => 'Em andamento', 'completed' => 'Concluído'];
+            @endphp
+            <span class="data-value">{{ $statusLabels[$project->status] ?? ucfirst($project->status ?? '—') }}</span>
         </div>
     </div>
 </div>
@@ -279,26 +282,30 @@
             <tbody>
                 @foreach($circuits as $index => $circuit)
                     @php
-                        $powerW   = (float)($circuit->power_w   ?? $circuit->power ?? 0);
-                        $powerVA  = (float)($circuit->power_va  ?? $powerW);
-                        $demandVA = (float)($circuit->demand_va ?? $circuit->demand ?? 0);
+                        $powerW        = (float)($circuit->power_w ?? 0);
+                        $powerVA       = (float)($circuit->power_va ?? 0);
+                        $demandFactor  = $circuit->use_manual_demand_factor ? $circuit->demand_factor_manual : $circuit->demand_factor_calculated;
+                        $demandVA      = (float)($circuit->use_manual_demand_va ? $circuit->demand_va_manual : $circuit->demand_va_calculated);
+                        $currentA      = (float)($circuit->project_current_a ?? 0);
+                        $conductorMm2  = $circuit->use_manual_final_conductor ? $circuit->final_conductor_manual_mm2 : $circuit->final_conductor_calculated_mm2;
+                        $breakerA      = $circuit->use_manual_breaker ? $circuit->breaker_manual_a : $circuit->breaker_calculated_a;
                         $totalPowerW   += $powerW;
                         $totalPowerVA  += $powerVA;
                         $totalDemandVA += $demandVA;
                     @endphp
                     <tr>
-                        <td>{{ $index + 1 }}</td>
-                        <td class="text-left">{{ $circuit->description ?? $circuit->name ?? '—' }}</td>
-                        <td>{{ $circuit->circuit_type ?? $circuit->type ?? '—' }}</td>
+                        <td>{{ $circuit->circuit_number ?? $index + 1 }}</td>
+                        <td class="text-left">{{ $circuit->description ?? '—' }}</td>
+                        <td>{{ $circuit->circuit_type ?? '—' }}</td>
                         <td>{{ number_format($powerW, 0, ',', '.') }}</td>
                         <td>{{ number_format($powerVA, 0, ',', '.') }}</td>
-                        <td>{{ isset($circuit->demand_factor) ? number_format((float)$circuit->demand_factor, 2, ',', '') : '—' }}</td>
+                        <td>{{ isset($demandFactor) ? number_format((float)$demandFactor, 2, ',', '') : '—' }}</td>
                         <td>{{ number_format($demandVA, 0, ',', '.') }}</td>
                         <td>{{ isset($circuit->power_factor) ? number_format((float)$circuit->power_factor, 2, ',', '') : '—' }}</td>
                         <td>{{ $circuit->voltage ?? '—' }}</td>
-                        <td>{{ isset($circuit->current) ? number_format((float)$circuit->current, 2, ',', '') : '—' }}</td>
-                        <td>{{ $circuit->conductor_section ?? $circuit->cable_section ?? '—' }}</td>
-                        <td>{{ $circuit->breaker_rating ?? $circuit->breaker ?? '—' }}</td>
+                        <td>{{ number_format($currentA, 2, ',', '') }}</td>
+                        <td>{{ isset($conductorMm2) ? number_format((float)$conductorMm2, 2, ',', '') : '—' }}</td>
+                        <td>{{ $breakerA ?? '—' }}</td>
                     </tr>
                 @endforeach
             </tbody>
