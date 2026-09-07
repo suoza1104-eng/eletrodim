@@ -289,6 +289,9 @@ class ProjectWizard extends Component
 
             if ($this->currentStep >= 3) {
                 $this->loadLoadsFromDb();
+                if ($this->hasRoomsMissingFromLoads()) {
+                    $this->generateLoadsFromRooms();
+                }
             }
 
             if ($this->currentStep >= 5) {
@@ -316,9 +319,11 @@ class ProjectWizard extends Component
         $this->currentStep = min($this->currentStep + 1, self::TOTAL_STEPS);
         $this->updateProgress();
 
-        if (($this->currentStep === 3 || $this->currentStep === 4) && empty($this->loads)) {
-            $this->loadLoadsFromDb();
+        if ($this->currentStep === 3 || $this->currentStep === 4) {
             if (empty($this->loads)) {
+                $this->loadLoadsFromDb();
+            }
+            if (empty($this->loads) || $this->hasRoomsMissingFromLoads()) {
                 $this->generateLoadsFromRooms();
             }
         }
@@ -328,6 +333,26 @@ class ProjectWizard extends Component
             $this->loadPhaseAssignments();
             $this->loadServiceEntrance();
         }
+    }
+
+    // Detecta cômodos (com id salvo) que ainda não têm nenhuma carga em $this->loads -
+    // acontece quando o usuário volta ao Step 2 e adiciona cômodos depois de já ter
+    // visitado o Step 3, já que a geração automática só rodava na primeira entrada.
+    private function hasRoomsMissingFromLoads(): bool
+    {
+        $loadRoomIds = array_unique(array_filter(array_map(
+            fn($l) => $l['room_id'] ?? null,
+            $this->loads
+        )));
+
+        foreach ($this->rooms as $room) {
+            $roomId = $room['id'] ?? null;
+            if ($roomId && !in_array($roomId, $loadRoomIds)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function prevStep(): void
@@ -361,9 +386,11 @@ class ProjectWizard extends Component
             $this->clearMessages();
             $this->currentStep = $step;
 
-            if (($step === 3 || $step === 4) && empty($this->loads)) {
-                $this->loadLoadsFromDb();
+            if ($step === 3 || $step === 4) {
                 if (empty($this->loads)) {
+                    $this->loadLoadsFromDb();
+                }
+                if (empty($this->loads) || $this->hasRoomsMissingFromLoads()) {
                     $this->generateLoadsFromRooms();
                 }
             }
