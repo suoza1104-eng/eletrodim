@@ -6,7 +6,7 @@ namespace App\Services;
 
 use App\Models\Project;
 use App\Models\ProjectReport;
-use Barryvdh\LaravelDompdf\Facade\Pdf;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 
