@@ -15,18 +15,16 @@ use Illuminate\Support\Facades\DB;
 
 class ProjectWizard extends Component
 {
-    public const TOTAL_STEPS = 10;
+    public const TOTAL_STEPS = 8;
     public const STEP_LABELS = [
-        1  => 'Dados do Projeto',
-        2  => 'Cadastro dos Cômodos e Cargas Mínimas',
-        3  => 'Levantamento das Cargas',
-        4  => 'Atribuição de Circuitos',
-        5  => 'Conferência das Cargas',
-        6  => 'Memorial de Cálculo',
-        7  => 'Cabos e Disjuntores',
-        8  => 'Distribuição de Fases',
-        9  => 'Eletrodutos / DPS / IDR',
-        10 => 'Padrão de Entrada',
+        1 => 'Dados do Projeto',
+        2 => 'Cadastro dos Cômodos e Cargas Mínimas',
+        3 => 'Levantamento das Cargas',
+        4 => 'Atribuição de Circuitos',
+        5 => 'Memorial de Cálculo e Dimensionamento',
+        6 => 'Distribuição de Fases',
+        7 => 'Eletrodutos / DPS / IDR',
+        8 => 'Padrão de Entrada',
     ];
 
     public const ROOM_TYPES = [
@@ -591,14 +589,14 @@ class ProjectWizard extends Component
     {
         DB::transaction(function () {
             match ($this->currentStep) {
-                1  => $this->saveStep1(),
-                2  => $this->saveStep2(),
-                3  => $this->saveStep3(),
-                4  => $this->saveStep4(),
-                7  => $this->saveStep7(),
-                8  => $this->saveStep8(),
-                9  => $this->saveStep9(),
-                10 => $this->saveStep10(),
+                1 => $this->saveStep1(),
+                2 => $this->saveStep2(),
+                3 => $this->saveStep3(),
+                4 => $this->saveStep4(),
+                5 => $this->saveStep5(),
+                6 => $this->saveStep6(),
+                7 => $this->saveStep7(),
+                8 => $this->saveStep8(),
                 default => null,
             };
         });
@@ -820,28 +818,79 @@ class ProjectWizard extends Component
         }
     }
 
-    private function saveStep7(): void
+    public function updateCircuitParam(int $circuitNumber, string $field, mixed $value): void
+    {
+        if (!isset($this->circuitOverrides[$circuitNumber])) {
+            $this->circuitOverrides[$circuitNumber] = [
+                'distance_m'           => 0.0,
+                'installation_method'  => 'B1',
+                'temperature_c'        => 30,
+                'grouped_circuits'     => 1,
+                'voltage_drop_percent' => 4.0,
+                'use_manual_conductor' => false,
+                'manual_conductor_mm2' => '',
+                'use_manual_breaker'   => false,
+                'manual_breaker_a'     => '',
+            ];
+        }
+
+        $this->circuitOverrides[$circuitNumber][$field] = $value;
+        $this->saveStep5();
+    }
+
+    private function saveStep5(): void
     {
         if (!$this->projectId) return;
-        foreach ($this->circuitOverrides as $circNum => $override) {
+
+        foreach ($this->circuitOverrides as $cn => $override) {
+            $distance   = isset($override['distance_m']) && $override['distance_m'] !== '' ? (float)$override['distance_m'] : 0.0;
+            $instMethod = !empty($override['installation_method']) ? (string)$override['installation_method'] : 'B1';
+            $tempC      = isset($override['temperature_c']) && $override['temperature_c'] !== '' ? (int)$override['temperature_c'] : 30;
+            $grouped    = isset($override['grouped_circuits']) && $override['grouped_circuits'] !== '' ? max(1, (int)$override['grouped_circuits']) : 1;
+            $vDrop      = isset($override['voltage_drop_percent']) && $override['voltage_drop_percent'] !== '' ? (float)$override['voltage_drop_percent'] : 4.0;
+            $useCond    = !empty($override['use_manual_conductor']) ? 1 : 0;
+            $manCond    = (!empty($override['use_manual_conductor']) && ($override['manual_conductor_mm2'] ?? '') !== '') ? (float)$override['manual_conductor_mm2'] : null;
+            $useBrk     = !empty($override['use_manual_breaker']) ? 1 : 0;
+            $manBrk     = (!empty($override['use_manual_breaker']) && ($override['manual_breaker_a'] ?? '') !== '') ? (int)$override['manual_breaker_a'] : null;
+
             try {
+                DB::table('project_input_rows')
+                    ->where('project_id', $this->projectId)
+                    ->where('circuit_number', (int) $cn)
+                    ->update([
+                        'distance_m'           => $distance,
+                        'installation_method'  => $instMethod,
+                        'temperature_c'        => $tempC,
+                        'grouped_circuits'     => $grouped,
+                        'voltage_drop_percent' => $vDrop,
+                        'updated_at'           => now(),
+                    ]);
+
                 DB::table('project_circuit_calculations')
                     ->where('project_id', $this->projectId)
-                    ->where('circuit_number', (int) $circNum)
+                    ->where('circuit_number', (int) $cn)
                     ->update([
-                        'use_manual_final_conductor' => $override['use_manual_conductor'] ? 1 : 0,
-                        'final_conductor_manual_mm2' => ($override['use_manual_conductor'] && $override['manual_conductor_mm2'] !== '')
-                            ? (float) $override['manual_conductor_mm2'] : null,
-                        'use_manual_breaker'         => $override['use_manual_breaker'] ? 1 : 0,
-                        'breaker_manual_a'           => ($override['use_manual_breaker'] && $override['manual_breaker_a'] !== '')
-                            ? (int) $override['manual_breaker_a'] : null,
+                        'distance_m'                 => $distance,
+                        'installation_method'        => $instMethod,
+                        'temperature_c'              => $tempC,
+                        'grouped_circuits'           => $grouped,
+                        'voltage_drop_percent'       => $vDrop,
+                        'use_manual_final_conductor' => $useCond,
+                        'final_conductor_manual_mm2' => $manCond,
+                        'use_manual_breaker'         => $useBrk,
+                        'breaker_manual_a'           => $manBrk,
                         'updated_at'                 => now(),
                     ]);
             } catch (\Throwable) {}
         }
+
+        try {
+            $service = app(CalculationService::class);
+            $service->calculateProject($this->projectId);
+        } catch (\Throwable) {}
     }
 
-    private function saveStep8(): void
+    private function saveStep6(): void
     {
         if (!$this->projectId) return;
 
@@ -898,7 +947,7 @@ class ProjectWizard extends Component
         }
     }
 
-    private function saveStep9(): void
+    private function saveStep7(): void
     {
         if (!$this->projectId) return;
         try {
@@ -911,7 +960,7 @@ class ProjectWizard extends Component
         } catch (\Throwable) {}
     }
 
-    private function saveStep10(): void
+    private function saveStep8(): void
     {
         if (!$this->projectId) return;
 
@@ -1029,6 +1078,11 @@ class ProjectWizard extends Component
             foreach ($rows as $row) {
                 $circNum = (int) $row->circuit_number;
                 $this->circuitOverrides[$circNum] = [
+                    'distance_m'           => (float) ($row->distance_m ?? 0.0),
+                    'installation_method'  => (string) ($row->installation_method ?? 'B1'),
+                    'temperature_c'        => (int) ($row->temperature_c ?? 30),
+                    'grouped_circuits'     => (int) ($row->grouped_circuits ?? 1),
+                    'voltage_drop_percent' => (float) ($row->voltage_drop_percent ?? 4.0),
                     'use_manual_conductor' => (bool) ($row->use_manual_final_conductor ?? false),
                     'manual_conductor_mm2' => $row->final_conductor_manual_mm2 !== null
                         ? (string) $row->final_conductor_manual_mm2 : '',

@@ -1173,11 +1173,11 @@
         </div>
         @endif
 
-        {{-- ─── STEP 5 — Conferência das Cargas ─── --}}
+        {{-- ─── STEP 5 — Memorial de Cálculo e Dimensionamento ─── --}}
         @if($currentStep === 5)
         <div class="p-6 md:p-8">
-            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">Conferência das Cargas</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">Resultado do cálculo de circuitos. Verifique se há erros antes de prosseguir.</p>
+            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">Memorial de Cálculo e Dimensionamento</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">Detalhamento dos cálculos e ajuste de parâmetros reais de cada circuito (comprimento, método, agrupamento, temperatura e overrides manuais).</p>
 
             @php
                 $calcRows = \Illuminate\Support\Facades\DB::table('project_circuit_calculations')
@@ -1189,177 +1189,183 @@
             @if($calcRows->isEmpty())
                 <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-yellow-800 rounded-lg p-4 text-sm flex items-start gap-3">
                     <svg class="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <span>Nenhum circuito calculado. Volte ao Step 4 e clique em "Calcular Circuitos".</span>
+                    <span>Nenhum circuito calculado. Volte à Etapa 4 e atribua os circuitos.</span>
                 </div>
             @else
-                <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-                    <table class="w-full text-sm">
-                        <thead class="bg-gray-50 dark:bg-gray-900/40 border-b border-gray-200 dark:border-gray-700">
-                            <tr>
-                                <th class="px-3 py-3 text-left font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">Circ.</th>
-                                <th class="px-3 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Ambiente / Tipo</th>
-                                <th class="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">W</th>
-                                <th class="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">VA</th>
-                                <th class="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">A Proj.</th>
-                                <th class="px-3 py-3 text-center font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">Cabo</th>
-                                <th class="px-3 py-3 text-center font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">Disj.</th>
-                                <th class="px-3 py-3 text-center font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                            @foreach($calcRows as $calcRow)
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 {{ $calcRow->calc_status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : '' }}">
-                                <td class="px-3 py-2.5">
-                                    <span class="bg-brand-yellow text-brand-black text-xs font-black px-2 py-0.5 rounded">C{{ $calcRow->circuit_number }}</span>
-                                </td>
-                                <td class="px-3 py-2.5">
-                                    <div class="text-gray-800 dark:text-gray-200 font-medium text-xs">{{ $calcRow->description ?? '—' }}</div>
-                                    <span class="text-xs px-1.5 py-0.5 rounded font-medium
-                                        {{ $calcRow->circuit_type === 'ILUMINAÇÃO' ? 'bg-blue-100 text-blue-700 dark:text-blue-300' :
-                                           ($calcRow->circuit_type === 'TUG' ? 'bg-green-100 text-green-700 dark:text-green-300' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300') }}">
-                                        {{ $calcRow->circuit_type ?? '—' }}
-                                    </span>
-                                </td>
-                                <td class="px-3 py-2.5 text-right text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ number_format($calcRow->power_w ?? 0, 0, ',', '.') }}</td>
-                                <td class="px-3 py-2.5 text-right text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ number_format($calcRow->power_va ?? 0, 0, ',', '.') }}</td>
-                                <td class="px-3 py-2.5 text-right font-medium text-gray-800 dark:text-gray-200 whitespace-nowrap">{{ number_format($calcRow->project_current_a ?? 0, 2, ',', '.') }}A</td>
-                                <td class="px-3 py-2.5 text-center font-semibold text-blue-700 dark:text-blue-300 whitespace-nowrap">
-                                    {{ $calcRow->final_conductor_calculated_mm2 ?? '—' }} mm²
-                                </td>
-                                <td class="px-3 py-2.5 text-center font-semibold text-purple-700 dark:text-purple-300 whitespace-nowrap">
-                                    {{ $calcRow->breaker_calculated_a ?? '—' }} A
-                                </td>
-                                <td class="px-3 py-2.5 text-center">
-                                    @if($calcRow->calc_status === 'error')
-                                        <span class="text-xs bg-red-100 text-red-700 dark:text-red-300 px-2 py-0.5 rounded-full font-medium">Erro</span>
-                                    @else
-                                        <span class="text-xs bg-green-100 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full font-medium">OK</span>
-                                    @endif
-                                </td>
-                            </tr>
-                            @if($calcRow->notes)
-                            <tr class="{{ $calcRow->calc_status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : 'bg-yellow-50 dark:bg-yellow-900/20' }}">
-                                <td colspan="8" class="px-3 pb-2 text-xs text-amber-700 dark:text-amber-300 italic">
-                                    ⚠ {{ implode('; ', (array)(json_decode($calcRow->notes, true) ?? [$calcRow->notes])) }}
-                                </td>
-                            </tr>
-                            @endif
-                            @endforeach
-                        </tbody>
-                        <tfoot class="bg-gray-50 dark:bg-gray-900/40 border-t border-gray-200 dark:border-gray-700">
-                            <tr>
-                                <td colspan="2" class="px-3 py-2.5 text-sm font-semibold text-gray-600 dark:text-gray-300">TOTAL</td>
-                                <td class="px-3 py-2.5 text-right font-bold text-gray-800 dark:text-gray-200">{{ number_format($calcRows->sum('power_w'), 0, ',', '.') }}</td>
-                                <td class="px-3 py-2.5 text-right font-bold text-gray-800 dark:text-gray-200">{{ number_format($calcRows->sum('power_va'), 0, ',', '.') }}</td>
-                                <td colspan="4"></td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-
-                @php $hasCalcErrors = $calcRows->where('calc_status', 'error')->count() > 0; @endphp
-                @if($hasCalcErrors)
-                <div class="mt-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 rounded-lg p-3 text-sm flex items-center gap-2">
-                    <svg class="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    Há circuitos com erro. Verifique os dados no Step 3 e recalcule no Step 4.
-                </div>
-                @else
-                <div class="mt-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 rounded-lg p-3 text-sm flex items-center gap-2">
-                    <svg class="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    Todos os {{ $calcRows->count() }} circuitos calculados com sucesso!
-                </div>
-                @endif
-            @endif
-        </div>
-        @endif
-
-        {{-- ─── STEP 6 — Memorial de Cálculo ─── --}}
-        @if($currentStep === 6)
-        <div class="p-6 md:p-8">
-            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">Memorial de Cálculo</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">Detalhamento completo de todos os cálculos por circuito.</p>
-
-            @php
-                $calcRows = \Illuminate\Support\Facades\DB::table('project_circuit_calculations')
-                    ->where('project_id', $projectId)
-                    ->orderBy('circuit_number')
-                    ->get();
-            @endphp
-
-            @if($calcRows->isEmpty())
-                <p class="text-sm text-gray-400 dark:text-gray-500 italic">Nenhum cálculo disponível.</p>
-            @else
-                <div class="space-y-4">
+                <div class="space-y-6">
                     @foreach($calcRows as $calcRow)
-                    <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-                        <div class="bg-gray-50 dark:bg-gray-900/40 px-4 py-3 flex flex-wrap items-center gap-2 border-b border-gray-200 dark:border-gray-700">
+                    @php
+                        $cn = (int) $calcRow->circuit_number;
+                        $ov = $circuitOverrides[$cn] ?? [
+                            'distance_m'           => (float)($calcRow->distance_m ?? 0.0),
+                            'installation_method'  => (string)($calcRow->installation_method ?? 'B1'),
+                            'temperature_c'        => (int)($calcRow->temperature_c ?? 30),
+                            'grouped_circuits'     => (int)($calcRow->grouped_circuits ?? 1),
+                            'voltage_drop_percent' => (float)($calcRow->voltage_drop_percent ?? 4.0),
+                            'use_manual_conductor' => (bool)($calcRow->use_manual_final_conductor ?? false),
+                            'manual_conductor_mm2' => $calcRow->final_conductor_manual_mm2 !== null ? (string)$calcRow->final_conductor_manual_mm2 : '',
+                            'use_manual_breaker'   => (bool)($calcRow->use_manual_breaker ?? false),
+                            'manual_breaker_a'     => $calcRow->breaker_manual_a !== null ? (string)$calcRow->breaker_manual_a : '',
+                        ];
+                    @endphp
+                    <div class="border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm bg-white dark:bg-gray-800">
+                        {{-- Circuit Header --}}
+                        <div class="bg-gray-50 dark:bg-gray-900/40 px-4 py-3 flex flex-wrap items-center gap-3 border-b border-gray-200 dark:border-gray-700">
                             <span class="bg-brand-yellow text-brand-black text-xs font-black px-2.5 py-1 rounded-full">C{{ $calcRow->circuit_number }}</span>
-                            <span class="font-semibold text-gray-800 dark:text-gray-200 text-sm">{{ $calcRow->description ?? '—' }}</span>
-                            <span class="text-xs px-2 py-0.5 rounded-full font-medium
+                            <span class="font-bold text-gray-800 dark:text-gray-200 text-sm">{{ $calcRow->description ?? '—' }}</span>
+                            <span class="text-xs px-2 py-0.5 rounded-full font-bold
                                 {{ $calcRow->circuit_type === 'ILUMINAÇÃO' ? 'bg-blue-100 text-blue-700 dark:text-blue-300' :
                                    ($calcRow->circuit_type === 'TUG' ? 'bg-green-100 text-green-700 dark:text-green-300' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300') }}">
                                 {{ $calcRow->circuit_type ?? '—' }}
                             </span>
-                            <span class="text-xs text-gray-400 dark:text-gray-500 ml-1">{{ $calcRow->phases ?? '?' }}F · {{ $calcRow->voltage ?? '?' }}V · {{ $calcRow->installation_method ?? '?' }}</span>
-                            <span class="ml-auto text-xs {{ $calcRow->calc_status === 'error' ? 'bg-red-100 text-red-700 dark:text-red-300' : 'bg-green-100 text-green-700 dark:text-green-300' }} px-2 py-0.5 rounded-full font-medium">
-                                {{ $calcRow->calc_status === 'error' ? 'Erro' : 'OK' }}
+                            <span class="text-xs text-gray-500 dark:text-gray-400 font-medium">{{ $calcRow->phases ?? '?' }}F · {{ $calcRow->voltage ?? '?' }}V</span>
+                            <span class="ml-auto text-xs font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 px-2.5 py-1 rounded-full border border-purple-200 dark:border-purple-800">
+                                Iproj: {{ number_format($calcRow->project_current_a ?? 0, 2, ',', '.') }} A
                             </span>
                         </div>
-                        <div class="p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-sm">
-                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
-                                <p class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Potência</p>
-                                <p class="font-semibold text-gray-800 dark:text-gray-200">{{ number_format($calcRow->power_w ?? 0, 0, ',', '.') }}W / {{ number_format($calcRow->power_va ?? 0, 0, ',', '.') }}VA</p>
+
+                        <div class="p-4 space-y-4">
+                            {{-- Painel de Edição de Parâmetros --}}
+                            <div class="bg-amber-50/50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50 rounded-xl p-3.5">
+                                <div class="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wide mb-2.5 flex items-center gap-1.5">
+                                    <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                    Parâmetros do Circuito (Recálculo Automático)
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                                    {{-- Comprimento L --}}
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Comprimento (m)</label>
+                                        <input type="number" step="0.5" min="0"
+                                            wire:change="updateCircuitParam({{ $cn }}, 'distance_m', $event.target.value)"
+                                            value="{{ $ov['distance_m'] ?? 0 }}"
+                                            class="w-full text-xs font-bold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-2.5 py-1.5 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-amber-400">
+                                    </div>
+                                    {{-- Método de Instalação --}}
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Método Instalação</label>
+                                        <select wire:change="updateCircuitParam({{ $cn }}, 'installation_method', $event.target.value)"
+                                            class="w-full text-xs font-bold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-2 py-1.5 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-amber-400">
+                                            @foreach(['A1','A2','B1','B2','C','D'] as $m)
+                                                <option value="{{ $m }}" {{ ($ov['installation_method'] ?? 'B1') === $m ? 'selected' : '' }}>{{ $m }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    {{-- Temperatura °C --}}
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Temp. Ambiente (°C)</label>
+                                        <select wire:change="updateCircuitParam({{ $cn }}, 'temperature_c', $event.target.value)"
+                                            class="w-full text-xs font-bold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-2 py-1.5 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-amber-400">
+                                            @foreach([15, 20, 25, 30, 35, 40, 45, 50] as $t)
+                                                <option value="{{ $t }}" {{ (int)($ov['temperature_c'] ?? 30) === $t ? 'selected' : '' }}>{{ $t }} °C</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    {{-- Circ. Agrupados --}}
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Circ. Agrupados</label>
+                                        <input type="number" min="1" max="20"
+                                            wire:change="updateCircuitParam({{ $cn }}, 'grouped_circuits', $event.target.value)"
+                                            value="{{ $ov['grouped_circuits'] ?? 1 }}"
+                                            class="w-full text-xs font-bold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-2.5 py-1.5 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-amber-400">
+                                    </div>
+                                    {{-- Queda de Tensão % --}}
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Queda Tensão Max %</label>
+                                        <select wire:change="updateCircuitParam({{ $cn }}, 'voltage_drop_percent', $event.target.value)"
+                                            class="w-full text-xs font-bold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-2 py-1.5 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-amber-400">
+                                            @foreach([2.0, 3.0, 4.0, 5.0, 7.0] as $vd)
+                                                <option value="{{ $vd }}" {{ (float)($ov['voltage_drop_percent'] ?? 4.0) == $vd ? 'selected' : '' }}>{{ $vd }} %</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
-                                <p class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Corrente de Projeto</p>
-                                <p class="font-semibold text-gray-800 dark:text-gray-200">{{ number_format($calcRow->project_current_a ?? 0, 2, ',', '.') }} A</p>
+
+                            {{-- Resumo do Memorial (Valores Calculados) --}}
+                            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
+                                <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-2.5">
+                                    <span class="text-gray-400 dark:text-gray-500 block text-[10px]">Fator Temp (fT)</span>
+                                    <span class="font-bold text-gray-800 dark:text-gray-200">{{ number_format($calcRow->temperature_factor ?? 1, 2, ',', '.') }}</span>
+                                </div>
+                                <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-2.5">
+                                    <span class="text-gray-400 dark:text-gray-500 block text-[10px]">Fator Agrup (fg)</span>
+                                    <span class="font-bold text-gray-800 dark:text-gray-200">{{ number_format($calcRow->grouping_factor ?? 1, 2, ',', '.') }}</span>
+                                </div>
+                                <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-2.5">
+                                    <span class="text-gray-400 dark:text-gray-500 block text-[10px]">Corrente Corrigida (Ic)</span>
+                                    <span class="font-bold text-gray-800 dark:text-gray-200">{{ number_format($calcRow->corrected_current_a ?? 0, 2, ',', '.') }} A</span>
+                                </div>
+                                <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-2.5">
+                                    <span class="text-gray-400 dark:text-gray-500 block text-[10px]">Cabo Mínimo (Norma)</span>
+                                    <span class="font-bold text-gray-800 dark:text-gray-200">{{ $calcRow->min_conductor_mm2 ?? '—' }} mm²</span>
+                                </div>
+                                <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-2.5">
+                                    <span class="text-gray-400 dark:text-gray-500 block text-[10px]">Cabo Ampacidade</span>
+                                    <span class="font-bold text-gray-800 dark:text-gray-200">{{ $calcRow->ampacity_conductor_mm2 ?? '—' }} mm²</span>
+                                </div>
+                                <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-2.5">
+                                    <span class="text-gray-400 dark:text-gray-500 block text-[10px]">Cabo Queda ({{ $calcRow->distance_m ?? 0 }}m)</span>
+                                    <span class="font-bold text-gray-800 dark:text-gray-200">{{ $calcRow->voltage_drop_conductor_mm2 ?? '—' }} mm²</span>
+                                </div>
                             </div>
-                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
-                                <p class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Fator Temperatura</p>
-                                <p class="font-semibold text-gray-800 dark:text-gray-200">{{ number_format($calcRow->temperature_factor ?? 1, 3, ',', '.') }} <span class="text-gray-400 dark:text-gray-500 font-normal">({{ $calcRow->temperature_c ?? '—' }}°C)</span></p>
-                            </div>
-                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
-                                <p class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Fator Agrupamento</p>
-                                <p class="font-semibold text-gray-800 dark:text-gray-200">{{ number_format($calcRow->grouping_factor ?? 1, 3, ',', '.') }} <span class="text-gray-400 dark:text-gray-500 font-normal">({{ $calcRow->grouped_circuits ?? 1 }} circ.)</span></p>
-                            </div>
-                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
-                                <p class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Corrente Corrigida</p>
-                                <p class="font-semibold text-gray-800 dark:text-gray-200">{{ number_format($calcRow->corrected_current_a ?? 0, 2, ',', '.') }} A</p>
-                            </div>
-                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
-                                <p class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Cabo Mínimo</p>
-                                <p class="font-semibold text-gray-800 dark:text-gray-200">{{ $calcRow->min_conductor_mm2 ?? '—' }} mm²</p>
-                            </div>
-                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
-                                <p class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Cabo por Ampacidade</p>
-                                <p class="font-semibold text-gray-800 dark:text-gray-200">{{ $calcRow->ampacity_conductor_mm2 ?? '—' }} mm²</p>
-                            </div>
-                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
-                                <p class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Cabo por Queda ({{ $calcRow->voltage_drop_percent ?? '—' }}%)</p>
-                                <p class="font-semibold text-gray-800 dark:text-gray-200">{{ $calcRow->voltage_drop_conductor_mm2 ?? '—' }} mm² <span class="text-gray-400 dark:text-gray-500 font-normal">· {{ $calcRow->distance_m ?? '—' }}m</span></p>
-                            </div>
-                            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                                <p class="text-xs text-blue-500 mb-0.5">Cabo Final Calculado</p>
-                                <p class="font-bold text-blue-800 dark:text-blue-300 text-lg">{{ $calcRow->final_conductor_calculated_mm2 ?? '—' }} mm²</p>
-                            </div>
-                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
-                                <p class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Iz do Cabo</p>
-                                <p class="font-semibold text-gray-800 dark:text-gray-200">{{ $calcRow->iz_a !== null ? number_format($calcRow->iz_a, 1, ',', '.') . ' A' : '—' }}</p>
-                            </div>
-                            <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
-                                <p class="text-xs text-purple-500 dark:text-purple-400 mb-0.5">Disjuntor Calculado</p>
-                                <p class="font-bold text-purple-800 dark:text-purple-300 text-lg">{{ $calcRow->breaker_calculated_a ?? '—' }} A</p>
-                            </div>
-                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
-                                <p class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Demanda (fator {{ number_format($calcRow->demand_factor_calculated ?? 1, 2, ',', '.') }})</p>
-                                <p class="font-semibold text-gray-800 dark:text-gray-200">{{ number_format($calcRow->demand_va_calculated ?? 0, 0, ',', '.') }} VA</p>
+
+                            {{-- Sobrescritas de Cabo e Disjuntor --}}
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {{-- Cabo Final --}}
+                                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3.5">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-sm font-bold text-blue-900 dark:text-blue-200">Seção do Cabo Final</span>
+                                        <label class="flex items-center gap-1.5 cursor-pointer">
+                                            <input type="checkbox"
+                                                wire:model.live="circuitOverrides.{{ $cn }}.use_manual_conductor"
+                                                wire:change="saveStep5"
+                                                class="w-4 h-4 rounded accent-blue-600">
+                                            <span class="text-xs text-blue-700 dark:text-blue-300 font-bold">Manual</span>
+                                        </label>
+                                    </div>
+                                    <p class="text-xs text-blue-600 dark:text-blue-400 mb-2">Calculado: <strong>{{ $calcRow->final_conductor_calculated_mm2 ?? '—' }} mm²</strong> | Iz: {{ $calcRow->iz_a !== null ? number_format($calcRow->iz_a, 1, ',', '.') . 'A' : '—' }}</p>
+                                    @if(!empty($ov['use_manual_conductor']))
+                                    <select wire:model.live="circuitOverrides.{{ $cn }}.manual_conductor_mm2"
+                                        wire:change="saveStep5"
+                                        class="w-full border border-blue-300 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 font-bold focus:outline-none focus:ring-2 focus:ring-blue-400">
+                                        <option value="">Selecione a seção...</option>
+                                        @foreach([1.5, 2.5, 4.0, 6.0, 10.0, 16.0, 25.0, 35.0, 50.0, 70.0, 95.0] as $mm2Val)
+                                            <option value="{{ $mm2Val }}">{{ $mm2Val }} mm²</option>
+                                        @endforeach
+                                    </select>
+                                    @else
+                                        <div class="text-2xl font-black text-blue-800 dark:text-blue-300">{{ $calcRow->final_conductor_calculated_mm2 ?? '—' }} mm²</div>
+                                    @endif
+                                </div>
+
+                                {{-- Disjuntor --}}
+                                <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-3.5">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-sm font-bold text-purple-900 dark:text-purple-200">Disjuntor de Proteção</span>
+                                        <label class="flex items-center gap-1.5 cursor-pointer">
+                                            <input type="checkbox"
+                                                wire:model.live="circuitOverrides.{{ $cn }}.use_manual_breaker"
+                                                wire:change="saveStep5"
+                                                class="w-4 h-4 rounded accent-purple-600">
+                                            <span class="text-xs text-purple-700 dark:text-purple-300 font-bold">Manual</span>
+                                        </label>
+                                    </div>
+                                    <p class="text-xs text-purple-600 dark:text-purple-400 mb-2">Calculado: <strong>{{ $calcRow->breaker_calculated_a ?? '—' }} A</strong></p>
+                                    @if(!empty($ov['use_manual_breaker']))
+                                    <select wire:model.live="circuitOverrides.{{ $cn }}.manual_breaker_a"
+                                        wire:change="saveStep5"
+                                        class="w-full border border-purple-300 dark:border-purple-700 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 font-bold focus:outline-none focus:ring-2 focus:ring-purple-400">
+                                        <option value="">Selecione a ampermagem...</option>
+                                        @foreach([6, 10, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125] as $baVal)
+                                            <option value="{{ $baVal }}">{{ $baVal }} A</option>
+                                        @endforeach
+                                    </select>
+                                    @else
+                                        <div class="text-2xl font-black text-purple-800 dark:text-purple-300">{{ $calcRow->breaker_calculated_a ?? '—' }} A</div>
+                                    @endif
+                                </div>
                             </div>
                         </div>
-                        @if($calcRow->notes)
-                        <div class="px-4 pb-3 text-xs text-amber-700 dark:text-amber-300 italic">
-                            ⚠ {{ implode('; ', (array)(json_decode($calcRow->notes, true) ?? [$calcRow->notes])) }}
-                        </div>
-                        @endif
                     </div>
                     @endforeach
                 </div>
@@ -1367,96 +1373,8 @@
         </div>
         @endif
 
-        {{-- ─── STEP 7 — Cabos e Disjuntores ─── --}}
-        @if($currentStep === 7)
-        <div class="p-6 md:p-8">
-            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">Cabos e Disjuntores</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">Revise os valores calculados. Ative "Manual" para ajustar individualmente.</p>
-
-            @php
-                $calcRows = \Illuminate\Support\Facades\DB::table('project_circuit_calculations')
-                    ->where('project_id', $projectId)
-                    ->orderBy('circuit_number')
-                    ->get();
-            @endphp
-
-            @if($calcRows->isEmpty())
-                <p class="text-sm text-gray-400 dark:text-gray-500 italic">Nenhum circuito calculado.</p>
-            @else
-                <div class="space-y-4">
-                    @foreach($calcRows as $calcRow)
-                    @php
-                        $cn  = (int) $calcRow->circuit_number;
-                        $ov  = $circuitOverrides[$cn] ?? ['use_manual_conductor'=>false,'manual_conductor_mm2'=>'','use_manual_breaker'=>false,'manual_breaker_a'=>''];
-                    @endphp
-                    <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4">
-                        <div class="flex flex-wrap items-center gap-2 mb-3">
-                            <span class="bg-brand-yellow text-brand-black text-xs font-black px-2.5 py-1 rounded-full">C{{ $calcRow->circuit_number }}</span>
-                            <span class="font-semibold text-gray-800 dark:text-gray-200 text-sm">{{ $calcRow->description ?? '—' }}</span>
-                            <span class="text-xs text-gray-400 dark:text-gray-500">{{ $calcRow->circuit_type ?? '' }} · {{ $calcRow->phases ?? '?' }}F · {{ $calcRow->voltage ?? '?' }}V</span>
-                            <span class="text-xs text-gray-400 dark:text-gray-500">| Iproj: {{ number_format($calcRow->project_current_a ?? 0, 2, ',', '.') }}A</span>
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {{-- Cabo --}}
-                            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm font-semibold text-blue-900 dark:text-blue-200">Seção do Cabo</span>
-                                    <label class="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="checkbox"
-                                            wire:model="circuitOverrides.{{ $cn }}.use_manual_conductor"
-                                            class="w-3.5 h-3.5 rounded accent-blue-600">
-                                        <span class="text-xs text-blue-700 dark:text-blue-300 font-medium">Manual</span>
-                                    </label>
-                                </div>
-                                <p class="text-xs text-blue-500 mb-2">Calculado: <strong>{{ $calcRow->final_conductor_calculated_mm2 ?? '—' }} mm²</strong> | Iz: {{ $calcRow->iz_a !== null ? number_format($calcRow->iz_a, 1, ',', '.') . 'A' : '—' }}</p>
-                                @if($ov['use_manual_conductor'])
-                                <select wire:model="circuitOverrides.{{ $cn }}.manual_conductor_mm2"
-                                    class="w-full border border-blue-300 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400">
-                                    <option value="">Selecione...</option>
-                                    @foreach([1.5, 2.5, 4.0, 6.0, 10.0, 16.0, 25.0, 35.0, 50.0, 70.0, 95.0] as $mm2Val)
-                                        <option value="{{ $mm2Val }}">{{ $mm2Val }} mm²</option>
-                                    @endforeach
-                                </select>
-                                @else
-                                    <div class="text-xl font-bold text-blue-800 dark:text-blue-300">{{ $calcRow->final_conductor_calculated_mm2 ?? '—' }} mm²</div>
-                                @endif
-                            </div>
-
-                            {{-- Disjuntor --}}
-                            <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm font-semibold text-purple-900 dark:text-purple-200">Disjuntor</span>
-                                    <label class="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="checkbox"
-                                            wire:model="circuitOverrides.{{ $cn }}.use_manual_breaker"
-                                            class="w-3.5 h-3.5 rounded accent-purple-600">
-                                        <span class="text-xs text-purple-700 dark:text-purple-300 font-medium">Manual</span>
-                                    </label>
-                                </div>
-                                <p class="text-xs text-purple-500 dark:text-purple-400 mb-2">Calculado: <strong>{{ $calcRow->breaker_calculated_a ?? '—' }} A</strong></p>
-                                @if($ov['use_manual_breaker'])
-                                <select wire:model="circuitOverrides.{{ $cn }}.manual_breaker_a"
-                                    class="w-full border border-purple-300 dark:border-purple-700 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400">
-                                    <option value="">Selecione...</option>
-                                    @foreach([6, 10, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125] as $baVal)
-                                        <option value="{{ $baVal }}">{{ $baVal }} A</option>
-                                    @endforeach
-                                </select>
-                                @else
-                                    <div class="text-xl font-bold text-purple-800 dark:text-purple-300">{{ $calcRow->breaker_calculated_a ?? '—' }} A</div>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                    @endforeach
-                </div>
-            @endif
-        </div>
-        @endif
-
-        {{-- ─── STEP 8 — Distribuição de Fases ─── --}}
-        @if($currentStep === 8)
+        {{-- ─── STEP 6 — Distribuição de Fases ─── --}}
+        @if($currentStep === 6)
         <div class="p-6 md:p-8">
             <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">Distribuição de Fases</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Atribua cada circuito a uma fase (R, S ou T) para equilibrar a instalação.</p>
@@ -1572,8 +1490,8 @@
         </div>
         @endif
 
-        {{-- ─── STEP 9 — Eletrodutos / DPS / IDR ─── --}}
-        @if($currentStep === 9)
+        {{-- ─── STEP 7 — Eletrodutos / DPS / IDR ─── --}}
+        @if($currentStep === 7)
         <div class="p-6 md:p-8">
             <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">Eletrodutos / DPS / IDR</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">Dimensionamento do eletroduto principal, dispositivo de proteção contra surtos e interruptor diferencial-residual.</p>
@@ -1757,8 +1675,8 @@
         </div>
         @endif
 
-        {{-- ─── STEP 10 — Padrão de Entrada ─── --}}
-        @if($currentStep === 10)
+        {{-- ─── STEP 8 — Padrão de Entrada ─── --}}
+        @if($currentStep === 8)
         <div class="p-6 md:p-8">
             <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">Padrão de Entrada</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">Resumo final da instalação com carga instalada e demanda provável.</p>
