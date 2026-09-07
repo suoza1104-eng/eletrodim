@@ -1089,6 +1089,7 @@ class ProjectWizard extends Component
     public function addRoom(): void
     {
         $this->rooms[] = $this->emptyRoom(count($this->rooms));
+        $this->dispatch('room-added');
     }
 
     public function removeRoom(int $index): void
@@ -1109,6 +1110,7 @@ class ProjectWizard extends Component
         }
         array_splice($this->rooms, $index, 1);
         $this->rooms = array_values($this->rooms);
+        $this->dispatch('toast', type: 'error', message: 'Cômodo removido.');
     }
 
     // ─── Step 2: Cálculo automático de cargas mínimas ────

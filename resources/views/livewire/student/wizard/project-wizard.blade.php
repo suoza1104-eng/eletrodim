@@ -1,4 +1,61 @@
-<div class="max-w-6xl mx-auto" x-data="{}">
+<div class="max-w-6xl mx-auto" x-data="{
+        toastShow: false,
+        toastType: 'success',
+        toastMessage: '',
+        toastTimer: null,
+        triggerToast(msg, type = 'success') {
+            if (!msg) return;
+            this.toastMessage = msg;
+            this.toastType = type;
+            this.toastShow = true;
+            clearTimeout(this.toastTimer);
+            this.toastTimer = setTimeout(() => { this.toastShow = false; }, 3500);
+        }
+    }"
+    x-on:toast.window="triggerToast($event.detail.message || ($event.detail[0] ? $event.detail[0].message : ''), $event.detail.type || ($event.detail[0] ? $event.detail[0].type : 'success'))"
+    x-on:room-added.window="
+        triggerToast('Cômodo criado com sucesso!', 'success');
+        $nextTick(() => {
+            setTimeout(() => {
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            }, 100);
+        });
+    ">
+
+    {{-- BANDEIRINHA RETANGULAR DE NOTIFICAÇÃO (CANTO SUPERIOR DIREITO) --}}
+    <div x-show="toastShow"
+         x-transition:enter="transition ease-out duration-300 transform"
+         x-transition:enter-start="opacity-0 translate-x-8 scale-95"
+         x-transition:enter-end="opacity-100 translate-x-0 scale-100"
+         x-transition:leave="transition ease-in duration-200 transform"
+         x-transition:leave-start="opacity-100 translate-x-0 scale-100"
+         x-transition:leave-end="opacity-0 translate-x-8 scale-95"
+         style="display: none;"
+         class="fixed top-5 right-5 z-50 max-w-sm w-full">
+        <div :class="toastType === 'success'
+                ? 'bg-emerald-600 text-white border-l-4 border-emerald-800 shadow-2xl'
+                : 'bg-rose-600 text-white border-l-4 border-rose-800 shadow-2xl'"
+             class="rounded-lg px-4 py-3 flex items-center justify-between gap-3 text-sm font-semibold tracking-wide">
+            <div class="flex items-center gap-2.5">
+                <template x-if="toastType === 'success'">
+                    <svg class="w-5 h-5 text-white flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </template>
+                <template x-if="toastType !== 'success'">
+                    <svg class="w-5 h-5 text-white flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </template>
+                <span x-text="toastMessage"></span>
+            </div>
+            <button @click="toastShow = false" type="button" class="text-white/80 hover:text-white transition focus:outline-none ml-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+    </div>
 
     {{-- ══════════════════════════════════════════════════════════
          PROGRESS BAR
