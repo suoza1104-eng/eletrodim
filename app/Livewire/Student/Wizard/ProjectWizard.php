@@ -602,7 +602,7 @@ class ProjectWizard extends Component
         });
     }
 
-    private function saveStep1(): void
+    public function saveStep1(): void
     {
         $data = [
             'user_id'      => Auth::id(),
@@ -626,7 +626,7 @@ class ProjectWizard extends Component
         }
     }
 
-    private function saveStep2(): void
+    public function saveStep2(): void
     {
         if (!$this->projectId) return;
 
@@ -678,7 +678,7 @@ class ProjectWizard extends Component
         }
     }
 
-    private function saveStep3(): void
+    public function saveStep3(): void
     {
         if (!$this->projectId) return;
 
@@ -838,7 +838,7 @@ class ProjectWizard extends Component
         $this->saveStep5();
     }
 
-    private function saveStep5(): void
+    public function saveStep5(): void
     {
         if (!$this->projectId) return;
 
@@ -890,7 +890,7 @@ class ProjectWizard extends Component
         } catch (\Throwable) {}
     }
 
-    private function saveStep6(): void
+    public function saveStep6(): void
     {
         if (!$this->projectId) return;
 
@@ -947,7 +947,7 @@ class ProjectWizard extends Component
         }
     }
 
-    private function saveStep7(): void
+    public function saveStep7(): void
     {
         if (!$this->projectId) return;
         try {
@@ -960,7 +960,7 @@ class ProjectWizard extends Component
         } catch (\Throwable) {}
     }
 
-    private function saveStep8(): void
+    public function saveStep8(): void
     {
         if (!$this->projectId) return;
 
@@ -1067,6 +1067,7 @@ class ProjectWizard extends Component
                     'split_original_description' => isset($row->split_original_description) && $row->split_original_description !== null ? (string)$row->split_original_description : null,
                 ];
             }
+        } catch (\Throwable) {}
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Error loading loads from DB: ' . $e->getMessage());
         }
@@ -2544,7 +2545,7 @@ class ProjectWizard extends Component
         }
     }
 
-    private function saveStep4(): void
+    public function saveStep4(): void
     {
         if (!$this->projectId) return;
 
