@@ -24,7 +24,7 @@ class PdfService
             'phaseDistributions',
             'conduits',
             'dps',
-            'idr',
+            'idrs',
             'serviceEntrance',
         ]);
 
