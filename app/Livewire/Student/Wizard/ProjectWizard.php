@@ -136,6 +136,10 @@ class ProjectWizard extends Component
             $room['lighting_va_manual']          ??= '';
             $room['use_manual_tug_qty']          ??= false;
             $room['tug_qty_manual']              ??= '';
+            $room['tug_qty_600_calculated']      ??= null;
+            $room['tug_qty_100_calculated']      ??= null;
+            $room['tug_qty_600_manual']          ??= '';
+            $room['tug_qty_100_manual']          ??= '';
             $room['use_manual_tug_va']           ??= false;
             $room['tug_va_manual']               ??= '';
             // Legacy step 3 compat
@@ -241,7 +245,11 @@ class ProjectWizard extends Component
                     'lighting_rule_description'  => $room->lighting_rule_description ?? '',
                     'tug_rule_group'             => $room->tug_rule_group ?? '',
                     'tug_qty_calculated'         => $room->tug_qty_calculated,
+                    'tug_qty_600_calculated'     => $tugData['qty_600'] ?? 0,
+                    'tug_qty_100_calculated'     => $tugData['qty_100'] ?? 0,
                     'tug_qty_manual'             => $room->tug_qty_manual !== null ? (string)$room->tug_qty_manual : '',
+                    'tug_qty_600_manual'         => $room->tug_qty_600_manual !== null ? (string)$room->tug_qty_600_manual : '',
+                    'tug_qty_100_manual'         => $room->tug_qty_100_manual !== null ? (string)$room->tug_qty_100_manual : '',
                     'use_manual_tug_qty'         => (bool)($room->use_manual_tug_qty ?? false),
                     'tug_va_calculated'          => $room->tug_va_calculated,
                     'tug_va_manual'              => $room->tug_va_manual !== null ? (string)$room->tug_va_manual : '',
@@ -593,11 +601,13 @@ class ProjectWizard extends Component
 
                     'tug_rule_group'             => $room['tug_rule_group'] ?: null,
                     'tug_qty_calculated'         => $room['tug_qty_calculated'],
-                    'tug_qty_manual'             => ($room['use_manual_tug_qty'] && $room['tug_qty_manual'] !== '') ? (int)$room['tug_qty_manual'] : null,
+                    'tug_qty_manual'             => ($room['use_manual_tug_qty'] && ($room['tug_qty_manual'] ?? '') !== '') ? (int)$room['tug_qty_manual'] : null,
+                    'tug_qty_600_manual'         => ($room['use_manual_tug_qty'] && ($room['tug_qty_600_manual'] ?? '') !== '') ? (int)$room['tug_qty_600_manual'] : null,
+                    'tug_qty_100_manual'         => ($room['use_manual_tug_qty'] && ($room['tug_qty_100_manual'] ?? '') !== '') ? (int)$room['tug_qty_100_manual'] : null,
                     'use_manual_tug_qty'         => $room['use_manual_tug_qty'] ? 1 : 0,
                     'tug_va_calculated'          => $room['tug_va_calculated'],
-                    'tug_va_manual'              => ($room['use_manual_tug_va'] && $room['tug_va_manual'] !== '') ? (int)$room['tug_va_manual'] : null,
-                    'use_manual_tug_va'          => $room['use_manual_tug_va'] ? 1 : 0,
+                    'tug_va_manual'              => null,
+                    'use_manual_tug_va'          => 0,
                     'tug_rule_description'       => $room['tug_rule_description'] ?: null,
 
                     'total_minimum_va_calculated'=> $room['total_minimum_va_calculated'],
@@ -1120,19 +1130,38 @@ class ProjectWizard extends Component
         $normalized = $this->normalizeRoomTypeForCalc($type);
         if ($perim > 0 || in_array($normalized, ['BANHEIRO', 'LAVABO'], true)) {
             $tugData = $this->calcMinTugData($type, $area, $perim);
-            $room['tug_rule_group']       = $tugData['rule_group'];
-            $room['tug_qty_calculated']   = $tugData['qty'];
-            $room['tug_va_calculated']    = $tugData['total_va'];
-            $room['tug_rule_description'] = $tugData['rule_description'];
+            $room['tug_rule_group']          = $tugData['rule_group'];
+            $room['tug_qty_calculated']      = $tugData['qty'];
+            $room['tug_qty_600_calculated']  = $tugData['qty_600'];
+            $room['tug_qty_100_calculated']  = $tugData['qty_100'];
+            $room['tug_va_calculated']       = $tugData['total_va'];
+            $room['tug_rule_description']    = $tugData['rule_description'];
         }
 
         $lightingVa = ($room['use_manual_lighting'] && $room['lighting_va_manual'] !== '')
             ? (int)$room['lighting_va_manual']
             : (int)($room['lighting_va_calculated'] ?? 0);
 
-        $tugVa = ($room['use_manual_tug_va'] && $room['tug_va_manual'] !== '')
-            ? (int)$room['tug_va_manual']
-            : (int)($room['tug_va_calculated'] ?? 0);
+        if (!empty($room['use_manual_tug_qty'])) {
+            if (($room['tug_qty_600_manual'] ?? '') === '') {
+                $room['tug_qty_600_manual'] = (string)($room['tug_qty_600_calculated'] ?? 0);
+            }
+            if (($room['tug_qty_100_manual'] ?? '') === '') {
+                $room['tug_qty_100_manual'] = (string)($room['tug_qty_100_calculated'] ?? 0);
+            }
+
+            $qty600 = (int)$room['tug_qty_600_manual'];
+            $qty100 = (int)$room['tug_qty_100_manual'];
+
+            $tugQty = $qty600 + $qty100;
+            $tugVa  = ($qty600 * 600) + ($qty100 * 100);
+
+            $room['tug_qty_manual'] = (string)$tugQty;
+            $room['tug_va_manual']  = (string)$tugVa;
+        } else {
+            $tugQty = (int)($room['tug_qty_calculated'] ?? 0);
+            $tugVa  = (int)($room['tug_va_calculated'] ?? 0);
+        }
 
         $room['total_minimum_va_calculated'] = $lightingVa + $tugVa;
         $room['total_minimum_va_final']      = $room['total_minimum_va_calculated'];
@@ -1152,12 +1181,18 @@ class ProjectWizard extends Component
     {
         if (!isset($this->rooms[$index])) return;
         $this->rooms[$index][$field] = false;
-        match ($field) {
-            'use_manual_lighting'  => $this->rooms[$index]['lighting_va_manual'] = '',
-            'use_manual_tug_qty'   => $this->rooms[$index]['tug_qty_manual'] = '',
-            'use_manual_tug_va'    => $this->rooms[$index]['tug_va_manual'] = '',
-            default                => null,
-        };
+        if ($field === 'use_manual_lighting') {
+            $this->rooms[$index]['lighting_va_manual'] = '';
+        } elseif ($field === 'use_manual_tug_qty') {
+            $this->rooms[$index]['tug_qty_manual'] = '';
+            $this->rooms[$index]['tug_qty_600_manual'] = '';
+            $this->rooms[$index]['tug_qty_100_manual'] = '';
+            $this->rooms[$index]['tug_va_manual'] = '';
+            $this->rooms[$index]['use_manual_tug_va'] = false;
+        } elseif ($field === 'use_manual_tug_va') {
+            $this->rooms[$index]['tug_va_manual'] = '';
+            $this->rooms[$index]['use_manual_tug_va'] = false;
+        }
         $this->calculateRoomLoads($index);
     }
 
@@ -1198,15 +1233,14 @@ class ProjectWizard extends Component
             // Effective TUG from Step 2
             $tugVa  = 0;
             $tugQty = 0;
-            if (($room['use_manual_tug_va'] ?? false) && ($room['tug_va_manual'] ?? '') !== '') {
-                $tugVa = (int)$room['tug_va_manual'];
+            if (!empty($room['use_manual_tug_qty'])) {
+                $qty600 = (($room['tug_qty_600_manual'] ?? '') !== '') ? (int)$room['tug_qty_600_manual'] : (int)($room['tug_qty_600_calculated'] ?? 0);
+                $qty100 = (($room['tug_qty_100_manual'] ?? '') !== '') ? (int)$room['tug_qty_100_manual'] : (int)($room['tug_qty_100_calculated'] ?? 0);
+                $tugQty = $qty600 + $qty100;
+                $tugVa  = ($qty600 * 600) + ($qty100 * 100);
             } elseif (($room['tug_va_calculated'] ?? null) !== null) {
-                $tugVa = (int)$room['tug_va_calculated'];
-            }
-            if (($room['use_manual_tug_qty'] ?? false) && ($room['tug_qty_manual'] ?? '') !== '') {
-                $tugQty = (int)$room['tug_qty_manual'];
-            } elseif (($room['tug_qty_calculated'] ?? null) !== null) {
-                $tugQty = (int)$room['tug_qty_calculated'];
+                $tugVa  = (int)$room['tug_va_calculated'];
+                $tugQty = (int)($room['tug_qty_calculated'] ?? 0);
             }
             $tugUnitVa = ($tugQty > 0 && $tugVa > 0) ? (int)round($tugVa / $tugQty) : 0;
 
@@ -1430,10 +1464,14 @@ class ProjectWizard extends Component
         $tipoD = ['HALL', 'ESCADA', 'VARANDA', 'GARAGEM', 'TERRACO'];
 
         if (in_array($norm, $tipoA, true)) {
-            $qty = max(1, (int)ceil($perimeter / 3.5));
-            $va  = $qty <= 3 ? ($qty * 600) : (3 * 600 + ($qty - 3) * 100);
+            $qty    = max(1, (int)ceil($perimeter / 3.5));
+            $qty600 = min(3, $qty);
+            $qty100 = max(0, $qty - 3);
+            $va     = ($qty600 * 600) + ($qty100 * 100);
             return [
                 'qty'              => $qty,
+                'qty_600'          => $qty600,
+                'qty_100'          => $qty100,
                 'total_va'         => $va,
                 'unit_va'          => 600,
                 'rule_group'       => 'TIPO_A_COZINHA_COPA_SERVICO',
@@ -1444,6 +1482,8 @@ class ProjectWizard extends Component
         if (in_array($norm, $tipoB, true)) {
             return [
                 'qty'              => 1,
+                'qty_600'          => 1,
+                'qty_100'          => 0,
                 'total_va'         => 600,
                 'unit_va'          => 600,
                 'rule_group'       => 'TIPO_B_BANHEIRO',
@@ -1454,6 +1494,8 @@ class ProjectWizard extends Component
         if (in_array($norm, $tipoD, true)) {
             return [
                 'qty'              => 1,
+                'qty_600'          => 0,
+                'qty_100'          => 1,
                 'total_va'         => 100,
                 'unit_va'          => 100,
                 'rule_group'       => 'TIPO_D_HALL_ESCADA_VARANDA_GARAGEM',
@@ -1465,6 +1507,8 @@ class ProjectWizard extends Component
         $qty = ($area <= 6.0 || $perimeter <= 0) ? 1 : max(1, (int)ceil($perimeter / 5.0));
         return [
             'qty'              => $qty,
+            'qty_600'          => 0,
+            'qty_100'          => $qty,
             'total_va'         => $qty * 100,
             'unit_va'          => 100,
             'rule_group'       => 'TIPO_C_SOCIAL_INTIMO_GERAL',
@@ -2041,6 +2085,10 @@ class ProjectWizard extends Component
             'lighting_va_manual'          => '',
             'use_manual_tug_qty'          => false,
             'tug_qty_manual'              => '',
+            'tug_qty_600_calculated'      => null,
+            'tug_qty_100_calculated'      => null,
+            'tug_qty_600_manual'          => '',
+            'tug_qty_100_manual'          => '',
             'use_manual_tug_va'           => false,
             'tug_va_manual'               => '',
             // Legacy

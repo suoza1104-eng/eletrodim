@@ -147,12 +147,18 @@
                 $effectiveLightingVa = ($room['use_manual_lighting'] ?? false) && ($room['lighting_va_manual'] ?? '') !== ''
                     ? (int)$room['lighting_va_manual']
                     : (int)($room['lighting_va_calculated'] ?? 0);
-                $effectiveTugVa = ($room['use_manual_tug_va'] ?? false) && ($room['tug_va_manual'] ?? '') !== ''
-                    ? (int)$room['tug_va_manual']
-                    : (int)($room['tug_va_calculated'] ?? 0);
-                $effectiveTugQty = ($room['use_manual_tug_qty'] ?? false) && ($room['tug_qty_manual'] ?? '') !== ''
-                    ? (int)$room['tug_qty_manual']
-                    : (int)($room['tug_qty_calculated'] ?? 0);
+
+                $effectiveTugQty600 = ($room['use_manual_tug_qty'] ?? false)
+                    ? (($room['tug_qty_600_manual'] ?? '') !== '' ? (int)$room['tug_qty_600_manual'] : (int)($room['tug_qty_600_calculated'] ?? 0))
+                    : (int)($room['tug_qty_600_calculated'] ?? 0);
+
+                $effectiveTugQty100 = ($room['use_manual_tug_qty'] ?? false)
+                    ? (($room['tug_qty_100_manual'] ?? '') !== '' ? (int)$room['tug_qty_100_manual'] : (int)($room['tug_qty_100_calculated'] ?? 0))
+                    : (int)($room['tug_qty_100_calculated'] ?? 0);
+
+                $effectiveTugQty = $effectiveTugQty600 + $effectiveTugQty100;
+                $effectiveTugVa  = ($effectiveTugQty600 * 600) + ($effectiveTugQty100 * 100);
+
                 $totalVa = $effectiveLightingVa + $effectiveTugVa;
                 $hasCalc = ($room['lighting_va_calculated'] ?? null) !== null || ($room['tug_qty_calculated'] ?? null) !== null;
             @endphp
@@ -301,55 +307,53 @@
                                 </div>
                                 <div class="text-xs font-semibold text-green-700 dark:text-green-300 mt-0.5">
                                     {{ $effectiveTugQty }} tomada{{ $effectiveTugQty !== 1 ? 's' : '' }}
+                                    @if($effectiveTugQty600 > 0 || $effectiveTugQty100 > 0)
+                                        <span class="text-[11px] font-normal text-green-600 dark:text-green-400 opacity-90">({{ $effectiveTugQty600 }}× 600VA + {{ $effectiveTugQty100 }}× 100VA)</span>
+                                    @endif
                                 </div>
-                                @if(($room['use_manual_tug_qty'] ?? false) || ($room['use_manual_tug_va'] ?? false))
+                                @if($room['use_manual_tug_qty'] ?? false)
                                     <p class="text-[11px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-100/80 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700 rounded px-1.5 py-0.5 mt-1 inline-block">Ajustado manualmente</p>
                                 @endif
                             </div>
 
                             {{-- Divider & Manual controls --}}
-                            <div class="mt-auto pt-3 border-t border-green-200/70 dark:border-green-800/70 space-y-2">
-                                <div>
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <input type="checkbox" wire:model="rooms.{{ $i }}.use_manual_tug_qty"
-                                            wire:change="calculateRoomLoads({{ $i }})"
-                                            class="w-3.5 h-3.5 accent-green-600 rounded">
-                                        <span class="text-xs text-green-700 dark:text-green-300 font-medium">Ajustar quantidade</span>
-                                    </label>
-                                    @if($room['use_manual_tug_qty'] ?? false)
-                                    <div class="mt-1.5 flex items-center gap-1.5">
-                                        <input type="text" inputmode="decimal" wire:model="rooms.{{ $i }}.tug_qty_manual"
-                                            wire:change="calculateRoomLoads({{ $i }})"
-                                            @keydown.enter="evaluateCalcFormula($event.target); $event.target.blur()"
-                                            @blur="evaluateCalcFormula($event.target)"
-                                            placeholder="Qtd (ex: =4+2)"
-                                            class="w-24 border border-green-300 bg-white dark:bg-gray-800 rounded-lg px-2.5 py-1 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-green-400">
-                                        <span class="text-xs text-green-600 dark:text-green-400 font-medium">tomadas</span>
-                                        <button wire:click="resetRoomManual({{ $i }}, 'use_manual_tug_qty')" class="text-xs text-green-600 hover:text-green-800 dark:text-green-300 underline ml-auto">↺</button>
+                            <div class="mt-auto pt-3 border-t border-green-200/70 dark:border-green-800/70">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" wire:model="rooms.{{ $i }}.use_manual_tug_qty"
+                                        wire:change="calculateRoomLoads({{ $i }})"
+                                        class="w-3.5 h-3.5 accent-green-600 rounded">
+                                    <span class="text-xs text-green-700 dark:text-green-300 font-medium">Ajustar quantidade</span>
+                                </label>
+                                @if($room['use_manual_tug_qty'] ?? false)
+                                <div class="space-y-2 mt-2">
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-[11px] font-medium text-green-800 dark:text-green-300 mb-0.5">Tomadas 600 VA</label>
+                                            <input type="text" inputmode="decimal" wire:model="rooms.{{ $i }}.tug_qty_600_manual"
+                                                wire:change="calculateRoomLoads({{ $i }})"
+                                                @keydown.enter="evaluateCalcFormula($event.target); $event.target.blur()"
+                                                @blur="evaluateCalcFormula($event.target)"
+                                                placeholder="Ex: =3"
+                                                class="w-full border border-green-300 bg-white dark:bg-gray-800 rounded-lg px-2 py-1 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-green-400">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[11px] font-medium text-green-800 dark:text-green-300 mb-0.5">Tomadas 100 VA</label>
+                                            <input type="text" inputmode="decimal" wire:model="rooms.{{ $i }}.tug_qty_100_manual"
+                                                wire:change="calculateRoomLoads({{ $i }})"
+                                                @keydown.enter="evaluateCalcFormula($event.target); $event.target.blur()"
+                                                @blur="evaluateCalcFormula($event.target)"
+                                                placeholder="Ex: =2"
+                                                class="w-full border border-green-300 bg-white dark:bg-gray-800 rounded-lg px-2 py-1 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-green-400">
+                                        </div>
                                     </div>
-                                    @endif
-                                </div>
-
-                                <div>
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <input type="checkbox" wire:model="rooms.{{ $i }}.use_manual_tug_va"
-                                            wire:change="calculateRoomLoads({{ $i }})"
-                                            class="w-3.5 h-3.5 accent-green-600 rounded">
-                                        <span class="text-xs text-green-700 dark:text-green-300 font-medium">Ajustar potência (VA)</span>
-                                    </label>
-                                    @if($room['use_manual_tug_va'] ?? false)
-                                    <div class="mt-1.5 flex items-center gap-1.5">
-                                        <input type="text" inputmode="decimal" wire:model="rooms.{{ $i }}.tug_va_manual"
-                                            wire:change="calculateRoomLoads({{ $i }})"
-                                            @keydown.enter="evaluateCalcFormula($event.target); $event.target.blur()"
-                                            @blur="evaluateCalcFormula($event.target)"
-                                            placeholder="VA (ex: =30*5)"
-                                            class="flex-1 border border-green-300 bg-white dark:bg-gray-800 rounded-lg px-2.5 py-1 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-green-400">
-                                        <span class="text-xs text-green-600 dark:text-green-400 font-medium">VA</span>
-                                        <button wire:click="resetRoomManual({{ $i }}, 'use_manual_tug_va')" class="text-xs text-green-600 hover:text-green-800 dark:text-green-300 underline">↺</button>
+                                    <div class="flex items-center justify-between pt-0.5">
+                                        <button wire:click="resetRoomManual({{ $i }}, 'use_manual_tug_qty')"
+                                            class="text-[11px] text-green-600 hover:text-green-800 dark:text-green-300 underline font-medium">
+                                            ↺ Restaurar automático
+                                        </button>
                                     </div>
-                                    @endif
                                 </div>
+                                @endif
                             </div>
                         </div>
 

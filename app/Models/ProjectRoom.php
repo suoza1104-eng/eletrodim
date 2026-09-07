@@ -24,6 +24,8 @@ class ProjectRoom extends Model
         'tug_rule_group',
         'tug_qty_calculated',
         'tug_qty_manual',
+        'tug_qty_600_manual',
+        'tug_qty_100_manual',
         'use_manual_tug_qty',
         'tug_va_calculated',
         'tug_va_manual',
