@@ -205,17 +205,21 @@
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Área (m²) <span class="text-red-500">*</span></label>
-                            <input type="number" wire:model="rooms.{{ $i }}.area_m2"
+                            <input type="text" inputmode="decimal" wire:model="rooms.{{ $i }}.area_m2"
                                 wire:change="calculateRoomLoads({{ $i }})"
-                                min="0.01" step="0.01" placeholder="m²"
+                                @keydown.enter="evaluateCalcFormula($event.target); $event.target.blur()"
+                                @blur="evaluateCalcFormula($event.target)"
+                                placeholder="m² (ex: =10*5)"
                                 class="w-full border rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 text-center focus:outline-none focus:ring-2 focus:ring-brand-yellow @error('rooms.'.$i.'.area_m2') border-red-400 bg-red-50 dark:bg-red-900/20 @else border-gray-300 dark:border-gray-600 @enderror">
                             @error('rooms.'.$i.'.area_m2')<p class="mt-0.5 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Perímetro (m) <span class="text-red-500">*</span></label>
-                            <input type="number" wire:model="rooms.{{ $i }}.perimeter_m"
+                            <input type="text" inputmode="decimal" wire:model="rooms.{{ $i }}.perimeter_m"
                                 wire:change="calculateRoomLoads({{ $i }})"
-                                min="0.01" step="0.01" placeholder="m"
+                                @keydown.enter="evaluateCalcFormula($event.target); $event.target.blur()"
+                                @blur="evaluateCalcFormula($event.target)"
+                                placeholder="m (ex: =2*(10+5))"
                                 class="w-full border rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 text-center focus:outline-none focus:ring-2 focus:ring-brand-yellow @error('rooms.'.$i.'.perimeter_m') border-red-400 bg-red-50 dark:bg-red-900/20 @else border-gray-300 dark:border-gray-600 @enderror">
                             @error('rooms.'.$i.'.perimeter_m')<p class="mt-0.5 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                         </div>
@@ -260,9 +264,11 @@
                                 </label>
                                 @if($room['use_manual_lighting'] ?? false)
                                 <div class="mt-2 flex items-center gap-1.5">
-                                    <input type="number" wire:model="rooms.{{ $i }}.lighting_va_manual"
+                                    <input type="text" inputmode="decimal" wire:model="rooms.{{ $i }}.lighting_va_manual"
                                         wire:change="calculateRoomLoads({{ $i }})"
-                                        min="1" step="1" placeholder="VA"
+                                        @keydown.enter="evaluateCalcFormula($event.target); $event.target.blur()"
+                                        @blur="evaluateCalcFormula($event.target)"
+                                        placeholder="VA (ex: =30*5)"
                                         class="flex-1 border border-blue-300 bg-white dark:bg-gray-800 rounded-lg px-2.5 py-1.5 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-blue-400">
                                     <span class="text-xs text-blue-600 dark:text-blue-400 font-bold">VA</span>
                                 </div>
@@ -312,9 +318,11 @@
                                     </label>
                                     @if($room['use_manual_tug_qty'] ?? false)
                                     <div class="mt-1.5 flex items-center gap-1.5">
-                                        <input type="number" wire:model="rooms.{{ $i }}.tug_qty_manual"
+                                        <input type="text" inputmode="decimal" wire:model="rooms.{{ $i }}.tug_qty_manual"
                                             wire:change="calculateRoomLoads({{ $i }})"
-                                            min="1" step="1" placeholder="Qtd"
+                                            @keydown.enter="evaluateCalcFormula($event.target); $event.target.blur()"
+                                            @blur="evaluateCalcFormula($event.target)"
+                                            placeholder="Qtd (ex: =4+2)"
                                             class="w-24 border border-green-300 bg-white dark:bg-gray-800 rounded-lg px-2.5 py-1 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-green-400">
                                         <span class="text-xs text-green-600 dark:text-green-400 font-medium">tomadas</span>
                                         <button wire:click="resetRoomManual({{ $i }}, 'use_manual_tug_qty')" class="text-xs text-green-600 hover:text-green-800 dark:text-green-300 underline ml-auto">↺</button>
@@ -331,9 +339,11 @@
                                     </label>
                                     @if($room['use_manual_tug_va'] ?? false)
                                     <div class="mt-1.5 flex items-center gap-1.5">
-                                        <input type="number" wire:model="rooms.{{ $i }}.tug_va_manual"
+                                        <input type="text" inputmode="decimal" wire:model="rooms.{{ $i }}.tug_va_manual"
                                             wire:change="calculateRoomLoads({{ $i }})"
-                                            min="1" step="1" placeholder="VA"
+                                            @keydown.enter="evaluateCalcFormula($event.target); $event.target.blur()"
+                                            @blur="evaluateCalcFormula($event.target)"
+                                            placeholder="VA (ex: =30*5)"
                                             class="flex-1 border border-green-300 bg-white dark:bg-gray-800 rounded-lg px-2.5 py-1 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-green-400">
                                         <span class="text-xs text-green-600 dark:text-green-400 font-medium">VA</span>
                                         <button wire:click="resetRoomManual({{ $i }}, 'use_manual_tug_va')" class="text-xs text-green-600 hover:text-green-800 dark:text-green-300 underline">↺</button>
@@ -578,10 +588,12 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Potência (VA) <span class="text-red-500">*</span></label>
-                                <input type="number" wire:model="loads.{{ $li }}.power_va"
+                                <input type="text" inputmode="decimal" wire:model="loads.{{ $li }}.power_va"
                                     wire:change="calculateLoad({{ $li }})"
-                                    min="1" step="1" placeholder="VA"
-                                    class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 text-center focus:outline-none focus:ring-2 focus:ring-brand-yellow @error('loads.'.$li.'.power_va') border-red-400 bg-red-50 dark:bg-red-900/20 @enderror">
+                                    @keydown.enter="evaluateCalcFormula($event.target); $event.target.blur()"
+                                    @blur="evaluateCalcFormula($event.target)"
+                                    placeholder="VA (ex: =30*5)"
+                                    class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 text-center focus:outline-none focus:ring-2 focus:ring-brand-yellow @error('loads.'.$li.'.power_va') border-red-400 bg-red-50 dark:bg-red-900/20 @else border-gray-300 dark:border-gray-600 @enderror">
                                 @error('loads.'.$li.'.power_va')<p class="mt-0.5 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                             </div>
                         </div>
@@ -597,10 +609,12 @@
                             </label>
                             @if($load['use_manual_va'] ?? false)
                             <div class="flex items-center gap-1.5">
-                                <input type="number" wire:model="loads.{{ $li }}.manual_va"
+                                <input type="text" inputmode="decimal" wire:model="loads.{{ $li }}.manual_va"
                                     wire:change="calculateLoad({{ $li }})"
-                                    min="1" step="1" placeholder="VA"
-                                    class="w-24 border border-amber-300 bg-white dark:bg-gray-800 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-400">
+                                    @keydown.enter="evaluateCalcFormula($event.target); $event.target.blur()"
+                                    @blur="evaluateCalcFormula($event.target)"
+                                    placeholder="VA (ex: =30*5)"
+                                    class="w-28 border border-amber-300 bg-white dark:bg-gray-800 rounded-lg px-2 py-1.5 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-amber-400">
                                 <span class="text-xs text-amber-700 dark:text-amber-300 font-medium">VA</span>
                                 <button wire:click="resetLoadManual({{ $li }})" class="text-xs text-amber-500 hover:text-amber-700 dark:text-amber-300 underline">↺ Restaurar</button>
                             </div>

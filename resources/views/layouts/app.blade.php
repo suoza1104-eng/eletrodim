@@ -164,6 +164,28 @@
     </div>
 
     @livewireScripts
+    <script>
+        window.evaluateCalcFormula = function(el) {
+            if (!el || el.value === undefined || el.value === null) return;
+            let val = el.value.toString().trim();
+            if (val.startsWith('=')) {
+                let expr = val.substring(1).trim().replace(/,/g, '.');
+                if (/^[0-9+\-*/%().\s]+$/.test(expr)) {
+                    try {
+                        let result = (new Function('"use strict"; return (' + expr + ')')());
+                        if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
+                            let finalVal = Math.round(result * 100) / 100;
+                            el.value = finalVal;
+                            el.dispatchEvent(new Event('input', { bubbles: true }));
+                            el.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                    } catch (err) {
+                        console.warn('Fórmula inválida:', expr, err);
+                    }
+                }
+            }
+        };
+    </script>
     @stack('scripts')
 </body>
 </html>
