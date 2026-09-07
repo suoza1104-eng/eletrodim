@@ -337,6 +337,24 @@ class ProjectWizard extends Component
         $this->currentStep = max($this->currentStep - 1, 1);
     }
 
+    // Chamado pelo botão "Concluir" do último passo: salva e marca o projeto como concluído,
+    // liberando o link de download do PDF na listagem de projetos.
+    public function finishProject(): void
+    {
+        $this->clearMessages();
+        $this->saveCurrentStep();
+
+        if ($this->projectId) {
+            Project::where('id', $this->projectId)->update([
+                'status'           => 'completed',
+                'progress_step'    => self::TOTAL_STEPS,
+                'progress_percent' => 100,
+            ]);
+        }
+
+        $this->successMessage = 'Projeto concluído! Acesse "Meus Projetos" para baixar o PDF.';
+    }
+
     public function goToStep(int $step): void
     {
         if ($step >= 1 && $step <= self::TOTAL_STEPS && $step <= $this->getMaxAllowedStep()) {
