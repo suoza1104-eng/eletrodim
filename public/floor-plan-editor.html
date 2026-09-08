@@ -789,6 +789,7 @@
   let dragSelectCurrent = null; // world — posição atual do arrasto
   let suppressNextClick = false; // evita que o "click" que sucede o mouseup do arrasto rode a seleção normal
   let draggingGrip = null; // {opening, side:'start'|'end'} — alça de porta/janela sendo arrastada
+  let draggingMove = null; // {mode:'single'|'multi', active, startMouse, kind?, id?, orig?, items?} — mover objeto(s) já selecionado(s)
 
   function isMultiSelected(kind, id){
     return selectedMulti.some(s=>s.kind===kind && s.id===id);
@@ -1331,8 +1332,24 @@
     for(const o of ops){
       const centerPx = o.t*len;
       const halfW = (o.widthM*PX_PER_M*zoom)/2;
+      const gStart = centerPx-halfW, gEnd = centerPx+halfW;
+      // linhas finas de referência mostrando a largura da parede atravessando
+      // o vão (a porta/janela é desenhada por cima, mais grossa)
+      const ga = { x:p1.x+ux*gStart, y:p1.y+uy*gStart };
+      const gb = { x:p1.x+ux*gEnd, y:p1.y+uy*gEnd };
+      ctx.save();
+      ctx.strokeStyle = getCss('--wall');
+      ctx.globalAlpha = 0.45;
+      ctx.lineWidth = 1;
+      [half, -half].forEach(off=>{
+        ctx.beginPath();
+        ctx.moveTo(ga.x+nx*off, ga.y+ny*off);
+        ctx.lineTo(gb.x+nx*off, gb.y+ny*off);
+        ctx.stroke();
+      });
+      ctx.restore();
       const openingSelected = !!(selected && selected.kind==='opening' && selected.id===o.id) || isMultiSelected('opening', o.id);
-      drawOpening(o, p1, ux, uy, centerPx-halfW, centerPx+halfW, thickPx, openingSelected);
+      drawOpening(o, p1, ux, uy, gStart, gEnd, thickPx, openingSelected);
     }
 
     const midX = (p1.x+p2.x)/2, midY=(p1.y+p2.y)/2;
@@ -1369,20 +1386,40 @@
     if(o.type === 'door'){
       const hinge = o.mirror ? b : a;
       const other = o.mirror ? a : b;
-      ctx.strokeStyle = isSelected ? getCss('--accent') : getCss('--door');
+      const leafLen = Math.hypot(other.x-hinge.x, other.y-hinge.y) || 1e-9;
+      const baseDir = { x:(other.x-hinge.x)/leafLen, y:(other.y-hinge.y)/leafLen };
+      const leafSign = o.flip ? -1 : 1;
+      // perpendicular de baseDir (não de ux,uy) — assim o giro é sempre
+      // exatamente 90°, com ou sem espelhar/inverter, sem depender de
+      // Math.min/max em ângulos (que "vira círculo" quando o ângulo cruza
+      // o limite de -180/180).
+      const leafDir = { x:-baseDir.y*leafSign, y:baseDir.x*leafSign };
+      const leafEnd = { x: hinge.x + leafDir.x*leafLen, y: hinge.y + leafDir.y*leafLen };
+      const doorColor = isSelected ? getCss('--accent') : getCss('--door');
+
+      ctx.strokeStyle = doorColor;
       ctx.lineWidth = isSelected ? 2.6 : 2;
       ctx.beginPath();
       ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
       ctx.stroke();
-      const leafLen = Math.hypot(other.x-hinge.x,other.y-hinge.y);
-      const leafEnd = { x: hinge.x + nx*leafLen, y: hinge.y + ny*leafLen };
+
+      // folha da porta com espessura de verdade (não é só uma linha)
+      const slabHalf = 1.6;
+      const leafPerp = { x:-leafDir.y, y:leafDir.x };
       ctx.beginPath();
-      ctx.moveTo(hinge.x,hinge.y); ctx.lineTo(leafEnd.x, leafEnd.y);
+      ctx.moveTo(hinge.x+leafPerp.x*slabHalf, hinge.y+leafPerp.y*slabHalf);
+      ctx.lineTo(leafEnd.x+leafPerp.x*slabHalf, leafEnd.y+leafPerp.y*slabHalf);
+      ctx.lineTo(leafEnd.x-leafPerp.x*slabHalf, leafEnd.y-leafPerp.y*slabHalf);
+      ctx.lineTo(hinge.x-leafPerp.x*slabHalf, hinge.y-leafPerp.y*slabHalf);
+      ctx.closePath();
+      ctx.fillStyle = doorColor;
+      ctx.fill();
       ctx.stroke();
+
+      const baseAngle = Math.atan2(baseDir.y, baseDir.x);
+      const sweep = leafSign * (Math.PI/2);
       ctx.beginPath();
-      const angle1 = Math.atan2(other.y-hinge.y, other.x-hinge.x);
-      const angle2 = Math.atan2(leafEnd.y-hinge.y, leafEnd.x-hinge.x);
-      ctx.arc(hinge.x, hinge.y, leafLen, Math.min(angle1,angle2), Math.max(angle1,angle2));
+      ctx.arc(hinge.x, hinge.y, leafLen, baseAngle, baseAngle+sweep, sweep<0);
       ctx.stroke();
     } else {
       ctx.strokeStyle = isSelected ? getCss('--accent') : getCss('--window');
@@ -1493,6 +1530,79 @@
     }
     o.widthM = endDist-startDist;
     o.t = ((startDist+endDist)/2)/wallLen;
+  }
+
+  // ---------------------------------------------------------------
+  // Arrastar pra mover: só entra em ação sobre algo que JÁ está
+  // selecionado (single ou multi) — clique simples continua só
+  // selecionando, como antes.
+  // ---------------------------------------------------------------
+  function hitTestForMove(world){
+    const nearSymbol = findSymbolNear(world, 0.13*symbolScale);
+    if(nearSymbol && ((selected && selected.kind==='symbol' && selected.id===nearSymbol.id) || isMultiSelected('symbol', nearSymbol.id))){
+      return { kind:'symbol', id:nearSymbol.id };
+    }
+    const nearOpening = findOpeningNear(world, 0.12);
+    if(nearOpening && ((selected && selected.kind==='opening' && selected.id===nearOpening.id) || isMultiSelected('opening', nearOpening.id))){
+      return { kind:'opening', id:nearOpening.id };
+    }
+    const nearDuct = findDuctNear(world, 0.12);
+    if(nearDuct && ((selected && selected.kind==='duct' && selected.id===nearDuct.id) || isMultiSelected('duct', nearDuct.id))){
+      return { kind:'duct', id:nearDuct.id };
+    }
+    const nearWall = findWallNear(world, 0.15);
+    if(nearWall && ((selected && selected.kind==='wall' && selected.id===nearWall.wall.id) || isMultiSelected('wall', nearWall.wall.id))){
+      return { kind:'wall', id:nearWall.wall.id };
+    }
+    if(selected && selected.kind==='room'){
+      const r = rooms.find(x=>x.id===selected.id);
+      if(r){
+        const faces = computeRoomFaces();
+        const face = findFaceContaining(r.seed, faces);
+        if(face && pointInPoly(world, face.rawPoly, face.vertices)) return { kind:'room', id:r.id };
+      }
+    }
+    return null;
+  }
+  function snapshotEntity(kind, id){
+    if(kind==='symbol'){ const s=symbols.find(x=>x.id===id); return s ? {x:s.x, y:s.y} : null; }
+    if(kind==='wall'){ const w=walls.find(x=>x.id===id); return w ? {x1:w.x1,y1:w.y1,x2:w.x2,y2:w.y2} : null; }
+    if(kind==='duct'){ const d=ducts.find(x=>x.id===id); return d ? {x1:d.x1,y1:d.y1,x2:d.x2,y2:d.y2} : null; }
+    if(kind==='room'){ const r=rooms.find(x=>x.id===id); return r ? {x:r.seed.x, y:r.seed.y} : null; }
+    if(kind==='opening'){ const o=openings.find(x=>x.id===id); return o ? {t:o.t} : null; }
+    return null;
+  }
+  function snapshotSelectionForMove(){
+    return selectedMulti.map(item=>({ kind:item.kind, id:item.id, orig:snapshotEntity(item.kind, item.id) })).filter(x=>x.orig);
+  }
+  function applyEntityDelta(kind, id, orig, dx, dy){
+    if(kind==='symbol'){
+      const s = symbols.find(x=>x.id===id);
+      if(s){ s.x = orig.x+dx; s.y = orig.y+dy; }
+    } else if(kind==='wall'){
+      const w = walls.find(x=>x.id===id);
+      if(w){ w.x1=orig.x1+dx; w.y1=orig.y1+dy; w.x2=orig.x2+dx; w.y2=orig.y2+dy; }
+    } else if(kind==='duct'){
+      const d = ducts.find(x=>x.id===id);
+      if(d){ d.x1=orig.x1+dx; d.y1=orig.y1+dy; d.x2=orig.x2+dx; d.y2=orig.y2+dy; }
+    } else if(kind==='room'){
+      const r = rooms.find(x=>x.id===id);
+      if(r){ r.seed.x = orig.x+dx; r.seed.y = orig.y+dy; }
+    } else if(kind==='opening'){
+      const o = openings.find(x=>x.id===id);
+      const wall = o ? walls.find(w=>w.id===o.wallId) : null;
+      if(o && wall){
+        const wallLen = wallLenWorld(wall);
+        if(wallLen>0){
+          const ux=(wall.x2-wall.x1)/wallLen, uy=(wall.y2-wall.y1)/wallLen;
+          const deltaDist = dx*ux + dy*uy;
+          const halfW = o.widthM/2;
+          let centerDist = orig.t*wallLen + deltaDist;
+          centerDist = Math.max(halfW, Math.min(wallLen-halfW, centerDist));
+          o.t = centerDist/wallLen;
+        }
+      }
+    }
   }
 
   // ---------------------------------------------------------------
@@ -2622,6 +2732,15 @@
         draggingGrip = grip;
         return;
       }
+      const hitMove = hitTestForMove(world);
+      if(hitMove){
+        if(selectedMulti.length>0){
+          draggingMove = { mode:'multi', active:false, startMouse:world, items: snapshotSelectionForMove() };
+        } else {
+          draggingMove = { mode:'single', active:false, startMouse:world, kind:hitMove.kind, id:hitMove.id, orig: snapshotEntity(hitMove.kind, hitMove.id) };
+        }
+        return;
+      }
       const hitSomething = findSymbolNear(world, 0.13*symbolScale) || findOpeningNear(world, 0.12)
         || findDuctNear(world, 0.12) || findWallNear(world, 0.15);
       if(!hitSomething){
@@ -2645,6 +2764,27 @@
       if(wall){ resizeOpeningGrip(draggingGrip.opening, wall, draggingGrip.side, world); draw(); }
       return;
     }
+    if(draggingMove){
+      const rect = canvas.getBoundingClientRect();
+      const world = screenToWorld(e.clientX-rect.left, e.clientY-rect.top);
+      const s1 = worldToScreen(draggingMove.startMouse.x, draggingMove.startMouse.y);
+      const s2 = worldToScreen(world.x, world.y);
+      if(!draggingMove.active && Math.hypot(s2.x-s1.x, s2.y-s1.y) > 4){
+        draggingMove.active = true;
+        canvas.style.cursor = 'grabbing';
+      }
+      if(draggingMove.active){
+        const dx = world.x-draggingMove.startMouse.x, dy = world.y-draggingMove.startMouse.y;
+        if(draggingMove.mode==='single'){
+          applyEntityDelta(draggingMove.kind, draggingMove.id, draggingMove.orig, dx, dy);
+        } else {
+          draggingMove.items.forEach(it=>applyEntityDelta(it.kind, it.id, it.orig, dx, dy));
+        }
+        cableResult = null; materialResult = null;
+        draw();
+      }
+      return;
+    }
     if(dragSelectStart){
       const rect = canvas.getBoundingClientRect();
       const world = screenToWorld(e.clientX-rect.left, e.clientY-rect.top);
@@ -2663,6 +2803,15 @@
       draggingGrip = null;
       suppressNextClick = true;
       afterChange();
+      return;
+    }
+    if(e.button===0 && draggingMove){
+      if(draggingMove.active){
+        suppressNextClick = true;
+        canvas.style.cursor = 'crosshair';
+        afterChange();
+      }
+      draggingMove = null;
       return;
     }
     if(e.button===0 && dragSelectStart){
@@ -3329,7 +3478,7 @@
         window: 'Clique sobre uma parede existente para inserir uma janela (1,20 m). Depois, use "Selecionar" pra ajustar a largura.',
         room: 'Clique no meio de um cômodo já fechado por paredes para nomeá-lo e calcular área e perímetro.',
         eletroduto: 'Clique exatamente em cima de um símbolo pra começar, depois no próximo símbolo (o círculo laranja mostra onde vai ancorar). Fora de um símbolo, não registra. Depois use "Distribuir cabos".',
-        select: 'Clique num objeto pra selecionar (porta/janela mostra 2 alças pra arrastar e redimensionar), ou arraste numa área vazia: pra direita = janela (só pega o que está totalmente dentro), pra esquerda = crossing (pega tudo que a janela tocar). Delete remove.'
+        select: 'Clique num objeto pra selecionar (porta/janela mostra 2 alças pra redimensionar) — clique de novo e arraste pra mover. Numa área vazia, arraste: pra direita = janela (só pega o que está totalmente dentro), pra esquerda = crossing (pega tudo que a janela tocar). Delete remove.'
       };
       hintBox.textContent = hints[tool] || '';
       draw(); updateStats();
