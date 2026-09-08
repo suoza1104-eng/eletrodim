@@ -38,12 +38,12 @@
   }
   .app{
     display:grid;
-    grid-template-columns: 1fr 330px;
+    grid-template-columns: 64px 1fr 330px;
     grid-template-rows: auto 1fr;
     height:100vh;
   }
   header{
-    grid-column: 1 / 3;
+    grid-column: 1 / 4;
     display:flex;
     align-items:center;
     justify-content:space-between;
@@ -95,6 +95,67 @@
     overflow:hidden;
     background: var(--bg);
   }
+  .leftbar{
+    background:#f7f8fa;
+    border-right:1px solid #d8dde5;
+    padding:10px 8px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+    color:#334155;
+  }
+  .left-icon{
+    width:42px;
+    height:42px;
+    border:0;
+    border-radius:8px;
+    background:transparent;
+    color:#64748b;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:19px;
+  }
+  .left-icon:hover,
+  .left-icon.active{
+    background:#eef2ff;
+    color:#7c3aed;
+  }
+  .super-panel{
+    position:absolute;
+    left:76px;
+    top:72px;
+    width:330px;
+    max-height:calc(100vh - 92px);
+    overflow:auto;
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    box-shadow:0 16px 40px rgba(0,0,0,.3);
+    border-radius:8px;
+    padding:14px;
+    z-index:12;
+    display:none;
+  }
+  .super-panel.show{ display:block; }
+  .cad-toggle{
+    background:#23282e;
+    border:1px solid var(--panel-border);
+    color:var(--text);
+    padding:7px 10px;
+    font-size:12px;
+    border-radius:6px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .cad-toggle.active{
+    background:var(--accent-dim);
+    border-color:var(--accent);
+    color:#ffd9b8;
+  }
   canvas{ display:block; cursor: crosshair; }
   .hint{
     position:absolute;
@@ -131,6 +192,8 @@
     flex-direction:column;
     gap:16px;
   }
+  aside .panel-block:nth-of-type(5),
+  aside .panel-block:nth-of-type(6){ display:none; }
   .panel-block h2{
     font-size:11px;
     text-transform: none;
@@ -312,15 +375,20 @@
       <div class="sub">v2 — blocos editáveis, biblioteca de símbolos, painel de propriedades e roteamento automático de cabos</div>
     </div>
     <div class="toolbar">
-      <button class="tool-btn active" data-tool="wall"><span class="swatch" style="background:var(--wall)"></span>Parede</button>
+      <button class="tool-btn active" data-tool="wall"><span class="swatch" style="background:var(--wall)"></span>Line</button>
+      <button class="tool-btn" data-tool="rect"><span class="swatch" style="background:var(--wall)"></span>Rec</button>
       <button class="tool-btn" data-tool="door"><span class="swatch" style="background:var(--door)"></span>Porta</button>
       <button class="tool-btn" data-tool="window"><span class="swatch" style="background:var(--window)"></span>Janela</button>
       <button class="tool-btn" data-tool="room"><span class="swatch" style="background:var(--accent)"></span>Nomear cômodo</button>
+      <button class="tool-btn" data-tool="polyroom"><span class="swatch" style="background:var(--accent)"></span>Poliline cômodo</button>
+      <button class="tool-btn" data-tool="fillet">Fillet</button>
       <span style="width:1px;background:var(--panel-border);align-self:stretch;margin:0 2px;"></span>
       <button class="tool-btn" data-tool="eletroduto"><span class="swatch" style="background:var(--duto)"></span>Eletroduto</button>
-      <button class="tool-btn" id="btnAutoRules">Distribuição automática</button>
       <span style="width:1px;background:var(--panel-border);align-self:stretch;margin:0 2px;"></span>
       <button class="tool-btn" data-tool="select">Selecionar</button>
+      <button class="cad-toggle active" id="btnOrtho" type="button">ORTO</button>
+      <button class="cad-toggle active" id="btnOsnap" type="button">OSNAP</button>
+      <button class="cad-toggle" id="btnOtrack" type="button">OTRACK</button>
       <span style="width:1px;background:var(--panel-border);align-self:stretch;margin:0 2px;"></span>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);">Escala símbolos
         <input type="number" id="symbolScaleInput" value="1.5" min="0.5" max="4" step="0.1" style="width:52px;background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;">
@@ -332,11 +400,56 @@
       <button class="tool-btn danger" id="btnClear">Limpar tudo</button>
     </div>
   </header>
+  <nav class="leftbar">
+    <button class="left-icon" data-tool="wall" title="Line">╱</button>
+    <button class="left-icon" data-tool="rect" title="Rectangle">▭</button>
+    <button class="left-icon" data-tool="room" title="Marcar cômodo">▣</button>
+    <button class="left-icon" data-tool="select" title="Selecionar">⌖</button>
+    <button class="left-icon active" id="btnSuperpowers" title="Superpoderes">✣</button>
+  </nav>
   <main>
     <canvas id="canvas"></canvas>
     <div class="coords" id="coordsBox">X: 0.00 m &nbsp; Y: 0.00 m &nbsp; <span id="zoomLabel" style="color:var(--muted)">100%</span></div>
     <div class="hint" id="hintBox">Clique para começar a desenhar uma parede. Cada clique adiciona um trecho. Pressione Esc para encerrar a corrente.</div>
     <div class="toast" id="toast"></div>
+    <div class="super-panel show" id="superPanel">
+      <div class="panel-block">
+        <h2>SUPERPODERES</h2>
+        <button class="wide primary" id="btnAutoRules">Distribuicao de eletrodutos automatica</button>
+        <div class="empty">Cria eletrodutos automaticamente conectando QDC, iluminacao, tomadas e interruptores conforme as regras ativas.</div>
+      </div>
+      <div class="panel-block">
+        <h2>ROTEAMENTO DE CABOS</h2>
+        <button class="wide primary" id="btnRoute">Distribuir cabos</button>
+        <div class="empty" id="routeEmpty">Desenhe os eletrodutos conectando os simbolos e clique aqui. O sistema acha o caminho mais curto de cada dispositivo ate o QDC.</div>
+        <ul class="item-list" id="routeList" style="margin-top:8px;"></ul>
+      </div>
+      <div class="panel-block">
+        <h2>QUANTIDADE DE MATERIAL</h2>
+        <div class="field-row" style="display:flex;gap:8px;margin-bottom:6px;">
+          <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Pe direito (m)
+            <input type="number" id="matPeDireito" value="2.70" step="0.05" min="1" style="background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
+          </label>
+          <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Altura QDC (m)
+            <input type="number" id="matAlturaQdc" value="1.60" step="0.05" min="0" style="background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
+          </label>
+        </div>
+        <div class="field-row" style="display:flex;gap:8px;margin-bottom:6px;">
+          <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Altura interruptor (m)
+            <input type="number" id="matAlturaInt" value="1.10" step="0.05" min="0" style="background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
+          </label>
+          <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Folga/emenda (m)
+            <input type="number" id="matFolga" value="0.30" step="0.05" min="0" style="background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
+          </label>
+        </div>
+        <label style="font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;margin-bottom:8px;">Margem de seguranca (%)
+          <input type="number" id="matMargem" value="10" step="1" min="0" style="background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
+        </label>
+        <button class="wide primary" id="btnMaterial">Calcular materiais</button>
+        <div class="empty" id="materialEmpty">Distribua os cabos primeiro. O calculo soma o trecho horizontal com descidas/subidas e margem.</div>
+        <ul class="item-list" id="materialList" style="margin-top:8px;"></ul>
+      </div>
+    </div>
   </main>
   <aside>
     <div class="panel-block">
@@ -454,6 +567,11 @@
   let nextRuleId = 6;
   let materialResult = null; // {rows:[{circuito,kind,metros}], totals:{kind:metros}} — só após "Calcular materiais"
   let nextId = 1;
+  let pendingProjectRooms = [];
+  let orthoMode = true;
+  let osnapMode = true;
+  let otrackMode = false;
+  let rectStart = null;
 
   // ---------------------------------------------------------------
   // Biblioteca de blocos: cada símbolo colocado na planta referencia
@@ -504,6 +622,66 @@
   function resolveColor(c){
     if(!c) return '#ffffff';
     return c.indexOf('--')===0 ? getCss(c) : c;
+  }
+
+  function buildEditorState(){
+    return {
+      version: 2,
+      walls, openings, rooms, symbols, ducts,
+      cableResult, ductRules, materialResult,
+      blockLibrary, nextBlockId, nextRuleId, nextId,
+      view: { zoom, origin },
+      settings: { symbolScale, orthoMode, osnapMode, otrackMode },
+      projectRooms: pendingProjectRooms
+    };
+  }
+
+  function loadEditorState(state){
+    if(!state || typeof state !== 'object') return;
+    walls = Array.isArray(state.walls) ? state.walls : [];
+    openings = Array.isArray(state.openings) ? state.openings : [];
+    rooms = Array.isArray(state.rooms) ? state.rooms : [];
+    symbols = Array.isArray(state.symbols) ? state.symbols : [];
+    ducts = Array.isArray(state.ducts) ? state.ducts : [];
+    cableResult = state.cableResult || null;
+    ductRules = Array.isArray(state.ductRules) ? state.ductRules : ductRules;
+    materialResult = state.materialResult || null;
+    blockLibrary = Array.isArray(state.blockLibrary) ? state.blockLibrary : blockLibrary;
+    nextBlockId = state.nextBlockId || nextBlockId;
+    nextRuleId = state.nextRuleId || nextRuleId;
+    nextId = state.nextId || nextId;
+    if(state.view){
+      zoom = state.view.zoom || zoom;
+      if(state.view.origin){
+        origin.x = state.view.origin.x || origin.x;
+        origin.y = state.view.origin.y || origin.y;
+      }
+    }
+    if(state.settings){
+      symbolScale = state.settings.symbolScale || symbolScale;
+      orthoMode = state.settings.orthoMode !== false;
+      osnapMode = state.settings.osnapMode !== false;
+      otrackMode = !!state.settings.otrackMode;
+    }
+    syncCadToggles();
+    renderBlockLibrary();
+    updateZoomLabel();
+    draw();
+    updateStats();
+  }
+
+  let saveTimer = null;
+  function scheduleSave(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(()=>{
+      window.parent.postMessage({ type:'eletrodim:floorplan-save', state: buildEditorState() }, '*');
+    }, 450);
+  }
+
+  function afterChange(){
+    draw();
+    updateStats();
+    scheduleSave();
   }
 
   // ---------------------------------------------------------------
@@ -668,6 +846,7 @@
     return Math.round(v/step)*step;
   }
   function snapPoint(p){
+    if(!osnapMode) return { x: +snap(p.x, SNAP_M).toFixed(3), y: +snap(p.y, SNAP_M).toFixed(3) };
     // tenta grudar primeiro num símbolo, depois num ponto de parede/eletroduto
     // existente (pra fechar cômodos e ancorar eletroduto exatamente no símbolo)
     const tolPx = 10;
@@ -689,6 +868,13 @@
       }
     }
     return { x: snap(p.x, SNAP_M), y: snap(p.y, SNAP_M) };
+  }
+
+  function applyOrtho(start, end){
+    if(!orthoMode || !start) return end;
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    return Math.abs(dx) >= Math.abs(dy) ? { x:end.x, y:start.y } : { x:start.x, y:end.y };
   }
 
   function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
@@ -1075,7 +1261,7 @@
     }
     if(tool==='wall' && chainStart){
       const p1 = worldToScreen(chainStart.x, chainStart.y);
-      const snapped = snapPoint(mouseWorld);
+      const snapped = applyOrtho(chainStart, snapPoint(mouseWorld));
       const p2 = worldToScreen(snapped.x, snapped.y);
       ctx.strokeStyle = getCss('--accent');
       ctx.lineWidth = 2;
@@ -1088,6 +1274,16 @@
       ctx.fillStyle = getCss('--accent');
       ctx.font = '12px Segoe UI, sans-serif';
       ctx.fillText(len.toFixed(2)+' m', (p1.x+p2.x)/2+10, (p1.y+p2.y)/2-10);
+    }
+    if(tool==='rect' && rectStart){
+      const end = snapPoint(mouseWorld);
+      const p1 = worldToScreen(rectStart.x, rectStart.y);
+      const p2 = worldToScreen(end.x, end.y);
+      ctx.strokeStyle = getCss('--accent');
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6,4]);
+      ctx.strokeRect(Math.min(p1.x,p2.x), Math.min(p1.y,p2.y), Math.abs(p2.x-p1.x), Math.abs(p2.y-p1.y));
+      ctx.setLineDash([]);
     }
     if((tool==='door'||tool==='window')){
       const near = findWallNear(mouseWorld, 0.3);
@@ -1276,6 +1472,7 @@
           sym.props[key] = v;
           cableResult = null; materialResult = null;
           draw();
+          scheduleSave();
         });
       });
       container.querySelector('#propDeleteBtn').addEventListener('click', deleteSelected);
@@ -1285,7 +1482,7 @@
       container.innerHTML = `
         <label class="prop-field">Nome<input type="text" id="propRoomName" value="${room.name}" maxlength="30"></label>
         <button class="wide danger" id="propDeleteBtn" style="background:#2a2020;border-color:var(--danger);">Excluir cômodo (Delete)</button>`;
-      container.querySelector('#propRoomName').addEventListener('input', (e)=>{ room.name = e.target.value; draw(); });
+      container.querySelector('#propRoomName').addEventListener('input', (e)=>{ room.name = e.target.value; draw(); scheduleSave(); });
       container.querySelector('#propDeleteBtn').addEventListener('click', deleteSelected);
     } else if(selected.kind==='duct'){
       const duct = ducts.find(d=>d.id===selected.id);
@@ -1296,7 +1493,7 @@
         <div class="stat-row"><span>Comprimento</span><span>${ductLenM(duct).toFixed(2)} m</span></div>
         <label class="prop-field">Camada<select id="propDuctCamada">${opts}</select></label>
         <button class="wide danger" id="propDeleteBtn" style="background:#2a2020;border-color:var(--danger);">Excluir eletroduto (Delete)</button>`;
-      container.querySelector('#propDuctCamada').addEventListener('change', (e)=>{ duct.camada = e.target.value; draw(); });
+      container.querySelector('#propDuctCamada').addEventListener('change', (e)=>{ duct.camada = e.target.value; draw(); scheduleSave(); });
       container.querySelector('#propDeleteBtn').addEventListener('click', deleteSelected);
     } else if(selected.kind==='wall'){
       const wall = walls.find(w=>w.id===selected.id);
@@ -1542,7 +1739,7 @@
     }
     ducts = mergeCollinearDucts(newDucts);
     cableResult = null; materialResult = null; selected = null;
-    draw(); updateStats();
+    afterChange();
     showToast('Rede de eletrodutos gerada por camada — ajuste manualmente onde precisar.');
   }
 
@@ -1636,7 +1833,7 @@
       showToast(erros>0
         ? `Roteamento feito com ${erros} pendência(s) — veja a lista de roteamento.`
         : `Cabos distribuídos: ${result.report.length} dispositivo(s) roteados.`);
-      draw(); updateStats();
+      afterChange();
     }
   });
 
@@ -1700,7 +1897,7 @@
     const result = calcularMaterial();
     if(result){
       materialResult = result;
-      draw(); updateStats();
+      afterChange();
     }
   });
 
@@ -1769,7 +1966,29 @@
   document.getElementById('symbolScaleInput').addEventListener('input', (e)=>{
     const v = parseFloat(e.target.value);
     symbolScale = (v && v>0) ? v : 1.5;
-    draw();
+    afterChange();
+  });
+
+  function syncCadToggles(){
+    const ortho = document.getElementById('btnOrtho');
+    const osnap = document.getElementById('btnOsnap');
+    const otrack = document.getElementById('btnOtrack');
+    if(ortho) ortho.classList.toggle('active', orthoMode);
+    if(osnap) osnap.classList.toggle('active', osnapMode);
+    if(otrack) otrack.classList.toggle('active', otrackMode);
+  }
+  document.getElementById('btnOrtho').addEventListener('click', ()=>{
+    orthoMode = !orthoMode; syncCadToggles(); scheduleSave();
+  });
+  document.getElementById('btnOsnap').addEventListener('click', ()=>{
+    osnapMode = !osnapMode; syncCadToggles(); scheduleSave();
+  });
+  document.getElementById('btnOtrack').addEventListener('click', ()=>{
+    otrackMode = !otrackMode; syncCadToggles(); scheduleSave();
+  });
+  document.getElementById('btnSuperpowers').addEventListener('click', ()=>{
+    document.getElementById('superPanel').classList.toggle('show');
+    document.getElementById('btnSuperpowers').classList.toggle('active');
   });
 
   // ---------------------------------------------------------------
@@ -1807,7 +2026,7 @@
               if(selBtn) selBtn.classList.add('active');
             }
             renderBlockLibrary();
-            draw(); updateStats();
+            afterChange();
           }
         });
       }
@@ -1921,16 +2140,31 @@
   canvas.addEventListener('click', (e)=>{
     const rect = canvas.getBoundingClientRect();
     const world = screenToWorld(e.clientX-rect.left, e.clientY-rect.top);
-    const snapped = snapPoint(world);
+    let snapped = snapPoint(world);
 
     if(tool==='wall'){
       if(!chainStart){
         chainStart = snapped;
       } else {
+        snapped = applyOrtho(chainStart, snapped);
         if(dist(chainStart, snapped) > 0.05){
           walls.push({ id: nextId++, x1: chainStart.x, y1: chainStart.y, x2: snapped.x, y2: snapped.y });
         }
         chainStart = snapped;
+      }
+    } else if(tool==='rect'){
+      if(!rectStart){
+        rectStart = snapped;
+      } else {
+        const a = rectStart;
+        const b = snapped;
+        if(Math.abs(a.x-b.x) > 0.05 && Math.abs(a.y-b.y) > 0.05){
+          walls.push({ id: nextId++, x1:a.x, y1:a.y, x2:b.x, y2:a.y });
+          walls.push({ id: nextId++, x1:b.x, y1:a.y, x2:b.x, y2:b.y });
+          walls.push({ id: nextId++, x1:b.x, y1:b.y, x2:a.x, y2:b.y });
+          walls.push({ id: nextId++, x1:a.x, y1:b.y, x2:a.x, y2:a.y });
+        }
+        rectStart = null;
       }
     } else if(tool==='door' || tool==='window'){
       const near = findWallNear(world, 0.3);
@@ -1994,8 +2228,7 @@
         selected = hitRoom ? {kind:'room', id: hitRoom.id} : null;
       }
     }
-    draw();
-    updateStats();
+    afterChange();
   });
 
   function findDuctNear(worldPt, tolM){
@@ -2033,6 +2266,8 @@
     const rect = canvas.getBoundingClientRect();
     modal.style.left = (screenX - rect.left + 10) + 'px';
     modal.style.top = (screenY - rect.top + 10) + 'px';
+    const usedRoomIds = new Set(rooms.map(r=>String(r.projectRoomId || '')).filter(Boolean));
+    const pendingChoices = pendingProjectRooms.filter(r=>r && r.id && !usedRoomIds.has(String(r.id)));
     modal.innerHTML = `
       <input type="text" placeholder="Nome do cômodo (ex: Quarto 1)" maxlength="30" />
       <button class="ok">OK</button>
@@ -2040,10 +2275,25 @@
     `;
     canvas.parentElement.appendChild(modal);
     const input = modal.querySelector('input');
+    let roomProjectRef = null;
+    if(pendingChoices.length){
+      const label = document.createElement('label');
+      label.style.cssText = 'font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:4px;';
+      label.textContent = 'Comodo do projeto';
+      roomProjectRef = document.createElement('select');
+      roomProjectRef.id = 'roomProjectRef';
+      roomProjectRef.innerHTML = '<option value="">Novo comodo no CAD</option>' + pendingChoices.map(r=>`<option value="${r.id}">${r.description || r.room_type || 'Comodo '+r.id}</option>`).join('');
+      roomProjectRef.addEventListener('change', ()=>{
+        const linked = pendingProjectRooms.find(r=>String(r.id)===String(roomProjectRef.value));
+        if(linked) input.value = linked.description || linked.room_type || '';
+      });
+      label.appendChild(roomProjectRef);
+      modal.insertBefore(label, input);
+    }
     input.focus();
     function confirmIt(){
       const name = input.value.trim();
-      if(name){ rooms.push({ id: nextId++, name, seed: worldPt }); draw(); updateStats(); }
+      if(name){ rooms.push({ id: nextId++, name, seed: worldPt, projectRoomId: modal.querySelector('#roomProjectRef') ? modal.querySelector('#roomProjectRef').value || null : null }); afterChange(); }
       modal.remove();
     }
     modal.querySelector('.ok').addEventListener('click', confirmIt);
@@ -2162,7 +2412,7 @@
       cableResult = null;
       materialResult = null;
       modal.remove();
-      draw(); updateStats();
+      afterChange();
     }
     modal.querySelector('.ok').addEventListener('click', confirmIt);
     modal.querySelector('.cancel').addEventListener('click', ()=>modal.remove());
@@ -2176,6 +2426,7 @@
     e.preventDefault();
     chainStart = null;
     ductChainStart = null;
+    rectStart = null;
     draw();
     updateStats();
   });
@@ -2183,7 +2434,7 @@
   window.addEventListener('keydown', (e)=>{
     const activeTag = document.activeElement && document.activeElement.tagName;
     const isEditingField = activeTag==='INPUT' || activeTag==='SELECT' || activeTag==='TEXTAREA';
-    if(e.key === 'Escape'){ chainStart = null; ductChainStart = null; removeOpenModals(); draw(); updateStats(); }
+    if(e.key === 'Escape'){ chainStart = null; ductChainStart = null; rectStart = null; removeOpenModals(); draw(); updateStats(); }
     if((e.key === 'Delete' || e.key === 'Backspace') && !isEditingField){
       if(!document.querySelector('.mini-modal')) deleteSelected();
     }
@@ -2197,6 +2448,7 @@
       activeBlockId = null;
       chainStart = null;
       ductChainStart = null;
+      rectStart = null;
       selected = null;
       hoverDuct = null;
       removeOpenModals();
@@ -2211,6 +2463,15 @@
       };
       hintBox.textContent = hints[tool] || '';
       draw(); updateStats();
+    });
+  });
+
+  document.querySelectorAll('.left-icon[data-tool]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const target = document.querySelector(`.tool-btn[data-tool="${btn.dataset.tool}"]`);
+      if(target) target.click();
+      document.querySelectorAll('.left-icon').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
     });
   });
 
@@ -2231,7 +2492,7 @@
       materialResult = null;
     }
     selected = null;
-    draw(); updateStats();
+    afterChange();
   }
   document.getElementById('btnDelete').addEventListener('click', deleteSelected);
 
@@ -2239,7 +2500,7 @@
     if(confirm('Apagar toda a planta atual?')){
       walls = []; openings = []; rooms = []; symbols = []; ducts = [];
       cableResult = null; materialResult = null; selected = null; chainStart = null; ductChainStart = null;
-      draw(); updateStats();
+      afterChange();
     }
   });
 
@@ -2248,7 +2509,7 @@
     return rooms.map(r=>{
       const face = findFaceContaining(r.seed, faces);
       return {
-        id: r.id, nome: r.name,
+        id: r.id, nome: r.name, project_room_id: r.projectRoomId || null,
         area_m2: face ? +face.area.toFixed(2) : null,
         perimetro_m: face ? +face.perimeter.toFixed(2) : null,
         fechado: !!face
@@ -2313,6 +2574,18 @@
     const box = document.getElementById('jsonOut');
     box.value = JSON.stringify(data, null, 2);
     box.classList.add('show');
+  });
+
+  window.addEventListener('message', (e)=>{
+    const data = e.data || {};
+    if(data.type !== 'eletrodim:floorplan-init') return;
+    pendingProjectRooms = Array.isArray(data.projectRooms) ? data.projectRooms : [];
+    if(data.state) loadEditorState(data.state);
+    else {
+      renderBlockLibrary();
+      resize();
+      updateStats();
+    }
   });
 
   renderBlockLibrary();

@@ -284,7 +284,24 @@
                         Ver detalhes do projeto
                     </button>
                 </div>
-                <iframe src="{{ asset('floor-plan-editor.html') }}" wire:ignore
+                <iframe id="floorPlanEditorFrame" src="{{ asset('floor-plan-editor.html') }}" wire:ignore
+                    x-init="
+                        const frame = $el;
+                        const payload = {
+                            type: 'eletrodim:floorplan-init',
+                            state: @js($floorPlanJson ? json_decode($floorPlanJson, true) : null),
+                            projectRooms: @js($rooms)
+                        };
+                        frame.addEventListener('load', () => {
+                            frame.contentWindow.postMessage(payload, window.location.origin);
+                        });
+                        window.addEventListener('message', (e) => {
+                            if (e.origin !== window.location.origin) return;
+                            if (e.data && e.data.type === 'eletrodim:floorplan-save') {
+                                $wire.saveFloorPlanState(JSON.stringify(e.data.state || {}));
+                            }
+                        });
+                    "
                     style="width:100%;height:calc(100vh - 56px);border:0;display:block;"
                     title="Editor de planta baixa"></iframe>
             </div>

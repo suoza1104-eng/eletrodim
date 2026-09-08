@@ -92,6 +92,7 @@ class ProjectWizard extends Component
     // Step 2 - modo de entrada dos cômodos: decisão explícita antes do cadastro/manual ou CAD
     public string $projectInputMode = '';
     public bool $showFloorPlanEditor = false;
+    public string $floorPlanJson = '';
 
     // Step 3 — loads
     public array $loads = [];
@@ -260,6 +261,7 @@ class ProjectWizard extends Component
             $this->city         = $project->city         ?? '';
             $this->state        = $project->state        ?? '';
             $this->observations = $project->observations ?? '';
+            $this->floorPlanJson = $project->floor_plan_json ?? '';
             $this->floorsCount  = (int)($project->floors_count ?? 1);
 
             if ($project->settings) {
@@ -627,6 +629,7 @@ class ProjectWizard extends Component
             'city'         => $this->city        ?: null,
             'state'        => $this->state       ?: null,
             'observations' => $this->observations ?: null,
+            'floor_plan_json' => $this->floorPlanJson ?: null,
             'floors_count' => max(1, (int)$this->floorsCount),
             'status'       => 'in_progress',
         ];
@@ -1267,6 +1270,17 @@ class ProjectWizard extends Component
         $this->showFloorPlanEditor = false;
     }
 
+    public function saveFloorPlanState(string $json): void
+    {
+        $this->floorPlanJson = $json;
+
+        if ($this->projectId) {
+            Project::where('id', $this->projectId)
+                ->where('user_id', Auth::id())
+                ->update(['floor_plan_json' => $json ?: null]);
+        }
+    }
+
     public function toggleFloorPlanEditor(): void
     {
         $this->showFloorPlanEditor = !$this->showFloorPlanEditor;
@@ -1292,14 +1306,30 @@ class ProjectWizard extends Component
             $perimetro = $c['perimetro_m'] ?? null;
             if ($area === null && $perimetro === null) continue;
 
-            $room = $this->emptyRoom(count($this->rooms));
+            $projectRoomId = $c['project_room_id'] ?? null;
+            $roomIndex = null;
+            if ($projectRoomId) {
+                foreach ($this->rooms as $idx => $existingRoom) {
+                    if ((string)($existingRoom['id'] ?? '') === (string)$projectRoomId) {
+                        $roomIndex = $idx;
+                        break;
+                    }
+                }
+            }
+
+            $room = $roomIndex !== null ? $this->rooms[$roomIndex] : $this->emptyRoom(count($this->rooms));
             $room['room_type']   = $this->guessRoomType($nome);
             $room['description'] = $nome;
             $room['area_m2']     = $area      !== null ? (string)$area      : '';
             $room['perimeter_m'] = $perimetro !== null ? (string)$perimetro : '';
 
-            $this->rooms[] = $room;
-            $this->calculateRoomLoads(count($this->rooms) - 1);
+            if ($roomIndex !== null) {
+                $this->rooms[$roomIndex] = $room;
+                $this->calculateRoomLoads($roomIndex);
+            } else {
+                $this->rooms[] = $room;
+                $this->calculateRoomLoads(count($this->rooms) - 1);
+            }
             $imported++;
         }
 
