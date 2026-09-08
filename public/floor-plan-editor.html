@@ -560,9 +560,9 @@
       <button class="tool-btn" data-tool="eletroduto"><span class="swatch" style="background:var(--duto)"></span>Eletroduto</button>
       <span style="width:1px;background:var(--panel-border);align-self:stretch;margin:0 2px;"></span>
       <button class="tool-btn" data-tool="select">Selecionar</button>
-      <button class="cad-toggle active" id="btnOrtho" type="button">ORTO</button>
-      <button class="cad-toggle active" id="btnOsnap" type="button">OSNAP</button>
-      <button class="cad-toggle" id="btnOtrack" type="button">OTRACK</button>
+      <button class="cad-toggle active" id="btnOrtho" type="button" title="Trava o próximo ponto na horizontal ou vertical">ORTO</button>
+      <button class="cad-toggle active" id="btnOsnap" type="button" title="Gruda em pontos de referência: □ endpoint, △ midpoint, ◇ nearest">OSNAP</button>
+      <button class="cad-toggle" id="btnOtrack" type="button" title="Mostra linha-guia tracejada quando o cursor alinha (mesma X ou Y) com um ponto existente">OTRACK</button>
       <span style="width:1px;background:var(--panel-border);align-self:stretch;margin:0 2px;"></span>
       <button class="cad-toggle active" id="btnUnit" type="button" title="Unidade usada ao digitar o comprimento de uma linha (Enter confirma)">Unidade: cm</button>
       <span style="width:1px;background:var(--panel-border);align-self:stretch;margin:0 2px;"></span>
@@ -1027,28 +1027,130 @@
   function snap(v, step){
     return Math.round(v/step)*step;
   }
-  function snapPoint(p){
-    if(!osnapMode) return { x: +snap(p.x, SNAP_M).toFixed(3), y: +snap(p.y, SNAP_M).toFixed(3) };
-    // tenta grudar primeiro num símbolo, depois num ponto de parede/eletroduto
-    // existente (pra fechar cômodos e ancorar eletroduto exatamente no símbolo)
-    const tolPx = 10;
-    const ps = worldToScreen(p.x, p.y);
-    for(const s of symbols){
-      const sp = worldToScreen(s.x, s.y);
-      if(Math.hypot(sp.x-ps.x, sp.y-ps.y) < tolPx) return {x:s.x, y:s.y};
-    }
+  // ---------------------------------------------------------------
+  // OSNAP (pontos de referência): endpoint (quadrado), midpoint
+  // (triângulo) e nearest (losango) — nessa ordem de prioridade,
+  // igual AutoCAD. OTRACK: linhas-guia tracejadas quando o cursor
+  // fica alinhado (mesma X ou Y) com algum desses pontos.
+  // ---------------------------------------------------------------
+  function closestPointOnSegment(a, b, p){
+    const abx = b.x-a.x, aby = b.y-a.y;
+    const abLen2 = abx*abx+aby*aby || 1e-9;
+    let t = ((p.x-a.x)*abx + (p.y-a.y)*aby)/abLen2;
+    t = Math.max(0, Math.min(1,t));
+    return { t, point: {x:a.x+abx*t, y:a.y+aby*t} };
+  }
+
+  function computeSnapCandidates(){
+    const pts = [];
     for(const w of walls){
-      for(const ep of [{x:w.x1,y:w.y1},{x:w.x2,y:w.y2}]){
-        const s = worldToScreen(ep.x, ep.y);
-        if(Math.hypot(s.x-ps.x, s.y-ps.y) < tolPx) return {x: ep.x, y: ep.y};
-      }
+      pts.push({x:w.x1, y:w.y1, kind:'endpoint'});
+      pts.push({x:w.x2, y:w.y2, kind:'endpoint'});
+      pts.push({x:(w.x1+w.x2)/2, y:(w.y1+w.y2)/2, kind:'midpoint'});
     }
     for(const d of ducts){
-      for(const ep of [{x:d.x1,y:d.y1},{x:d.x2,y:d.y2}]){
-        const s = worldToScreen(ep.x, ep.y);
-        if(Math.hypot(s.x-ps.x, s.y-ps.y) < tolPx) return {x: ep.x, y: ep.y};
+      pts.push({x:d.x1, y:d.y1, kind:'endpoint'});
+      pts.push({x:d.x2, y:d.y2, kind:'endpoint'});
+      pts.push({x:(d.x1+d.x2)/2, y:(d.y1+d.y2)/2, kind:'midpoint'});
+    }
+    for(const s of symbols){
+      pts.push({x:s.x, y:s.y, kind:'endpoint'});
+    }
+    return pts;
+  }
+
+  function findOsnapMatch(worldPt){
+    const tolPx = 10;
+    const ps = worldToScreen(worldPt.x, worldPt.y);
+    const rankOf = { endpoint:0, midpoint:1 };
+
+    // endpoint e midpoint são pontos exatos — o mais próximo, priorizando
+    // endpoint sobre midpoint quando os dois estão dentro da tolerância
+    let best=null, bestD=Infinity, bestRank=Infinity;
+    for(const c of computeSnapCandidates()){
+      const cs = worldToScreen(c.x, c.y);
+      const d = Math.hypot(cs.x-ps.x, cs.y-ps.y);
+      if(d>tolPx) continue;
+      const rank = rankOf[c.kind];
+      if(rank<bestRank || (rank===bestRank && d<bestD)){
+        best = {x:c.x, y:c.y}; bestD = d; bestRank = rank;
       }
     }
+    if(best) return { point:best, kind: bestRank===0 ? 'endpoint' : 'midpoint' };
+
+    // nearest — ponto mais próximo sobre qualquer trecho de parede/eletroduto
+    let nearest=null, nearestD=Infinity;
+    for(const w of walls){
+      const {point} = closestPointOnSegment({x:w.x1,y:w.y1}, {x:w.x2,y:w.y2}, worldPt);
+      const d = Math.hypot(worldToScreen(point.x,point.y).x-ps.x, worldToScreen(point.x,point.y).y-ps.y);
+      if(d<nearestD){ nearestD=d; nearest=point; }
+    }
+    for(const d0 of ducts){
+      const {point} = closestPointOnSegment({x:d0.x1,y:d0.y1}, {x:d0.x2,y:d0.y2}, worldPt);
+      const d = Math.hypot(worldToScreen(point.x,point.y).x-ps.x, worldToScreen(point.x,point.y).y-ps.y);
+      if(d<nearestD){ nearestD=d; nearest=point; }
+    }
+    if(nearest && nearestD<=tolPx) return { point:nearest, kind:'nearest' };
+    return null;
+  }
+
+  function findTrackAlignments(worldPt){
+    if(!otrackMode) return [];
+    const tolPx = 6;
+    const ms = worldToScreen(worldPt.x, worldPt.y);
+    const hits = [];
+    for(const c of computeSnapCandidates()){
+      const cs = worldToScreen(c.x, c.y);
+      if(Math.abs(cs.x-ms.x)<=tolPx && Math.abs(cs.y-ms.y)>tolPx) hits.push({axis:'v', point:c});
+      else if(Math.abs(cs.y-ms.y)<=tolPx && Math.abs(cs.x-ms.x)>tolPx) hits.push({axis:'h', point:c});
+    }
+    return hits;
+  }
+
+  function drawSnapMarker(kind, p){
+    const s = worldToScreen(p.x, p.y);
+    const r = 6;
+    ctx.save();
+    ctx.strokeStyle = getCss('--accent');
+    ctx.fillStyle = getCss('--panel');
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    if(kind==='endpoint'){
+      ctx.rect(s.x-r, s.y-r, r*2, r*2);
+    } else if(kind==='midpoint'){
+      ctx.moveTo(s.x, s.y-r);
+      ctx.lineTo(s.x+r, s.y+r*0.75);
+      ctx.lineTo(s.x-r, s.y+r*0.75);
+      ctx.closePath();
+    } else {
+      ctx.moveTo(s.x-r, s.y);
+      ctx.lineTo(s.x, s.y-r);
+      ctx.lineTo(s.x+r, s.y);
+      ctx.lineTo(s.x, s.y+r);
+      ctx.closePath();
+    }
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function snapPoint(p){
+    if(osnapMode){
+      const match = findOsnapMatch(p);
+      if(match) return { x: match.point.x, y: match.point.y };
+    }
+    if(otrackMode){
+      const hits = findTrackAlignments(p);
+      if(hits.length){
+        let x = p.x, y = p.y;
+        const vHit = hits.find(h=>h.axis==='v');
+        const hHit = hits.find(h=>h.axis==='h');
+        if(vHit) x = vHit.point.x;
+        if(hHit) y = hHit.point.y;
+        return { x, y };
+      }
+    }
+    if(!osnapMode) return { x: +snap(p.x, SNAP_M).toFixed(3), y: +snap(p.y, SNAP_M).toFixed(3) };
     return { x: snap(p.x, SNAP_M), y: snap(p.y, SNAP_M) };
   }
 
@@ -1561,6 +1663,28 @@
         ctx.globalAlpha = 0.5;
         drawSymbol({ blockId: blockDef.id, type: blockDef.tipo, x: snapped.x, y: snapped.y, props: defaultProps(blockDef) }, false);
         ctx.globalAlpha = 1;
+      }
+    }
+
+    if(tool!=='select'){
+      if(otrackMode){
+        for(const hit of findTrackAlignments(mouseWorld)){
+          const cs = worldToScreen(hit.point.x, hit.point.y);
+          ctx.save();
+          ctx.strokeStyle = getCss('--interruptor');
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4,4]);
+          ctx.beginPath();
+          if(hit.axis==='v'){ ctx.moveTo(cs.x, 0); ctx.lineTo(cs.x, canvas.height); }
+          else { ctx.moveTo(0, cs.y); ctx.lineTo(canvas.width, cs.y); }
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.restore();
+        }
+      }
+      if(osnapMode){
+        const match = findOsnapMatch(mouseWorld);
+        if(match) drawSnapMarker(match.kind, match.point);
       }
     }
   }
