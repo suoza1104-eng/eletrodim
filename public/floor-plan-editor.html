@@ -701,10 +701,10 @@
   const GRID_MINOR_M = 0.5;  // linha fina a cada 0.5m
   const GRID_MAJOR_M = 1.0;  // linha forte a cada 1m
   const SNAP_M = 0.1;        // snap a cada 10cm
-  const WALL_THICK_M = 0.12; // espessura visual da parede (12cm)
+  const WALL_THICK_DEFAULT_M = 0.15; // espessura padrão da parede (15cm) — cada parede pode ter a sua própria (editável nas propriedades)
 
-  let walls = [];    // {id, x1,y1,x2,y2} em metros
-  let openings = [];  // {id, wallId, type:'door'|'window', t: 0..1, widthM}
+  let walls = [];    // {id, x1,y1,x2,y2, thickness} em metros — thickness ausente cai no padrão de 15cm
+  let openings = [];  // {id, wallId, type:'door'|'window', t: 0..1, widthM, flip} — flip inverte o lado da abertura da porta
   let rooms = [];     // {id, name, seed:{x,y}} em metros — área/perímetro recalculados a cada desenho
   let symbols = [];   // {id, blockId, type, x, y, props:{...}} — "type" espelha o tipo lógico do bloco (tomada/interruptor/luz/qdc/custom)
   let ducts = [];      // {id, x1,y1,x2,y2, camada?} em metros — rede física de eletrodutos, sem info de cabo
@@ -1078,7 +1078,7 @@
   function commitWallSegment(endpoint){
     if(!chainStart) return;
     if(dist(chainStart, endpoint) > 0.05){
-      walls.push({ id: nextId++, x1: chainStart.x, y1: chainStart.y, x2: endpoint.x, y2: endpoint.y });
+      walls.push({ id: nextId++, x1: chainStart.x, y1: chainStart.y, x2: endpoint.x, y2: endpoint.y, thickness: WALL_THICK_DEFAULT_M });
     }
     chainStart = endpoint;
     typedLength = '';
@@ -1126,7 +1126,7 @@
     const dx = p2.x-p1.x, dy = p2.y-p1.y;
     const len = Math.hypot(dx,dy) || 1;
     const ux = dx/len, uy = dy/len;
-    const thickPx = WALL_THICK_M*PX_PER_M*zoom;
+    const thickPx = (w.thickness || WALL_THICK_DEFAULT_M)*PX_PER_M*zoom;
 
     const ops = openings.filter(o=>o.wallId===w.id).sort((a,b)=>a.t-b.t);
 
@@ -1146,7 +1146,8 @@
         const segStart = centerPx - halfW;
         const segEnd = centerPx + halfW;
         drawSeg(cursor, Math.max(cursor,segStart));
-        drawOpening(o, p1, ux, uy, segStart, segEnd, thickPx);
+        const openingSelected = !!(selected && selected.kind==='opening' && selected.id===o.id);
+        drawOpening(o, p1, ux, uy, segStart, segEnd, thickPx, openingSelected);
         cursor = segEnd;
       }
       drawSeg(cursor, len);
@@ -1167,20 +1168,22 @@
     ctx.font = '11px Segoe UI, sans-serif';
     ctx.fillStyle = getCss('--muted');
     ctx.textAlign = 'center';
-    const label = wallLenM(w).toFixed(2) + ' m';
+    const espessuraCm = Math.round((w.thickness || WALL_THICK_DEFAULT_M)*100);
+    const label = wallLenM(w).toFixed(2) + ' m · ' + espessuraCm + 'cm';
     ctx.fillText(label, midX + nx*14, midY + ny*14);
     ctx.restore();
   }
 
-  function drawOpening(o, p1, ux, uy, segStart, segEnd, thickPx){
+  function drawOpening(o, p1, ux, uy, segStart, segEnd, thickPx, isSelected){
     const a = { x: p1.x+ux*segStart, y: p1.y+uy*segStart };
     const b = { x: p1.x+ux*segEnd, y: p1.y+uy*segEnd };
-    const nx = -uy, ny = ux;
+    const flipSign = o.flip ? -1 : 1;
+    const nx = -uy*flipSign, ny = ux*flipSign;
     const half = thickPx/2;
 
     if(o.type === 'door'){
-      ctx.strokeStyle = getCss('--door');
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = isSelected ? getCss('--accent') : getCss('--door');
+      ctx.lineWidth = isSelected ? 2.6 : 2;
       ctx.beginPath();
       ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
       ctx.stroke();
@@ -1195,8 +1198,8 @@
       ctx.arc(a.x, a.y, leafLen, Math.min(angle1,angle2), Math.max(angle1,angle2));
       ctx.stroke();
     } else {
-      ctx.strokeStyle = getCss('--window');
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = isSelected ? getCss('--accent') : getCss('--window');
+      ctx.lineWidth = isSelected ? 2.6 : 2;
       ctx.beginPath();
       ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
       ctx.stroke();
@@ -1227,6 +1230,19 @@
     }
     if(best && bestD <= tolM) return best;
     return null;
+  }
+
+  function findOpeningNear(worldPt, tolM){
+    let best=null, bestD=Infinity;
+    for(const o of openings){
+      const wall = walls.find(w=>w.id===o.wallId);
+      if(!wall) continue;
+      const center = { x: wall.x1 + (wall.x2-wall.x1)*o.t, y: wall.y1 + (wall.y2-wall.y1)*o.t };
+      const d = dist(center, worldPt);
+      const accept = (o.widthM/2) + tolM;
+      if(d <= accept && d < bestD){ bestD = d; best = o; }
+    }
+    return best;
   }
 
   // ---------------------------------------------------------------
@@ -1707,9 +1723,37 @@
     } else if(selected.kind==='wall'){
       const wall = walls.find(w=>w.id===selected.id);
       if(!wall){ selected=null; return renderPropertiesPanel(); }
+      const espessuraCm = Math.round((wall.thickness || WALL_THICK_DEFAULT_M)*100);
       container.innerHTML = `
         <div class="stat-row"><span>Comprimento</span><span>${wallLenM(wall).toFixed(2)} m</span></div>
+        <label class="prop-field">Espessura (cm)<input type="number" id="propWallThick" value="${espessuraCm}" min="5" max="40" step="1"></label>
         <button class="wide danger" id="propDeleteBtn" style="margin-top:8px;background:var(--danger-soft-bg);color:var(--danger-soft-text);border-color:var(--danger);">Excluir parede (Delete)</button>`;
+      container.querySelector('#propWallThick').addEventListener('input', (e)=>{
+        const cm = +e.target.value;
+        if(cm>0) wall.thickness = cm/100;
+        draw(); scheduleSave();
+      });
+      container.querySelector('#propDeleteBtn').addEventListener('click', deleteSelected);
+    } else if(selected.kind==='opening'){
+      const opening = openings.find(o=>o.id===selected.id);
+      if(!opening){ selected=null; return renderPropertiesPanel(); }
+      const isDoor = opening.type==='door';
+      container.innerHTML = `
+        <div class="stat-row"><span>Tipo</span><span>${isDoor?'Porta':'Janela'}</span></div>
+        <label class="prop-field">Largura (m)<input type="number" id="propOpeningWidth" value="${opening.widthM}" min="0.3" max="3" step="0.05"></label>
+        ${isDoor ? `<button class="wide" id="propOpeningFlip" type="button" style="margin-bottom:8px;">${opening.flip ? '↺ Voltar abertura ao lado padrão' : '↻ Inverter lado da abertura'}</button>` : ''}
+        <button class="wide danger" id="propDeleteBtn" style="background:var(--danger-soft-bg);color:var(--danger-soft-text);border-color:var(--danger);">Excluir ${isDoor?'porta':'janela'} (Delete)</button>`;
+      container.querySelector('#propOpeningWidth').addEventListener('input', (e)=>{
+        const v = +e.target.value;
+        if(v>0) opening.widthM = v;
+        draw(); scheduleSave();
+      });
+      const flipBtn = container.querySelector('#propOpeningFlip');
+      if(flipBtn) flipBtn.addEventListener('click', ()=>{
+        opening.flip = !opening.flip;
+        renderPropertiesPanel();
+        draw(); scheduleSave();
+      });
       container.querySelector('#propDeleteBtn').addEventListener('click', deleteSelected);
     }
   }
@@ -2449,17 +2493,17 @@
         const a = rectStart;
         const b = snapped;
         if(Math.abs(a.x-b.x) > 0.05 && Math.abs(a.y-b.y) > 0.05){
-          walls.push({ id: nextId++, x1:a.x, y1:a.y, x2:b.x, y2:a.y });
-          walls.push({ id: nextId++, x1:b.x, y1:a.y, x2:b.x, y2:b.y });
-          walls.push({ id: nextId++, x1:b.x, y1:b.y, x2:a.x, y2:b.y });
-          walls.push({ id: nextId++, x1:a.x, y1:b.y, x2:a.x, y2:a.y });
+          walls.push({ id: nextId++, x1:a.x, y1:a.y, x2:b.x, y2:a.y, thickness: WALL_THICK_DEFAULT_M });
+          walls.push({ id: nextId++, x1:b.x, y1:a.y, x2:b.x, y2:b.y, thickness: WALL_THICK_DEFAULT_M });
+          walls.push({ id: nextId++, x1:b.x, y1:b.y, x2:a.x, y2:b.y, thickness: WALL_THICK_DEFAULT_M });
+          walls.push({ id: nextId++, x1:a.x, y1:b.y, x2:a.x, y2:a.y, thickness: WALL_THICK_DEFAULT_M });
         }
         rectStart = null;
       }
     } else if(tool==='door' || tool==='window'){
       const near = findWallNear(world, 0.3);
       if(near){
-        openings.push({ id: nextId++, wallId: near.wall.id, type: tool, t: near.t, widthM: tool==='door'?0.8:1.2 });
+        openings.push({ id: nextId++, wallId: near.wall.id, type: tool, t: near.t, widthM: tool==='door'?0.8:1.2, flip:false });
       }
     } else if(tool==='room'){
       const faces = computeRoomFaces();
@@ -2498,10 +2542,13 @@
       }
     } else if(tool==='select'){
       const nearSymbol = findSymbolNear(world, 0.13*symbolScale);
+      const nearOpening = findOpeningNear(world, 0.12);
       const nearWall = findWallNear(world, 0.15);
       const nearDuct = findDuctNear(world, 0.12);
       if(nearSymbol){
         selected = {kind:'symbol', id: nearSymbol.id};
+      } else if(nearOpening){
+        selected = {kind:'opening', id: nearOpening.id};
       } else if(nearDuct){
         selected = {kind:'duct', id: nearDuct.id};
         const tags = cableResult ? (cableResult.cableTags[nearDuct.id]||[]) : [];
@@ -2800,11 +2847,11 @@
       renderBlockLibrary();
       const hints = {
         wall: 'Clique para começar a desenhar uma parede. Depois do 1º ponto, digite um número pra definir a medida exata (Enter confirma) — a unidade é a que estiver marcada em "Unidade". Clique direito ou Esc encerra a corrente.',
-        door: 'Clique sobre uma parede existente para inserir uma porta (0,80 m).',
-        window: 'Clique sobre uma parede existente para inserir uma janela (1,20 m).',
+        door: 'Clique sobre uma parede existente para inserir uma porta (0,80 m). Depois, use "Selecionar" pra ajustar largura ou inverter o lado da abertura.',
+        window: 'Clique sobre uma parede existente para inserir uma janela (1,20 m). Depois, use "Selecionar" pra ajustar a largura.',
         room: 'Clique no meio de um cômodo já fechado por paredes para nomeá-lo e calcular área e perímetro.',
         eletroduto: 'Clique exatamente em cima de um símbolo pra começar, depois no próximo símbolo (o círculo laranja mostra onde vai ancorar). Fora de um símbolo, não registra. Depois use "Distribuir cabos".',
-        select: 'Clique numa parede, bloco, eletroduto ou cômodo pra selecionar — as propriedades aparecem no painel da direita. Delete remove.'
+        select: 'Clique numa parede, porta, janela, bloco, eletroduto ou cômodo pra selecionar — as propriedades aparecem no painel da direita. Delete remove.'
       };
       hintBox.textContent = hints[tool] || '';
       draw(); updateStats();
@@ -2825,6 +2872,8 @@
     if(selected.kind==='wall'){
       walls = walls.filter(w=>w.id!==selected.id);
       openings = openings.filter(o=>o.wallId!==selected.id);
+    } else if(selected.kind==='opening'){
+      openings = openings.filter(o=>o.id!==selected.id);
     } else if(selected.kind==='room'){
       rooms = rooms.filter(r=>r.id!==selected.id);
     } else if(selected.kind==='symbol'){
@@ -2883,12 +2932,14 @@
         id: w.id,
         inicio: { x: +w.x1.toFixed(2), y: +w.y1.toFixed(2) },
         fim: { x: +w.x2.toFixed(2), y: +w.y2.toFixed(2) },
-        comprimento_m: +wallLenM(w).toFixed(2)
+        comprimento_m: +wallLenM(w).toFixed(2),
+        espessura_m: w.thickness || WALL_THICK_DEFAULT_M
       })),
       aberturas: openings.map(o=>({
         id: o.id, parede_id: o.wallId,
         tipo: o.type==='door'?'porta':'janela',
-        posicao_relativa: +o.t.toFixed(3), largura_m: o.widthM
+        posicao_relativa: +o.t.toFixed(3), largura_m: o.widthM,
+        invertido: !!o.flip
       })),
       comodos: buildComodosPayload(),
       simbolos: symbols.map(s=>{
