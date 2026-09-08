@@ -158,6 +158,25 @@
   .tool-btn.danger:hover{ border-color: var(--danger); color:var(--danger-soft-text); }
   .tool-btn.zoom{ padding:7px 10px; font-weight:700; }
   .swatch{ width:9px; height:9px; border-radius:2px; display:inline-block; }
+  .theme-toggle{
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    gap:7px;
+    background: var(--surface);
+    border:1.5px solid var(--accent);
+    color: var(--text);
+    padding:8px 14px;
+    font-size:12.5px;
+    font-weight:700;
+    border-radius:999px;
+    cursor:pointer;
+    box-shadow:0 4px 12px var(--shadow-color);
+    transition: background .12s, transform .12s, box-shadow .12s;
+    margin-left:12px;
+  }
+  .theme-toggle:hover{ background:var(--surface-hover); transform:translateY(-1px); box-shadow:0 8px 18px var(--shadow-color); }
+  .theme-toggle span:first-child{ font-size:15px; line-height:1; }
   main{
     position:relative;
     overflow:hidden;
@@ -514,9 +533,8 @@
       <button class="tool-btn" id="btnResetView">Resetar vista</button>
       <button class="tool-btn danger" id="btnDelete">Excluir</button>
       <button class="tool-btn danger" id="btnClear">Limpar tudo</button>
-      <span style="width:1px;background:var(--panel-border);align-self:stretch;margin:0 2px;"></span>
-      <button class="tool-btn" id="btnThemeToggle" type="button" title="Alternar tema claro/escuro"><span id="themeToggleIcon">🌙</span><span id="themeToggleLabel">Tema escuro</span></button>
     </div>
+    <button class="theme-toggle" id="btnThemeToggle" type="button" title="Alternar tema claro/escuro"><span id="themeToggleIcon">🌙</span><span id="themeToggleLabel">Tema escuro</span></button>
   </header>
   <nav class="leftbar">
     <button class="left-icon" data-tool="wall" title="Line">╱</button>
