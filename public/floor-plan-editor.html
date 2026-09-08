@@ -761,7 +761,19 @@
   let chainStart = null;  // {x,y} em metros — corrente de parede em andamento
   let ductChainStart = null; // {x,y} em metros — corrente de eletroduto em andamento
   let mouseWorld = {x:0, y:0};
-  let selected = null; // {kind:'wall'|'room'|'symbol'|'duct', id}
+  let selected = null; // {kind:'wall'|'room'|'symbol'|'duct'|'opening', id}
+  let selectedMulti = []; // [{kind,id}, ...] — resultado de uma janela de seleção (window/crossing)
+  let dragSelectStart = null;   // world — início do arrasto de seleção (só com a ferramenta Selecionar)
+  let dragSelectActive = false; // true assim que o arrasto passa de um limiar mínimo (evita disparar num clique simples)
+  let dragSelectCurrent = null; // world — posição atual do arrasto
+  let suppressNextClick = false; // evita que o "click" que sucede o mouseup do arrasto rode a seleção normal
+
+  function isMultiSelected(kind, id){
+    return selectedMulti.some(s=>s.kind===kind && s.id===id);
+  }
+  function isWallSelected(w){
+    return !!(selected && selected.kind==='wall' && selected.id===w.id) || isMultiSelected('wall', w.id);
+  }
 
   function findBlockDef(id){
     return blockLibrary.find(b=>b.id===id);
@@ -1222,50 +1234,86 @@
     return dist({x:d.x1,y:d.y1},{x:d.x2,y:d.y2});
   }
 
-  function drawWall(w, isSelected){
+  // Paredes são desenhadas em DUAS passadas globais (todas as "outer" antes
+  // de qualquer "inner") pra fechar o canto certinho, sem entalhe: cada
+  // trecho é esticado por meia-espessura nas pontas verdadeiras da parede
+  // (não nas pontas cortadas por porta/janela), então o preenchimento da
+  // cor da parede de duas paredes perpendiculares se funde num quadrado
+  // sólido no canto. A segunda passada "esgota" o miolo com a cor de fundo,
+  // recuando meia-espessura nas pontas verdadeiras — o que deixa o bloco do
+  // canto sólido e o resto da parede oca (as 2 linhas de contorno).
+  function computeWallSegments(w, len){
+    const ops = openings.filter(o=>o.wallId===w.id).sort((a,b)=>a.t-b.t);
+    if(ops.length===0) return { segs:[{ from:0, to:len, extendStart:true, extendEnd:true }], ops };
+    const segs = [];
+    let cursor = 0, first = true;
+    for(const o of ops){
+      const centerPx = o.t*len;
+      const halfW = (o.widthM*PX_PER_M*zoom)/2;
+      const segStart = centerPx - halfW;
+      const segEnd = centerPx + halfW;
+      if(segStart > cursor) segs.push({ from:cursor, to:segStart, extendStart:first, extendEnd:false });
+      cursor = segEnd;
+      first = false;
+    }
+    if(len > cursor) segs.push({ from:cursor, to:len, extendStart:false, extendEnd:true });
+    return { segs, ops };
+  }
+
+  function fillWallSpan(p1, ux, uy, nx, ny, fromPx, toPx, halfW, insetStart, insetEnd, color){
+    const a0 = fromPx + insetStart, b0 = toPx - insetEnd;
+    if(b0 <= a0 || halfW <= 0) return;
+    const a = { x: p1.x+ux*a0, y: p1.y+uy*a0 };
+    const b = { x: p1.x+ux*b0, y: p1.y+uy*b0 };
+    ctx.beginPath();
+    ctx.moveTo(a.x+nx*halfW, a.y+ny*halfW);
+    ctx.lineTo(b.x+nx*halfW, b.y+ny*halfW);
+    ctx.lineTo(b.x-nx*halfW, b.y-ny*halfW);
+    ctx.lineTo(a.x-nx*halfW, a.y-ny*halfW);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  function drawWallOuter(w, isSelected){
     const p1 = worldToScreen(w.x1, w.y1);
     const p2 = worldToScreen(w.x2, w.y2);
     const dx = p2.x-p1.x, dy = p2.y-p1.y;
     const len = Math.hypot(dx,dy) || 1;
-    const ux = dx/len, uy = dy/len;
-    const thickPx = (w.thickness || WALL_THICK_DEFAULT_M)*PX_PER_M*zoom;
-
-    const ops = openings.filter(o=>o.wallId===w.id).sort((a,b)=>a.t-b.t);
-
-    ctx.lineCap = 'butt';
-    ctx.strokeStyle = isSelected ? getCss('--accent') : getCss('--wall');
-    ctx.lineWidth = thickPx;
-
-    if(ops.length === 0){
-      ctx.beginPath();
-      ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
-      ctx.stroke();
-    } else {
-      let cursor = 0;
-      for(const o of ops){
-        const centerPx = o.t*len;
-        const halfW = (o.widthM*PX_PER_M*zoom)/2;
-        const segStart = centerPx - halfW;
-        const segEnd = centerPx + halfW;
-        drawSeg(cursor, Math.max(cursor,segStart));
-        const openingSelected = !!(selected && selected.kind==='opening' && selected.id===o.id);
-        drawOpening(o, p1, ux, uy, segStart, segEnd, thickPx, openingSelected);
-        cursor = segEnd;
-      }
-      drawSeg(cursor, len);
+    const ux = dx/len, uy = dy/len, nx = -uy, ny = ux;
+    const half = ((w.thickness || WALL_THICK_DEFAULT_M)*PX_PER_M*zoom)/2;
+    const { segs } = computeWallSegments(w, len);
+    const color = isSelected ? getCss('--accent') : getCss('--wall');
+    for(const seg of segs){
+      fillWallSpan(p1, ux, uy, nx, ny, seg.from, seg.to, half,
+        seg.extendStart?-half:0, seg.extendEnd?-half:0, color);
     }
+  }
 
-    function drawSeg(fromPx, toPx){
-      if(toPx <= fromPx) return;
-      const a = { x: p1.x+ux*fromPx, y: p1.y+uy*fromPx };
-      const b = { x: p1.x+ux*toPx, y: p1.y+uy*toPx };
-      ctx.beginPath();
-      ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
-      ctx.stroke();
+  function drawWallInner(w, isSelected){
+    const p1 = worldToScreen(w.x1, w.y1);
+    const p2 = worldToScreen(w.x2, w.y2);
+    const dx = p2.x-p1.x, dy = p2.y-p1.y;
+    const len = Math.hypot(dx,dy) || 1;
+    const ux = dx/len, uy = dy/len, nx = -uy, ny = ux;
+    const thickPx = (w.thickness || WALL_THICK_DEFAULT_M)*PX_PER_M*zoom;
+    const half = thickPx/2;
+    const borderPx = Math.min(2.4, half*0.4);
+    const innerHalf = Math.max(0, half-borderPx);
+    const { segs, ops } = computeWallSegments(w, len);
+
+    for(const seg of segs){
+      fillWallSpan(p1, ux, uy, nx, ny, seg.from, seg.to, innerHalf,
+        seg.extendStart?half:0, seg.extendEnd?half:0, getCss('--bg'));
+    }
+    for(const o of ops){
+      const centerPx = o.t*len;
+      const halfW = (o.widthM*PX_PER_M*zoom)/2;
+      const openingSelected = !!(selected && selected.kind==='opening' && selected.id===o.id) || isMultiSelected('opening', o.id);
+      drawOpening(o, p1, ux, uy, centerPx-halfW, centerPx+halfW, thickPx, openingSelected);
     }
 
     const midX = (p1.x+p2.x)/2, midY=(p1.y+p2.y)/2;
-    const nx = -uy, ny = ux;
     ctx.save();
     ctx.font = '11px Segoe UI, sans-serif';
     ctx.fillStyle = getCss('--muted');
@@ -1542,7 +1590,7 @@
     if(rooms.length>0 && roomFaces){
       for(const r of rooms){
         const face = findFaceContaining(r.seed, roomFaces);
-        const isSel = selected && selected.kind==='room' && selected.id===r.id;
+        const isSel = (selected && selected.kind==='room' && selected.id===r.id) || isMultiSelected('room', r.id);
         if(!face) continue;
         ctx.beginPath();
         face.polyCoords.forEach((p,i)=>{
@@ -1579,8 +1627,10 @@
     }
 
     for(const w of walls){
-      const isSel = selected && selected.kind==='wall' && selected.id===w.id;
-      drawWall(w, isSel);
+      drawWallOuter(w, isWallSelected(w));
+    }
+    for(const w of walls){
+      drawWallInner(w, isWallSelected(w));
     }
     if(tool==='wall' && chainStart){
       const p1 = worldToScreen(chainStart.x, chainStart.y);
@@ -1611,6 +1661,38 @@
       ctx.setLineDash([6,4]);
       ctx.strokeRect(Math.min(p1.x,p2.x), Math.min(p1.y,p2.y), Math.abs(p2.x-p1.x), Math.abs(p2.y-p1.y));
       ctx.setLineDash([]);
+      const wM = Math.abs(end.x-rectStart.x), hM = Math.abs(end.y-rectStart.y);
+      ctx.fillStyle = getCss('--accent');
+      ctx.font = '12px Segoe UI, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(wM.toFixed(2)+' m', (p1.x+p2.x)/2, Math.min(p1.y,p2.y)-10);
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.translate(Math.max(p1.x,p2.x)+16, (p1.y+p2.y)/2);
+      ctx.rotate(-Math.PI/2);
+      ctx.fillText(hM.toFixed(2)+' m', 0, 0);
+      ctx.restore();
+    }
+    if(dragSelectActive && dragSelectStart && dragSelectCurrent){
+      const isWindow = dragSelectCurrent.x >= dragSelectStart.x;
+      const p1 = worldToScreen(dragSelectStart.x, dragSelectStart.y);
+      const p2 = worldToScreen(dragSelectCurrent.x, dragSelectCurrent.y);
+      const x = Math.min(p1.x,p2.x), y = Math.min(p1.y,p2.y);
+      const wpx = Math.abs(p2.x-p1.x), hpx = Math.abs(p2.y-p1.y);
+      ctx.save();
+      if(isWindow){
+        ctx.strokeStyle = getCss('--accent');
+        ctx.fillStyle = 'rgba(255,135,55,0.12)';
+      } else {
+        ctx.strokeStyle = getCss('--interruptor');
+        ctx.fillStyle = 'rgba(201,143,224,0.12)';
+        ctx.setLineDash([5,4]);
+      }
+      ctx.lineWidth = 1.4;
+      ctx.fillRect(x,y,wpx,hpx);
+      ctx.strokeRect(x,y,wpx,hpx);
+      ctx.setLineDash([]);
+      ctx.restore();
     }
     if((tool==='door'||tool==='window')){
       const near = findWallNear(mouseWorld, 0.3);
@@ -1625,7 +1707,7 @@
     }
 
     for(const d of ducts){
-      const isSel = selected && selected.kind==='duct' && selected.id===d.id;
+      const isSel = (selected && selected.kind==='duct' && selected.id===d.id) || isMultiSelected('duct', d.id);
       const isHov = hoverDuct && hoverDuct.id===d.id;
       drawDuct(d, isSel, isHov);
     }
@@ -1653,7 +1735,7 @@
     }
 
     for(const s of symbols){
-      const isSel = selected && selected.kind==='symbol' && selected.id===s.id;
+      const isSel = (selected && selected.kind==='symbol' && selected.id===s.id) || isMultiSelected('symbol', s.id);
       drawSymbol(s, isSel);
     }
     if(tool==='block' && activeBlockId){
@@ -1798,6 +1880,14 @@
 
   function renderPropertiesPanel(){
     const container = document.getElementById('propContent');
+    if(selectedMulti.length>0){
+      container.innerHTML = `
+        <div class="stat-row"><span>Selecionados</span><span>${selectedMulti.length}</span></div>
+        <div class="empty">Selecionados com janela de seleção. Delete remove todos de uma vez.</div>
+        <button class="wide danger" id="propDeleteBtn" style="background:var(--danger-soft-bg);color:var(--danger-soft-text);border-color:var(--danger);">Excluir selecionados (Delete)</button>`;
+      container.querySelector('#propDeleteBtn').addEventListener('click', deleteSelected);
+      return;
+    }
     if(!selected){
       container.innerHTML = '<div class="empty">Selecione um elemento na planta (use a ferramenta "Selecionar") para ver e editar suas propriedades aqui.</div>';
       return;
@@ -2115,7 +2205,7 @@
       }
     }
     ducts = mergeCollinearDucts(newDucts);
-    cableResult = null; materialResult = null; selected = null;
+    cableResult = null; materialResult = null; selected = null; selectedMulti = [];
     afterChange();
     showToast('Rede de eletrodutos gerada por camada — ajuste manualmente onde precisar.');
   }
@@ -2368,6 +2458,18 @@
       panStart = { x:e.clientX, y:e.clientY };
       panOriginStart = { x:origin.x, y:origin.y };
       canvas.style.cursor = 'grabbing';
+      return;
+    }
+    if(e.button===0 && tool==='select'){
+      const rect = canvas.getBoundingClientRect();
+      const world = screenToWorld(e.clientX-rect.left, e.clientY-rect.top);
+      const hitSomething = findSymbolNear(world, 0.13*symbolScale) || findOpeningNear(world, 0.12)
+        || findDuctNear(world, 0.12) || findWallNear(world, 0.15);
+      if(!hitSomething){
+        dragSelectStart = world;
+        dragSelectActive = false;
+        dragSelectCurrent = world;
+      }
     }
   });
   window.addEventListener('mousemove', (e)=>{
@@ -2375,6 +2477,15 @@
       origin.x = panOriginStart.x + (e.clientX-panStart.x);
       origin.y = panOriginStart.y + (e.clientY-panStart.y);
       draw();
+      return;
+    }
+    if(dragSelectStart){
+      const rect = canvas.getBoundingClientRect();
+      const world = screenToWorld(e.clientX-rect.left, e.clientY-rect.top);
+      const s1 = worldToScreen(dragSelectStart.x, dragSelectStart.y);
+      const s2 = worldToScreen(world.x, world.y);
+      if(!dragSelectActive && Math.hypot(s2.x-s1.x, s2.y-s1.y) > 4) dragSelectActive = true;
+      if(dragSelectActive){ dragSelectCurrent = world; draw(); }
     }
   });
   window.addEventListener('mouseup', (e)=>{
@@ -2382,7 +2493,75 @@
       isPanning = false;
       canvas.style.cursor = 'crosshair';
     }
+    if(e.button===0 && dragSelectStart){
+      if(dragSelectActive && dragSelectCurrent){
+        finishDragSelect(dragSelectStart, dragSelectCurrent);
+        suppressNextClick = true;
+      }
+      dragSelectStart = null;
+      dragSelectActive = false;
+      dragSelectCurrent = null;
+    }
   });
+
+  // ---------------------------------------------------------------
+  // Janela de seleção (estilo AutoCAD): arrasta pra direita = "window"
+  // (só pega o que está TOTALMENTE dentro), arrasta pra esquerda =
+  // "crossing" (pega tudo que a janela toca, mesmo que só encoste).
+  // ---------------------------------------------------------------
+  function segSegIntersect(p1,p2,p3,p4){
+    function cross(o,a,b){ return (a.x-o.x)*(b.y-o.y) - (a.y-o.y)*(b.x-o.x); }
+    const d1 = cross(p3,p4,p1), d2 = cross(p3,p4,p2);
+    const d3 = cross(p1,p2,p3), d4 = cross(p1,p2,p4);
+    return ((d1>0&&d2<0)||(d1<0&&d2>0)) && ((d3>0&&d4<0)||(d3<0&&d4>0));
+  }
+
+  function finishDragSelect(a, b){
+    const minX = Math.min(a.x,b.x), maxX = Math.max(a.x,b.x);
+    const minY = Math.min(a.y,b.y), maxY = Math.max(a.y,b.y);
+    const isWindow = b.x >= a.x;
+
+    function pointInside(p){ return p.x>=minX && p.x<=maxX && p.y>=minY && p.y<=maxY; }
+    function segHits(p1, p2){
+      if(isWindow) return pointInside(p1) && pointInside(p2);
+      if(pointInside(p1) || pointInside(p2)) return true;
+      const corners = [
+        {x:minX,y:minY}, {x:maxX,y:minY}, {x:maxX,y:maxY}, {x:minX,y:maxY}
+      ];
+      for(let i=0;i<4;i++){
+        if(segSegIntersect(p1, p2, corners[i], corners[(i+1)%4])) return true;
+      }
+      return false;
+    }
+
+    const results = [];
+    for(const w of walls){
+      if(segHits({x:w.x1,y:w.y1}, {x:w.x2,y:w.y2})) results.push({kind:'wall', id:w.id});
+    }
+    for(const d of ducts){
+      if(segHits({x:d.x1,y:d.y1}, {x:d.x2,y:d.y2})) results.push({kind:'duct', id:d.id});
+    }
+    for(const s of symbols){
+      if(pointInside(s)) results.push({kind:'symbol', id:s.id});
+    }
+    for(const o of openings){
+      const wall = walls.find(w=>w.id===o.wallId);
+      if(!wall) continue;
+      const center = { x: wall.x1+(wall.x2-wall.x1)*o.t, y: wall.y1+(wall.y2-wall.y1)*o.t };
+      if(pointInside(center)) results.push({kind:'opening', id:o.id});
+    }
+    for(const r of rooms){
+      if(pointInside(r.seed)) results.push({kind:'room', id:r.id});
+    }
+
+    selected = null;
+    selectedMulti = results;
+    showToast(results.length
+      ? `${results.length} objeto(s) selecionado(s) (${isWindow ? 'janela' : 'crossing'}).`
+      : `Nenhum objeto ${isWindow ? 'totalmente dentro' : 'tocando'} a janela de seleção.`);
+    afterChange();
+  }
+
   function updateZoomLabel(){
     const el = document.getElementById('zoomLabel');
     if(el) el.textContent = Math.round(zoom*100)+'%';
@@ -2600,6 +2779,7 @@
   });
 
   canvas.addEventListener('click', (e)=>{
+    if(suppressNextClick){ suppressNextClick = false; return; }
     const rect = canvas.getBoundingClientRect();
     const world = screenToWorld(e.clientX-rect.left, e.clientY-rect.top);
     let snapped = snapPoint(world);
@@ -2665,6 +2845,7 @@
         }
       }
     } else if(tool==='select'){
+      selectedMulti = [];
       const nearSymbol = findSymbolNear(world, 0.13*symbolScale);
       const nearOpening = findOpeningNear(world, 0.12);
       const nearWall = findWallNear(world, 0.15);
@@ -2966,6 +3147,7 @@
       rectStart = null;
       typedLength = '';
       selected = null;
+      selectedMulti = [];
       hoverDuct = null;
       removeOpenModals();
       renderBlockLibrary();
@@ -2975,7 +3157,7 @@
         window: 'Clique sobre uma parede existente para inserir uma janela (1,20 m). Depois, use "Selecionar" pra ajustar a largura.',
         room: 'Clique no meio de um cômodo já fechado por paredes para nomeá-lo e calcular área e perímetro.',
         eletroduto: 'Clique exatamente em cima de um símbolo pra começar, depois no próximo símbolo (o círculo laranja mostra onde vai ancorar). Fora de um símbolo, não registra. Depois use "Distribuir cabos".',
-        select: 'Clique numa parede, porta, janela, bloco, eletroduto ou cômodo pra selecionar — as propriedades aparecem no painel da direita. Delete remove.'
+        select: 'Clique num objeto pra selecionar, ou arraste numa área vazia: pra direita = janela (só pega o que está totalmente dentro), pra esquerda = crossing (pega tudo que a janela tocar). Delete remove.'
       };
       hintBox.textContent = hints[tool] || '';
       draw(); updateStats();
@@ -2992,6 +3174,21 @@
   });
 
   function deleteSelected(){
+    if(selectedMulti.length>0){
+      const wallIds = new Set(selectedMulti.filter(s=>s.kind==='wall').map(s=>s.id));
+      const openingIds = new Set(selectedMulti.filter(s=>s.kind==='opening').map(s=>s.id));
+      const roomIds = new Set(selectedMulti.filter(s=>s.kind==='room').map(s=>s.id));
+      const symbolIds = new Set(selectedMulti.filter(s=>s.kind==='symbol').map(s=>s.id));
+      const ductIds = new Set(selectedMulti.filter(s=>s.kind==='duct').map(s=>s.id));
+      if(wallIds.size) walls = walls.filter(w=>!wallIds.has(w.id));
+      openings = openings.filter(o=>!openingIds.has(o.id) && !wallIds.has(o.wallId));
+      if(roomIds.size) rooms = rooms.filter(r=>!roomIds.has(r.id));
+      if(symbolIds.size){ symbols = symbols.filter(s=>!symbolIds.has(s.id)); cableResult=null; materialResult=null; }
+      if(ductIds.size){ ducts = ducts.filter(d=>!ductIds.has(d.id)); cableResult=null; materialResult=null; }
+      selectedMulti = [];
+      afterChange();
+      return;
+    }
     if(!selected) return;
     if(selected.kind==='wall'){
       walls = walls.filter(w=>w.id!==selected.id);
@@ -3017,7 +3214,7 @@
   document.getElementById('btnClear').addEventListener('click', ()=>{
     if(confirm('Apagar toda a planta atual?')){
       walls = []; openings = []; rooms = []; symbols = []; ducts = [];
-      cableResult = null; materialResult = null; selected = null; chainStart = null; ductChainStart = null; typedLength = '';
+      cableResult = null; materialResult = null; selected = null; selectedMulti = []; chainStart = null; ductChainStart = null; typedLength = '';
       afterChange();
     }
   });
