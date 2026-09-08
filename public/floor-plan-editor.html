@@ -500,6 +500,45 @@
     border-color:var(--muted);
   }
   .np-row{ display:flex; flex-direction:column; gap:4px; padding:6px; background:var(--surface); border-radius:8px; }
+  .action-card{
+    display:flex;
+    align-items:flex-start;
+    gap:11px;
+    width:100%;
+    text-align:left;
+    background:var(--surface);
+    border:1px solid var(--surface-border);
+    border-radius:11px;
+    padding:11px 12px;
+    cursor:pointer;
+    font-family:inherit;
+    transition: background .12s, border-color .12s, transform .12s, box-shadow .12s;
+  }
+  .action-card:hover{
+    background:var(--surface-hover);
+    border-color:var(--accent);
+    transform:translateY(-1px);
+    box-shadow:0 8px 18px var(--shadow-color);
+  }
+  .action-card:disabled{ opacity:.55; cursor:not-allowed; transform:none; box-shadow:none; }
+  .action-icon{
+    flex-shrink:0;
+    width:34px;
+    height:34px;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:16px;
+    background:var(--accent-dim);
+    color:var(--active-text);
+  }
+  .action-icon.blue{ background:rgba(95,180,224,.18); }
+  .action-icon.green{ background:rgba(159,214,107,.22); }
+  .action-icon.purple{ background:rgba(201,143,224,.22); }
+  .action-text{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .action-title{ font-size:12.5px; font-weight:700; color:var(--text); }
+  .action-desc{ font-size:11px; color:var(--muted); line-height:1.42; }
 </style>
 </head>
 <body>
@@ -560,13 +599,24 @@
     <div class="super-panel" id="superPanel">
       <div class="panel-block">
         <h2>SUPERPODERES</h2>
-        <button class="wide primary" id="btnAutoRules">Distribuicao de eletrodutos automatica</button>
-        <div class="empty">Cria eletrodutos automaticamente conectando QDC, iluminacao, tomadas e interruptores conforme as regras ativas.</div>
+        <button class="action-card" id="btnAutoRules" type="button">
+          <span class="action-icon">⚡</span>
+          <span class="action-text">
+            <span class="action-title">Distribuição automática de eletrodutos</span>
+            <span class="action-desc">Conecta QDC, iluminação, tomadas e interruptores automaticamente conforme as regras ativas.</span>
+          </span>
+        </button>
       </div>
       <div class="panel-block">
         <h2>ROTEAMENTO DE CABOS</h2>
-        <button class="wide primary" id="btnRoute">Distribuir cabos</button>
-        <div class="empty" id="routeEmpty">Desenhe os eletrodutos conectando os simbolos e clique aqui. O sistema acha o caminho mais curto de cada dispositivo ate o QDC.</div>
+        <button class="action-card" id="btnRoute" type="button">
+          <span class="action-icon blue">🔀</span>
+          <span class="action-text">
+            <span class="action-title">Distribuir cabos</span>
+            <span class="action-desc">Acha o caminho mais curto de cada dispositivo até o QDC pelos eletrodutos desenhados.</span>
+          </span>
+        </button>
+        <div class="empty" id="routeEmpty" style="margin-top:8px;">Desenhe os eletrodutos conectando os símbolos antes de distribuir.</div>
         <ul class="item-list" id="routeList" style="margin-top:8px;"></ul>
       </div>
       <div class="panel-block">
@@ -590,14 +640,25 @@
         <label style="font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;margin-bottom:8px;">Margem de seguranca (%)
           <input type="number" id="matMargem" value="10" step="1" min="0" style="background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
         </label>
-        <button class="wide primary" id="btnMaterial">Calcular materiais</button>
-        <div class="empty" id="materialEmpty">Distribua os cabos primeiro. O calculo soma o trecho horizontal com descidas/subidas e margem.</div>
+        <button class="action-card" id="btnMaterial" type="button">
+          <span class="action-icon green">📦</span>
+          <span class="action-text">
+            <span class="action-title">Calcular materiais</span>
+            <span class="action-desc">Soma o trecho horizontal com descidas/subidas e margem de segurança, por circuito.</span>
+          </span>
+        </button>
+        <div class="empty" id="materialEmpty" style="margin-top:8px;">Distribua os cabos primeiro.</div>
         <ul class="item-list" id="materialList" style="margin-top:8px;"></ul>
       </div>
       <div class="panel-block">
         <h2>PROJETO ELETRODIM</h2>
-        <button class="wide primary" id="btnSendRooms">Enviar cômodos para o projeto</button>
-        <div class="empty">Use depois de marcar/nomear os cômodos fechados. O editor também sincroniza automaticamente quando a planta muda.</div>
+        <button class="action-card" id="btnSendRooms" type="button">
+          <span class="action-icon purple">📤</span>
+          <span class="action-text">
+            <span class="action-title">Enviar cômodos para o projeto</span>
+            <span class="action-desc">Envia nome, área e perímetro de cada cômodo fechado. Também sincroniza sozinho quando a planta muda.</span>
+          </span>
+        </button>
       </div>
     </div>
   </main>
