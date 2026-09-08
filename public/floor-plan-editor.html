@@ -1172,7 +1172,8 @@
       qty100 = +room.manualTugQty100 || 0;
       tugVa = qty600*600 + qty100*100;
     }
-    return { roomType, lightingCalc, lightingVa, tug, tugVa, qty600, qty100, total: lightingVa+tugVa };
+    const tueVa = (room.tues||[]).reduce((s,t)=>s+(+t.va||0),0);
+    return { roomType, lightingCalc, lightingVa, tug, tugVa, qty600, qty100, tueVa, total: lightingVa+tugVa+tueVa };
   }
 
   function resize(){
@@ -2518,6 +2519,25 @@
               <input type="number" id="propRoomTug100" title="Qtd. tomadas 100VA" value="${room.manualTugQty100 ?? calc.tug.qty100}" min="0" step="1" style="flex:1;background:var(--panel);border:1px solid var(--panel-border);color:var(--text);padding:6px 8px;border-radius:6px;">
             </div>` : ''}
         </div>
+        <div style="background:var(--surface);border:1px solid var(--surface-border);border-radius:10px;padding:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:11px;color:var(--muted);">🔧 TUE (uso específico)</span>
+            <span style="font-weight:700;color:var(--text);">${calc.tueVa} VA</span>
+          </div>
+          ${(room.tues||[]).length ? `
+            <ul style="list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:4px;">
+              ${(room.tues||[]).map((t,i)=>`
+                <li style="display:flex;justify-content:space-between;align-items:center;font-size:11px;background:var(--panel);border-radius:6px;padding:4px 8px;">
+                  <span>${t.name} — ${t.va} VA</span>
+                  <button type="button" class="prop-tue-remove" data-idx="${i}" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px;padding:0 2px;">✕</button>
+                </li>`).join('')}
+            </ul>` : ''}
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <input type="text" id="propRoomTueName" placeholder="Ex: Chuveiro" style="flex:2;background:var(--panel);border:1px solid var(--panel-border);color:var(--text);padding:6px 8px;border-radius:6px;font-size:12px;">
+            <input type="number" id="propRoomTueVa" placeholder="VA" min="0" step="10" style="flex:1;background:var(--panel);border:1px solid var(--panel-border);color:var(--text);padding:6px 8px;border-radius:6px;font-size:12px;">
+            <button type="button" id="propRoomTueAdd" style="flex-shrink:0;padding:6px 10px;border-radius:6px;border:1px solid var(--panel-border);background:var(--surface-hover);color:var(--text);font-size:12px;cursor:pointer;">+</button>
+          </div>
+        </div>
         <div style="background:var(--accent-dim);border-radius:10px;padding:10px;display:flex;justify-content:space-between;align-items:center;">
           <span style="font-size:11px;color:var(--active-text);">📐 Total mínimo</span>
           <span style="font-weight:800;color:var(--active-text);">${calc.total} VA</span>
@@ -2541,6 +2561,26 @@
     if(t600) t600.addEventListener('input', (e)=>{ room.manualTugQty600 = e.target.value; draw(); scheduleSave(); });
     const t100 = container.querySelector('#propRoomTug100');
     if(t100) t100.addEventListener('input', (e)=>{ room.manualTugQty100 = e.target.value; draw(); scheduleSave(); });
+    container.querySelectorAll('.prop-tue-remove').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const idx = +btn.dataset.idx;
+        room.tues.splice(idx,1);
+        rerender();
+        scheduleSave();
+      });
+    });
+    const tueAdd = container.querySelector('#propRoomTueAdd');
+    if(tueAdd) tueAdd.addEventListener('click', ()=>{
+      const nameInput = container.querySelector('#propRoomTueName');
+      const vaInput = container.querySelector('#propRoomTueVa');
+      const name = nameInput.value.trim();
+      const va = +vaInput.value;
+      if(!name || !(va>0)){ showToast('Informe nome e potência (VA) da TUE.'); return; }
+      if(!room.tues) room.tues = [];
+      room.tues.push({ id: nextId++, name, va });
+      rerender();
+      scheduleSave();
+    });
   }
 
   function renderRoomProps(container, room){

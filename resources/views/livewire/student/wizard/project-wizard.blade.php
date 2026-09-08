@@ -284,7 +284,7 @@
                         Ver detalhes do projeto
                     </button>
                 </div>
-                <iframe id="floorPlanEditorFrame" src="{{ asset('floor-plan-editor.html') }}" wire:ignore
+                <iframe id="floorPlanEditorFrame" src="{{ asset('floor-plan-editor.html') }}?v={{ @filemtime(public_path('floor-plan-editor.html')) ?: time() }}" wire:ignore
                     x-init="
                         const frame = $el;
                         const payload = {
