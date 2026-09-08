@@ -96,49 +96,77 @@
     background: var(--bg);
   }
   .leftbar{
-    background:#f7f8fa;
-    border-right:1px solid #d8dde5;
-    padding:10px 8px;
+    background:#fbfcfe;
+    border-right:1px solid #dde3ec;
+    padding:12px 8px;
     display:flex;
     flex-direction:column;
     align-items:center;
-    gap:10px;
+    gap:8px;
     color:#334155;
+    box-shadow:inset -1px 0 0 rgba(15,23,42,.04);
   }
   .left-icon{
-    width:42px;
-    height:42px;
+    width:38px;
+    height:38px;
     border:0;
-    border-radius:8px;
+    border-radius:10px;
     background:transparent;
     color:#64748b;
     cursor:pointer;
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:19px;
+    font-size:18px;
+    transition:background .14s, color .14s, box-shadow .14s, transform .14s;
   }
-  .left-icon:hover,
-  .left-icon.active{
-    background:#eef2ff;
-    color:#7c3aed;
+  .left-icon:hover{
+    background:#f1f5f9;
+    color:#334155;
+    transform:translateX(1px);
+  }
+  .left-icon.active,
+  .left-icon.panel-open{
+    background:#f3e8ff;
+    color:#a21caf;
+    box-shadow:0 8px 18px rgba(126,34,206,.12);
   }
   .super-panel{
     position:absolute;
     left:76px;
-    top:72px;
-    width:330px;
+    top:90px;
+    width:304px;
     max-height:calc(100vh - 92px);
     overflow:auto;
-    background:var(--panel);
-    border:1px solid var(--panel-border);
-    box-shadow:0 16px 40px rgba(0,0,0,.3);
-    border-radius:8px;
-    padding:14px;
+    overflow-x:hidden;
+    background:#1b2027;
+    border:1px solid rgba(148,163,184,.22);
+    box-shadow:0 22px 55px rgba(0,0,0,.36), 0 0 0 1px rgba(255,255,255,.03) inset;
+    border-radius:12px;
+    padding:12px;
     z-index:12;
-    display:none;
+    opacity:0;
+    pointer-events:none;
+    transform:translateX(-8px) scale(.98);
+    transition:opacity .14s ease, transform .14s ease;
   }
-  .super-panel.show{ display:block; }
+  .super-panel.show{
+    opacity:1;
+    pointer-events:auto;
+    transform:translateX(0) scale(1);
+  }
+  .super-panel .panel-block{
+    padding:0;
+    margin:0 0 14px;
+    border:0;
+    background:transparent;
+  }
+  .super-panel .panel-block:last-child{ margin-bottom:0; }
+  .super-panel h2{
+    color:#93a4ba;
+    letter-spacing:.6px;
+    text-transform:uppercase;
+  }
   .cad-toggle{
     background:#23282e;
     border:1px solid var(--panel-border);
@@ -192,8 +220,7 @@
     flex-direction:column;
     gap:16px;
   }
-  aside .panel-block:nth-of-type(5),
-  aside .panel-block:nth-of-type(6){ display:none; }
+  aside .panel-block:not(:nth-of-type(3)){ display:none; }
   .panel-block h2{
     font-size:11px;
     text-transform: none;
@@ -405,14 +432,23 @@
     <button class="left-icon" data-tool="rect" title="Rectangle">▭</button>
     <button class="left-icon" data-tool="room" title="Marcar cômodo">▣</button>
     <button class="left-icon" data-tool="select" title="Selecionar">⌖</button>
-    <button class="left-icon active" id="btnSuperpowers" title="Superpoderes">✣</button>
+    <button class="left-icon" id="btnBlocksPanel" title="Biblioteca de blocos">◉</button>
+    <button class="left-icon" id="btnSuperpowers" title="Superpoderes">✣</button>
   </nav>
   <main>
     <canvas id="canvas"></canvas>
     <div class="coords" id="coordsBox">X: 0.00 m &nbsp; Y: 0.00 m &nbsp; <span id="zoomLabel" style="color:var(--muted)">100%</span></div>
     <div class="hint" id="hintBox">Clique para começar a desenhar uma parede. Cada clique adiciona um trecho. Pressione Esc para encerrar a corrente.</div>
     <div class="toast" id="toast"></div>
-    <div class="super-panel show" id="superPanel">
+    <div class="super-panel" id="blocksPanel">
+      <div class="panel-block">
+        <h2>BIBLIOTECA DE BLOCOS</h2>
+        <div class="block-grid" id="blockLibraryGrid"></div>
+        <button class="wide" id="btnNewBlock" style="margin-top:8px;">+ Novo bloco</button>
+        <div class="empty" style="margin-top:8px;">Passe o mouse, escolha um bloco e clique na planta para posicionar tomadas, interruptores, pontos de luz e QDC.</div>
+      </div>
+    </div>
+    <div class="super-panel" id="superPanel">
       <div class="panel-block">
         <h2>SUPERPODERES</h2>
         <button class="wide primary" id="btnAutoRules">Distribuicao de eletrodutos automatica</button>
@@ -466,8 +502,8 @@
     </div>
     <div class="panel-block">
       <h2>BIBLIOTECA DE BLOCOS</h2>
-      <div class="block-grid" id="blockLibraryGrid"></div>
-      <button class="wide" id="btnNewBlock" style="margin-top:8px;">+ Novo bloco</button>
+      <div class="block-grid"></div>
+      <button class="wide" type="button" style="margin-top:8px;">+ Novo bloco</button>
       <div style="font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.4;">Clique num bloco pra armar a ferramenta e depois clique na planta pra posicionar. Botão direito num bloco personalizado remove ele da biblioteca (sem apagar os já colocados na planta).</div>
     </div>
     <div class="panel-block">
@@ -1986,10 +2022,38 @@
   document.getElementById('btnOtrack').addEventListener('click', ()=>{
     otrackMode = !otrackMode; syncCadToggles(); scheduleSave();
   });
-  document.getElementById('btnSuperpowers').addEventListener('click', ()=>{
-    document.getElementById('superPanel').classList.toggle('show');
-    document.getElementById('btnSuperpowers').classList.toggle('active');
-  });
+  function bindFloatingPanel(buttonId, panelId){
+    const button = document.getElementById(buttonId);
+    const panel = document.getElementById(panelId);
+    if(!button || !panel) return;
+    let closeTimer = null;
+    const otherPanels = [...document.querySelectorAll('.super-panel')].filter(p=>p!==panel);
+    const otherButtons = [...document.querySelectorAll('.left-icon')].filter(b=>b!==button);
+    const open = ()=>{
+      clearTimeout(closeTimer);
+      otherPanels.forEach(p=>p.classList.remove('show'));
+      otherButtons.forEach(b=>b.classList.remove('panel-open'));
+      panel.classList.add('show');
+      button.classList.add('panel-open');
+    };
+    const closeSoon = ()=>{
+      clearTimeout(closeTimer);
+      closeTimer = setTimeout(()=>{
+        panel.classList.remove('show');
+        button.classList.remove('panel-open');
+      }, 160);
+    };
+    button.addEventListener('mouseenter', open);
+    button.addEventListener('mouseleave', closeSoon);
+    button.addEventListener('click', (event)=>{
+      event.preventDefault();
+      open();
+    });
+    panel.addEventListener('mouseenter', open);
+    panel.addEventListener('mouseleave', closeSoon);
+  }
+  bindFloatingPanel('btnBlocksPanel', 'blocksPanel');
+  bindFloatingPanel('btnSuperpowers', 'superPanel');
 
   // ---------------------------------------------------------------
   // Biblioteca de blocos: grade de blocos disponíveis (padrão +
