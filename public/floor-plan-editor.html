@@ -1497,6 +1497,16 @@
     }
   }
 
+  function wallEndNeighborCount(wall, x, y){
+    const EPS = 0.02;
+    let count = 0;
+    for(const other of walls){
+      if(other===wall) continue;
+      if(Math.hypot(other.x1-x,other.y1-y)<EPS || Math.hypot(other.x2-x,other.y2-y)<EPS) count++;
+    }
+    return count;
+  }
+
   function drawWallInner(w, isSelected){
     const p1 = worldToScreen(w.x1, w.y1);
     const p2 = worldToScreen(w.x2, w.y2);
@@ -1508,14 +1518,18 @@
     const borderPx = Math.min(2.4, half*0.4);
     const innerHalf = Math.max(0, half-borderPx);
     const { segs, ops } = computeWallSegments(w, len);
+    // o miolo oco só estica até a ponta verdadeira (fechando o canto sem
+    // deixar bloco sólido) quando é um cruzamento simples de DUAS paredes —
+    // em T/cruzamento (3+ paredes no mesmo ponto) ou ponta solta, volta a
+    // recuar meia-espessura, senão sobra um vão em branco onde não tem
+    // parede nenhuma cobrindo
+    const startSimpleCorner = wallEndNeighborCount(w, w.x1, w.y1) === 1;
+    const endSimpleCorner = wallEndNeighborCount(w, w.x2, w.y2) === 1;
 
     for(const seg of segs){
-      // o miolo oco estica até a ponta verdadeira igual o preenchimento
-      // externo (mesmo extend, só a largura perpendicular é menor) — assim
-      // as duas paredes perpendiculares somam o oco uma da outra bem no
-      // canto, sem sobrar aquele quadradinho sólido preenchendo o cruzamento
-      fillWallSpan(p1, ux, uy, nx, ny, seg.from, seg.to, innerHalf,
-        seg.extendStart?-half:0, seg.extendEnd?-half:0, getCss('--bg'));
+      const insetStart = seg.extendStart ? (startSimpleCorner ? -half : half) : 0;
+      const insetEnd = seg.extendEnd ? (endSimpleCorner ? -half : half) : 0;
+      fillWallSpan(p1, ux, uy, nx, ny, seg.from, seg.to, innerHalf, insetStart, insetEnd, getCss('--bg'));
     }
     for(const o of ops){
       const centerPx = o.t*len;
