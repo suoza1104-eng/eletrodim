@@ -746,7 +746,8 @@
   let otrackMode = false;
   let rectStart = null;
   let measureUnit = 'cm'; // 'cm' ou 'm' — como interpretar o número digitado ao desenhar uma linha
-  let typedLength = '';   // buffer do comprimento digitado durante Line/Eletroduto (confirma com Enter)
+  let typedLength = '';   // buffer do comprimento digitado durante Line/Eletroduto/Retângulo (confirma com Enter)
+  let rectFixedWidthM = null; // largura (eixo X) travada no retângulo após o 1º Enter — null = ainda livre
 
   // ---------------------------------------------------------------
   // Biblioteca de blocos: cada símbolo colocado na planta referencia
@@ -1219,6 +1220,54 @@
     }
     chainStart = endpoint;
     typedLength = '';
+  }
+
+  function commitRect(a, b){
+    if(Math.abs(a.x-b.x) > 0.05 && Math.abs(a.y-b.y) > 0.05){
+      walls.push({ id: nextId++, x1:a.x, y1:a.y, x2:b.x, y2:a.y, thickness: WALL_THICK_DEFAULT_M });
+      walls.push({ id: nextId++, x1:b.x, y1:a.y, x2:b.x, y2:b.y, thickness: WALL_THICK_DEFAULT_M });
+      walls.push({ id: nextId++, x1:b.x, y1:b.y, x2:a.x, y2:b.y, thickness: WALL_THICK_DEFAULT_M });
+      walls.push({ id: nextId++, x1:a.x, y1:b.y, x2:a.x, y2:a.y, thickness: WALL_THICK_DEFAULT_M });
+    }
+    rectStart = null;
+    rectFixedWidthM = null;
+    typedLength = '';
+  }
+
+  // "Atrai e alinha": se uma parede acaba quase paralela e bem perto de
+  // outra já existente (ex.: desenhada ou arrastada quase em cima), gruda
+  // exatamente na mesma linha em vez de deixar as duas quase-sobrepostas
+  // e desalinhadas.
+  function snapWallToParallelNeighbor(w){
+    const wx=w.x2-w.x1, wy=w.y2-w.y1;
+    const wLen = Math.hypot(wx,wy);
+    if(wLen<=1e-6) return;
+    const wux=wx/wLen, wuy=wy/wLen;
+    const cosTol = Math.cos(4*Math.PI/180); // ~4° de tolerância angular
+    const distTolM = 0.25; // até 25cm de distância "atrai"
+    let best=null, bestD=Infinity;
+    for(const other of walls){
+      if(other===w) continue;
+      const ox=other.x2-other.x1, oy=other.y2-other.y1;
+      const oLen=Math.hypot(ox,oy);
+      if(oLen<=1e-6) continue;
+      const oux=ox/oLen, ouy=oy/oLen;
+      if(Math.abs(wux*oux+wuy*ouy) < cosTol) continue; // não é paralela/antiparalela o suficiente
+      const mx=(w.x1+w.x2)/2, my=(w.y1+w.y2)/2;
+      const relx=mx-other.x1, rely=my-other.y1;
+      const nx=-ouy, ny=oux;
+      const perp = Math.abs(relx*nx+rely*ny);
+      if(perp<=distTolM && perp<bestD){ bestD=perp; best={ p0x:other.x1, p0y:other.y1, ux:oux, uy:ouy }; }
+    }
+    if(!best) return;
+    function proj(px,py){
+      const relx=px-best.p0x, rely=py-best.p0y;
+      const nx=-best.uy, ny=best.ux;
+      const perp = relx*nx+rely*ny;
+      return { x:px-perp*nx, y:py-perp*ny };
+    }
+    const p1=proj(w.x1,w.y1), p2=proj(w.x2,w.y2);
+    w.x1=p1.x; w.y1=p1.y; w.x2=p2.x; w.y2=p2.y;
   }
 
   function drawGrid(){
@@ -1881,7 +1930,16 @@
       ctx.fillText(label, (p1.x+p2.x)/2+10, (p1.y+p2.y)/2-10);
     }
     if(tool==='rect' && rectStart){
-      const end = snapPoint(mouseWorld);
+      const free = snapPoint(mouseWorld);
+      const dirX = mouseWorld.x >= rectStart.x ? 1 : -1;
+      const dirY = mouseWorld.y >= rectStart.y ? 1 : -1;
+      const typedM = typedLength ? parseTypedLength(typedLength) : null;
+      let end = { x: free.x, y: free.y };
+      if(rectFixedWidthM !== null) end.x = rectStart.x + dirX*rectFixedWidthM;
+      if(typedM !== null){
+        if(rectFixedWidthM === null) end.x = rectStart.x + dirX*typedM;
+        else end.y = rectStart.y + dirY*typedM;
+      }
       const p1 = worldToScreen(rectStart.x, rectStart.y);
       const p2 = worldToScreen(end.x, end.y);
       ctx.strokeStyle = getCss('--accent');
@@ -1893,12 +1951,16 @@
       ctx.fillStyle = getCss('--accent');
       ctx.font = '12px Segoe UI, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(wM.toFixed(2)+' m', (p1.x+p2.x)/2, Math.min(p1.y,p2.y)-10);
+      const typingX = typedLength && rectFixedWidthM===null;
+      const typingY = typedLength && rectFixedWidthM!==null;
+      const wLabel = rectFixedWidthM!==null ? '🔒 '+wM.toFixed(2)+' m' : (typingX ? typedLength+(measureUnit==='cm'?' cm':' m')+' ↵' : wM.toFixed(2)+' m');
+      ctx.fillText(wLabel, (p1.x+p2.x)/2, Math.min(p1.y,p2.y)-10);
       ctx.save();
       ctx.textAlign = 'center';
       ctx.translate(Math.max(p1.x,p2.x)+16, (p1.y+p2.y)/2);
       ctx.rotate(-Math.PI/2);
-      ctx.fillText(hM.toFixed(2)+' m', 0, 0);
+      const hLabel = typingY ? typedLength+(measureUnit==='cm'?' cm':' m')+' ↵' : hM.toFixed(2)+' m';
+      ctx.fillText(hLabel, 0, 0);
       ctx.restore();
     }
     if(dragSelectActive && dragSelectStart && dragSelectCurrent){
@@ -2807,6 +2869,10 @@
     }
     if(e.button===0 && draggingMove){
       if(draggingMove.active){
+        if(draggingMove.mode==='single' && draggingMove.kind==='wall'){
+          const w = walls.find(x=>x.id===draggingMove.id);
+          if(w) snapWallToParallelNeighbor(w);
+        }
         suppressNextClick = true;
         canvas.style.cursor = 'crosshair';
         afterChange();
@@ -3115,15 +3181,12 @@
       if(!rectStart){
         rectStart = snapped;
       } else {
-        const a = rectStart;
-        const b = snapped;
-        if(Math.abs(a.x-b.x) > 0.05 && Math.abs(a.y-b.y) > 0.05){
-          walls.push({ id: nextId++, x1:a.x, y1:a.y, x2:b.x, y2:a.y, thickness: WALL_THICK_DEFAULT_M });
-          walls.push({ id: nextId++, x1:b.x, y1:a.y, x2:b.x, y2:b.y, thickness: WALL_THICK_DEFAULT_M });
-          walls.push({ id: nextId++, x1:b.x, y1:b.y, x2:a.x, y2:b.y, thickness: WALL_THICK_DEFAULT_M });
-          walls.push({ id: nextId++, x1:a.x, y1:b.y, x2:a.x, y2:a.y, thickness: WALL_THICK_DEFAULT_M });
+        let b = snapped;
+        if(rectFixedWidthM !== null){
+          const dirX = b.x >= rectStart.x ? 1 : -1;
+          b = { x: rectStart.x + dirX*rectFixedWidthM, y: b.y };
         }
-        rectStart = null;
+        commitRect(rectStart, b);
       }
     } else if(tool==='door' || tool==='window'){
       const near = findWallNear(world, 0.3);
@@ -3390,6 +3453,7 @@
     chainStart = null;
     ductChainStart = null;
     rectStart = null;
+    rectFixedWidthM = null;
     typedLength = '';
     draw();
     updateStats();
@@ -3401,6 +3465,7 @@
     chainStart = null;
     ductChainStart = null;
     rectStart = null;
+    rectFixedWidthM = null;
     typedLength = '';
     hoverDuct = null;
     removeOpenModals();
@@ -3422,11 +3487,13 @@
     const hasModal = !!document.querySelector('.mini-modal');
     const noMods = !e.ctrlKey && !e.metaKey && !e.altKey;
 
-    // Entrada dinâmica de comprimento: com uma parede em andamento, digitar
-    // números define a distância exata (na unidade escolhida) na direção
-    // já resolvida pelo mouse/ORTO — Enter confirma, Esc cancela só o
-    // número digitado (sem cancelar a corrente inteira).
-    const isTypingLength = tool==='wall' && !!chainStart && !isEditingField && !hasModal;
+    // Entrada dinâmica de medidas: com uma parede ou retângulo em andamento,
+    // digitar números define a medida exata (na unidade escolhida) em vez
+    // de depender só da posição do mouse — Enter confirma, Esc cancela só
+    // o número digitado (sem cancelar a corrente/retângulo inteiro).
+    const isTypingWall = tool==='wall' && !!chainStart;
+    const isTypingRect = tool==='rect' && !!rectStart;
+    const isTypingLength = (isTypingWall || isTypingRect) && !isEditingField && !hasModal;
     if(isTypingLength && noMods && /^[0-9]$/.test(e.key)){
       typedLength += e.key; e.preventDefault(); draw(); return;
     }
@@ -3436,7 +3503,7 @@
     if(isTypingLength && typedLength!=='' && (e.key==='Backspace' || e.key==='Delete')){
       typedLength = typedLength.slice(0, -1); e.preventDefault(); draw(); return;
     }
-    if(isTypingLength && typedLength!=='' && e.key==='Enter'){
+    if(isTypingWall && typedLength!=='' && e.key==='Enter'){
       const lengthM = parseTypedLength(typedLength);
       if(lengthM!==null){
         const dirPoint = applyOrtho(chainStart, snapPoint(mouseWorld));
@@ -3446,6 +3513,30 @@
         typedLength = ''; draw();
       }
       e.preventDefault(); return;
+    }
+    if(isTypingRect && typedLength!=='' && e.key==='Enter'){
+      const valM = parseTypedLength(typedLength);
+      if(valM!==null){
+        if(rectFixedWidthM === null){
+          // 1º Enter: trava a medida do eixo X, Y continua livre (ou digite de novo)
+          rectFixedWidthM = valM;
+          typedLength = '';
+          draw();
+        } else {
+          // 2º Enter: usa a medida digitada como eixo Y e fecha o retângulo
+          const dirX = mouseWorld.x >= rectStart.x ? 1 : -1;
+          const dirY = mouseWorld.y >= rectStart.y ? 1 : -1;
+          const b = { x: rectStart.x + dirX*rectFixedWidthM, y: rectStart.y + dirY*valM };
+          commitRect(rectStart, b);
+          afterChange();
+        }
+      } else {
+        typedLength = ''; draw();
+      }
+      e.preventDefault(); return;
+    }
+    if(isTypingRect && typedLength==='' && rectFixedWidthM!==null && e.key==='Escape'){
+      rectFixedWidthM = null; e.preventDefault(); draw(); return;
     }
     if(isTypingLength && typedLength!=='' && e.key==='Escape'){
       typedLength = ''; e.preventDefault(); draw(); return;
@@ -3466,6 +3557,7 @@
       chainStart = null;
       ductChainStart = null;
       rectStart = null;
+      rectFixedWidthM = null;
       typedLength = '';
       selected = null;
       selectedMulti = [];
@@ -3474,6 +3566,7 @@
       renderBlockLibrary();
       const hints = {
         wall: 'Clique para começar a desenhar uma parede. Depois do 1º ponto, digite um número pra definir a medida exata (Enter confirma) — a unidade é a que estiver marcada em "Unidade". Clique direito ou Esc encerra a corrente.',
+        rect: 'Clique no primeiro canto, depois digite a medida do X e Enter (trava a largura), depois a medida do Y e Enter (fecha o retângulo) — ou solte o mouse livremente a qualquer momento.',
         door: 'Clique sobre uma parede existente para inserir uma porta (0,80 m). Depois, use "Selecionar" pra ajustar largura ou inverter o lado da abertura.',
         window: 'Clique sobre uma parede existente para inserir uma janela (1,20 m). Depois, use "Selecionar" pra ajustar a largura.',
         room: 'Clique no meio de um cômodo já fechado por paredes para nomeá-lo e calcular área e perímetro.',
@@ -3535,7 +3628,7 @@
   document.getElementById('btnClear').addEventListener('click', ()=>{
     if(confirm('Apagar toda a planta atual?')){
       walls = []; openings = []; rooms = []; symbols = []; ducts = [];
-      cableResult = null; materialResult = null; selected = null; selectedMulti = []; chainStart = null; ductChainStart = null; typedLength = '';
+      cableResult = null; materialResult = null; selected = null; selectedMulti = []; chainStart = null; ductChainStart = null; rectStart = null; rectFixedWidthM = null; typedLength = '';
       afterChange();
     }
   });
