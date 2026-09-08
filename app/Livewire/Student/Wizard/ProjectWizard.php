@@ -89,7 +89,8 @@ class ProjectWizard extends Component
     // Step 2 — rooms
     public array $rooms = [];
 
-    // Step 2 — editor de planta baixa (opcional, alimenta $rooms via importRoomsFromFloorPlan)
+    // Step 2 - modo de entrada dos cômodos: decisão explícita antes do cadastro/manual ou CAD
+    public string $projectInputMode = '';
     public bool $showFloorPlanEditor = false;
 
     // Step 3 — loads
@@ -362,8 +363,8 @@ class ProjectWizard extends Component
         $this->normalizeRooms();
         $this->normalizeLoads();
 
-        if (empty($this->rooms)) {
-            $this->addRoom();
+        if (!empty($this->rooms)) {
+            $this->projectInputMode = 'manual';
         }
     }
 
@@ -418,6 +419,9 @@ class ProjectWizard extends Component
         $this->clearMessages();
         $this->saveCurrentStep();
         $this->currentStep = max($this->currentStep - 1, 1);
+        if ($this->currentStep !== 2) {
+            $this->showFloorPlanEditor = false;
+        }
     }
 
     // Chamado pelo botão "Concluir" do último passo: salva e marca o projeto como concluído,
@@ -525,6 +529,12 @@ class ProjectWizard extends Component
 
     private function validateRoomsStep2(): void
     {
+        if ($this->projectInputMode === '' && empty($this->rooms)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'rooms' => 'Escolha se o projeto será feito com desenho da planta ou sem desenho da planta.',
+            ]);
+        }
+
         if (empty($this->rooms)) {
             throw \Illuminate\Validation\ValidationException::withMessages([
                 'rooms' => 'Adicione pelo menos um cômodo.',
@@ -1230,9 +1240,39 @@ class ProjectWizard extends Component
 
     // ─── Step 2: editor de planta baixa ──────────────────
 
+    public function chooseProjectInputMode(string $mode): void
+    {
+        if (!in_array($mode, ['floorplan', 'manual'], true)) {
+            return;
+        }
+
+        $this->clearMessages();
+        $this->projectInputMode = $mode;
+        $this->showFloorPlanEditor = $mode === 'floorplan';
+
+        if ($mode === 'manual' && empty($this->rooms)) {
+            $this->rooms[] = $this->emptyRoom(0);
+        }
+    }
+
+    public function openFloorPlanEditor(): void
+    {
+        $this->clearMessages();
+        $this->projectInputMode = 'floorplan';
+        $this->showFloorPlanEditor = true;
+    }
+
+    public function closeFloorPlanEditor(): void
+    {
+        $this->showFloorPlanEditor = false;
+    }
+
     public function toggleFloorPlanEditor(): void
     {
         $this->showFloorPlanEditor = !$this->showFloorPlanEditor;
+        if ($this->showFloorPlanEditor) {
+            $this->projectInputMode = 'floorplan';
+        }
     }
 
     /**
@@ -1265,6 +1305,7 @@ class ProjectWizard extends Component
 
         if ($imported > 0) {
             $this->showFloorPlanEditor = false;
+            $this->projectInputMode = 'manual';
             $this->successMessage = "{$imported} cômodo(s) importado(s) da planta baixa. Confira o tipo de cada cômodo (foi adivinhado pelo nome) antes de avançar.";
             $this->dispatch('room-added');
         } else {

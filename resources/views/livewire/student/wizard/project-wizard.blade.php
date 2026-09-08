@@ -197,17 +197,59 @@
         {{-- ─── STEP 2 — Cadastro dos Cômodos e Cargas Mínimas ─── --}}
         @if($currentStep === 2)
         <div class="p-4 md:p-8">
+            <div class="mb-6">
+                <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200">Como deseja montar o projeto?</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Escolha se os ambientes serao criados pelo desenho da planta ou pelo cadastro manual.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <button wire:click="chooseProjectInputMode('floorplan')" type="button"
+                        class="text-left border {{ $projectInputMode === 'floorplan' ? 'border-brand-yellow ring-2 ring-brand-yellow/40 bg-yellow-50 dark:bg-yellow-900/20' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600' }} rounded-xl p-5 transition shadow-sm">
+                        <div class="flex items-start gap-3">
+                            <div class="w-11 h-11 rounded-lg bg-brand-black text-brand-yellow flex items-center justify-center flex-shrink-0">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                            </div>
+                            <div>
+                                <div class="font-black text-gray-900 dark:text-gray-100">Com desenho da planta</div>
+                                <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">Abre uma tela CAD para desenhar comodos, inserir componentes e depois revisar os detalhes do projeto.</div>
+                            </div>
+                        </div>
+                    </button>
+
+                    <button wire:click="chooseProjectInputMode('manual')" type="button"
+                        class="text-left border {{ $projectInputMode === 'manual' ? 'border-brand-yellow ring-2 ring-brand-yellow/40 bg-yellow-50 dark:bg-yellow-900/20' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600' }} rounded-xl p-5 transition shadow-sm">
+                        <div class="flex items-start gap-3">
+                            <div class="w-11 h-11 rounded-lg bg-gray-900 dark:bg-gray-700 text-white flex items-center justify-center flex-shrink-0">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                            </div>
+                            <div>
+                                <div class="font-black text-gray-900 dark:text-gray-100">Sem desenho da planta</div>
+                                <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">Mantem o fluxo atual, preenchendo manualmente comodo, area, perimetro e cargas minimas.</div>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            @if($projectInputMode === 'floorplan' && !$showFloorPlanEditor)
+            <div class="mb-6 bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                    <p class="font-bold text-gray-800 dark:text-gray-200 text-sm">Editor CAD selecionado</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Monte a planta em tela cheia. Depois volte para ver e editar os detalhes do projeto.</p>
+                </div>
+                <button wire:click="openFloorPlanEditor" type="button"
+                    class="inline-flex items-center justify-center gap-2 bg-brand-black text-white hover:bg-black text-sm font-bold px-4 py-2.5 rounded-lg transition whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                    Abrir editor CAD
+                </button>
+            </div>
+            @endif
+
+            @if($projectInputMode === 'manual' || !empty($rooms) || $showFloorPlanEditor)
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
                 <div>
                     <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200">Cadastro dos Cômodos e Cargas Mínimas</h3>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Cadastre os ambientes da instalação. O EletroDIM calcula automaticamente a iluminação e as tomadas mínimas conforme a NBR 5410.</p>
                 </div>
                 <div class="flex items-center gap-2 flex-shrink-0">
-                    <button wire:click="toggleFloorPlanEditor" type="button"
-                        class="inline-flex items-center gap-1.5 {{ $showFloorPlanEditor ? 'bg-brand-black text-white' : 'bg-white dark:bg-gray-800 text-brand-black dark:text-gray-200 border border-gray-300 dark:border-gray-600' }} text-sm font-bold px-4 py-2.5 rounded-lg transition whitespace-nowrap shadow-sm">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
-                        {{ $showFloorPlanEditor ? 'Fechar planta baixa' : 'Desenhar planta baixa' }}
-                    </button>
                     <button wire:click="addRoom"
                         class="inline-flex items-center gap-1.5 bg-brand-yellow hover:bg-brand-yellow-hover text-brand-black text-sm font-bold px-4 py-2.5 rounded-lg transition flex-shrink-0 whitespace-nowrap shadow-sm">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
@@ -217,7 +259,7 @@
             </div>
 
             @if($showFloorPlanEditor)
-            <div class="mb-6 rounded-xl overflow-hidden border border-gray-300 dark:border-gray-600" x-data x-init="
+            <div class="fixed inset-0 z-[80] bg-gray-950" x-data x-init="
                 if (!window.__eletrodimFloorPlanListenerAttached) {
                     window.__eletrodimFloorPlanListenerAttached = true;
                     window.addEventListener('message', (e) => {
@@ -228,8 +270,22 @@
                     });
                 }
             ">
+                <div class="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-8 h-8 rounded-lg bg-brand-yellow text-brand-black flex items-center justify-center font-black">2</div>
+                        <div class="min-w-0">
+                            <p class="text-sm font-black text-gray-900 dark:text-gray-100 truncate">Editor CAD da planta baixa</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 truncate">Desenhe a arquitetura, insira componentes e envie os comodos para o projeto.</p>
+                        </div>
+                    </div>
+                    <button wire:click="closeFloorPlanEditor" type="button"
+                        class="inline-flex items-center gap-2 bg-brand-yellow hover:bg-brand-yellow-hover text-brand-black text-sm font-bold px-4 py-2 rounded-lg transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        Ver detalhes do projeto
+                    </button>
+                </div>
                 <iframe src="{{ asset('floor-plan-editor.html') }}" wire:ignore
-                    style="width:100%;height:640px;border:0;display:block;"
+                    style="width:100%;height:calc(100vh - 56px);border:0;display:block;"
                     title="Editor de planta baixa"></iframe>
             </div>
             <p class="text-xs text-gray-500 dark:text-gray-400 -mt-4 mb-6">Desenhe as paredes, nomeie os cômodos (feche o contorno primeiro) e clique em <strong>"Enviar cômodos para o projeto"</strong> no painel direito do editor. O tipo de cada cômodo é adivinhado pelo nome — confira e ajuste antes de avançar.</p>
@@ -530,6 +586,7 @@
                     <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
                 </button>
             </div>
+            @endif
         </div>
         @endif
 
