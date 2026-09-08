@@ -220,10 +220,10 @@
   }
   .super-panel{
     position:absolute;
-    left:76px;
-    top:90px;
+    left:70px;
+    top:14px;
+    bottom:14px;
     width:304px;
-    max-height:calc(100vh - 92px);
     overflow:auto;
     overflow-x:hidden;
     background:var(--super-panel-bg);
@@ -309,7 +309,7 @@
     flex-direction:column;
     gap:16px;
   }
-  aside .panel-block:not(:nth-of-type(3)){ display:none; }
+  aside .panel-block:not(.panel-block-visible){ display:none; }
   .panel-block h2{
     font-size:11px;
     text-transform: none;
@@ -621,30 +621,11 @@
       </div>
       <div class="panel-block">
         <h2>QUANTIDADE DE MATERIAL</h2>
-        <div class="field-row" style="display:flex;gap:8px;margin-bottom:6px;">
-          <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Pe direito (m)
-            <input type="number" id="matPeDireito" value="2.70" step="0.05" min="1" style="background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
-          </label>
-          <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Altura QDC (m)
-            <input type="number" id="matAlturaQdc" value="1.60" step="0.05" min="0" style="background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
-          </label>
-        </div>
-        <div class="field-row" style="display:flex;gap:8px;margin-bottom:6px;">
-          <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Altura interruptor (m)
-            <input type="number" id="matAlturaInt" value="1.10" step="0.05" min="0" style="background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
-          </label>
-          <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Folga/emenda (m)
-            <input type="number" id="matFolga" value="0.30" step="0.05" min="0" style="background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
-          </label>
-        </div>
-        <label style="font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;margin-bottom:8px;">Margem de seguranca (%)
-          <input type="number" id="matMargem" value="10" step="1" min="0" style="background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
-        </label>
         <button class="action-card" id="btnMaterial" type="button">
           <span class="action-icon green">📦</span>
           <span class="action-text">
             <span class="action-title">Calcular materiais</span>
-            <span class="action-desc">Soma o trecho horizontal com descidas/subidas e margem de segurança, por circuito.</span>
+            <span class="action-desc">Abre as medidas (pé direito, alturas, folga, margem) pra confirmar e soma o trecho de cada circuito.</span>
           </span>
         </button>
         <div class="empty" id="materialEmpty" style="margin-top:8px;">Distribua os cabos primeiro.</div>
@@ -675,13 +656,7 @@
       <div class="stat-row"><span>QDC</span><span id="statQdc">0</span></div>
       <div class="stat-row"><span>Eletrodutos</span><span id="statDutos">0</span></div>
     </div>
-    <div class="panel-block">
-      <h2>BIBLIOTECA DE BLOCOS</h2>
-      <div class="block-grid"></div>
-      <button class="wide" type="button" style="margin-top:8px;">+ Novo bloco</button>
-      <div style="font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.4;">Clique num bloco pra armar a ferramenta e depois clique na planta pra posicionar. Botão direito num bloco personalizado remove ele da biblioteca (sem apagar os já colocados na planta).</div>
-    </div>
-    <div class="panel-block">
+    <div class="panel-block panel-block-visible">
       <h2>PROPRIEDADES</h2>
       <div id="propContent"><div class="empty">Selecione um elemento na planta (use a ferramenta "Selecionar") para ver e editar suas propriedades aqui.</div></div>
     </div>
@@ -694,37 +669,6 @@
       <div class="stat-row"><span><span class="swatch" style="background:var(--duto)"></span> Eletroduto</span><span style="color:var(--muted)">rede física — cabos só após distribuir</span></div>
       <div class="stat-row" style="border-bottom:none;"><span>Blocos personalizados</span><span style="color:var(--muted)">cor e forma escolhidas na criação</span></div>
       <div style="font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.4;">A NBR 5444 foi formalmente cancelada em 2014, mas seus símbolos seguem sendo o padrão de fato usado no mercado e no ensino — ajuste conforme sua referência exata.</div>
-    </div>
-    <div class="panel-block">
-      <h2>ROTEAMENTO DE CABOS</h2>
-      <button class="wide primary" id="btnRoute">Distribuir cabos</button>
-      <div class="empty" id="routeEmpty">Desenhe os eletrodutos conectando os símbolos e clique aqui. O sistema acha o caminho mais curto de cada dispositivo até o QDC (ou até a luminária, no caso do retorno).</div>
-      <ul class="item-list" id="routeList" style="margin-top:8px;"></ul>
-    </div>
-    <div class="panel-block">
-      <h2>QUANTIDADE DE MATERIAL</h2>
-      <div class="field-row" style="display:flex;gap:8px;margin-bottom:6px;">
-        <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Pé direito (m)
-          <input type="number" id="matPeDireito" value="2.70" step="0.05" min="1" style="background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
-        </label>
-        <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Altura QDC (m)
-          <input type="number" id="matAlturaQdc" value="1.60" step="0.05" min="0" style="background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
-        </label>
-      </div>
-      <div class="field-row" style="display:flex;gap:8px;margin-bottom:6px;">
-        <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Altura interruptor (m)
-          <input type="number" id="matAlturaInt" value="1.10" step="0.05" min="0" style="background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
-        </label>
-        <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Folga/emenda (m)
-          <input type="number" id="matFolga" value="0.30" step="0.05" min="0" style="background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
-        </label>
-      </div>
-      <label style="font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;margin-bottom:8px;">Margem de segurança (%)
-        <input type="number" id="matMargem" value="10" step="1" min="0" style="background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
-      </label>
-      <button class="wide primary" id="btnMaterial">Calcular materiais</button>
-      <div class="empty" id="materialEmpty">Distribua os cabos primeiro. O cálculo soma o trecho horizontal (pelo eletroduto) com a descida do QDC e a subida até cada dispositivo, mais folga e margem.</div>
-      <ul class="item-list" id="materialList" style="margin-top:8px;"></ul>
     </div>
     <div class="panel-block">
       <h2>CÔMODOS</h2>
@@ -740,11 +684,6 @@
       <h2>EXPORTAR</h2>
       <button class="wide primary" id="btnExport">Gerar JSON das coordenadas</button>
       <textarea id="jsonOut" spellcheck="false"></textarea>
-    </div>
-    <div class="panel-block">
-      <h2>PROJETO ELETRODIM</h2>
-      <button class="wide primary" type="button">Enviar cômodos para o projeto</button>
-      <div style="font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.4;">Envia nome, área e perímetro de cada cômodo fechado pro assistente de dimensionamento (só funciona quando este editor está aberto dentro do EletroDIM).</div>
     </div>
   </aside>
 </div>
@@ -2131,13 +2070,64 @@
 
   const KIND_NAME = { F:'fase', N:'neutro', T:'terra', R:'retorno' };
 
-  document.getElementById('btnMaterial').addEventListener('click', ()=>{
-    const result = calcularMaterial();
-    if(result){
-      materialResult = result;
-      afterChange();
+  let materialDefaults = { peDireito:'2.70', alturaQdc:'1.60', alturaInt:'1.10', folga:'0.30', margem:'10' };
+
+  function openMaterialModal(){
+    if(!cableResult){
+      showToast('Distribua os cabos primeiro — o cálculo de material usa os caminhos já roteados.');
+      return;
     }
-  });
+    removeOpenModals();
+    const modal = document.createElement('div');
+    modal.className = 'mini-modal';
+    modal.style.left = '50%'; modal.style.top = '60px'; modal.style.transform = 'translateX(-50%)';
+    modal.style.width = '320px';
+    modal.innerHTML = `
+      <div style="font-size:12.5px;font-weight:700;color:var(--text);">Medidas para cálculo de material</div>
+      <div class="field-row">
+        <label style="flex:1">Pé direito (m)<input type="number" id="matPeDireito" value="${materialDefaults.peDireito}" step="0.05" min="1"></label>
+        <label style="flex:1">Altura QDC (m)<input type="number" id="matAlturaQdc" value="${materialDefaults.alturaQdc}" step="0.05" min="0"></label>
+      </div>
+      <div class="field-row">
+        <label style="flex:1">Altura interruptor (m)<input type="number" id="matAlturaInt" value="${materialDefaults.alturaInt}" step="0.05" min="0"></label>
+        <label style="flex:1">Folga/emenda (m)<input type="number" id="matFolga" value="${materialDefaults.folga}" step="0.05" min="0"></label>
+      </div>
+      <label>Margem de segurança (%)<input type="number" id="matMargem" value="${materialDefaults.margem}" step="1" min="0"></label>
+      <div class="buttons">
+        <button class="cancel">Cancelar</button>
+        <button class="ok">Calcular</button>
+      </div>
+    `;
+    canvas.parentElement.appendChild(modal);
+    const firstInput = modal.querySelector('input');
+    if(firstInput) firstInput.focus();
+
+    function confirmIt(){
+      // calcularMaterial() lê os valores via getElementById — os inputs
+      // acima ainda estão no DOM neste momento, então funciona sem mudar
+      // a função existente.
+      const result = calcularMaterial();
+      materialDefaults = {
+        peDireito: modal.querySelector('#matPeDireito').value || '2.70',
+        alturaQdc: modal.querySelector('#matAlturaQdc').value || '1.60',
+        alturaInt: modal.querySelector('#matAlturaInt').value || '1.10',
+        folga: modal.querySelector('#matFolga').value || '0.30',
+        margem: modal.querySelector('#matMargem').value || '10',
+      };
+      modal.remove();
+      if(result){
+        materialResult = result;
+        afterChange();
+      }
+    }
+    modal.querySelector('.ok').addEventListener('click', confirmIt);
+    modal.querySelector('.cancel').addEventListener('click', ()=>modal.remove());
+    modal.addEventListener('keydown', (ev)=>{
+      if(ev.key==='Enter') confirmIt();
+      if(ev.key==='Escape') modal.remove();
+    });
+  }
+  document.getElementById('btnMaterial').addEventListener('click', openMaterialModal);
 
   // ---------------------------------------------------------------
   // Zoom (roda do mouse, botões +/-) e pan (arrastar com o botão do
