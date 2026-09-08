@@ -767,6 +767,7 @@
   let dragSelectActive = false; // true assim que o arrasto passa de um limiar mínimo (evita disparar num clique simples)
   let dragSelectCurrent = null; // world — posição atual do arrasto
   let suppressNextClick = false; // evita que o "click" que sucede o mouseup do arrasto rode a seleção normal
+  let draggingGrip = null; // {opening, side:'start'|'end'} — alça de porta/janela sendo arrastada
 
   function isMultiSelected(kind, id){
     return selectedMulti.some(s=>s.kind===kind && s.id===id);
@@ -1331,6 +1332,19 @@
     const nx = -uy*flipSign, ny = ux*flipSign;
     const half = thickPx/2;
 
+    // fechamento (jambas): traço atravessando a espessura da parede em
+    // cada uma das duas bordas da abertura — sem isso a porta/janela fica
+    // "flutuando" sem fechar visualmente contra a alvenaria ao lado.
+    const wnx = -uy, wny = ux; // perpendicular da PAREDE, não muda com o flip da porta
+    ctx.strokeStyle = isSelected ? getCss('--accent') : getCss('--wall');
+    ctx.lineWidth = 1.6;
+    [a,b].forEach(pt=>{
+      ctx.beginPath();
+      ctx.moveTo(pt.x+wnx*half, pt.y+wny*half);
+      ctx.lineTo(pt.x-wnx*half, pt.y-wny*half);
+      ctx.stroke();
+    });
+
     if(o.type === 'door'){
       ctx.strokeStyle = isSelected ? getCss('--accent') : getCss('--door');
       ctx.lineWidth = isSelected ? 2.6 : 2;
@@ -1393,6 +1407,61 @@
       if(d <= accept && d < bestD){ bestD = d; best = o; }
     }
     return best;
+  }
+
+  // Alças (grips) de porta/janela: dois pontos, um em cada borda da
+  // abertura, que podem ser arrastados pra redimensionar (ajustar widthM
+  // mantendo a outra borda fixa).
+  function wallLenWorld(wall){ return dist({x:wall.x1,y:wall.y1},{x:wall.x2,y:wall.y2}); }
+  function wallParamDistance(wall, p){
+    const abx=wall.x2-wall.x1, aby=wall.y2-wall.y1;
+    const abLen = Math.hypot(abx,aby)||1e-9;
+    const ux=abx/abLen, uy=aby/abLen;
+    const t = (p.x-wall.x1)*ux + (p.y-wall.y1)*uy;
+    return Math.max(0, Math.min(abLen, t));
+  }
+  function openingGripPoints(o){
+    const wall = walls.find(w=>w.id===o.wallId);
+    if(!wall) return null;
+    const wallLen = wallLenWorld(wall);
+    if(wallLen<=0) return null;
+    const ux=(wall.x2-wall.x1)/wallLen, uy=(wall.y2-wall.y1)/wallLen;
+    const centerDist = o.t*wallLen, halfW = o.widthM/2;
+    return {
+      wall,
+      startP: { x: wall.x1+ux*(centerDist-halfW), y: wall.y1+uy*(centerDist-halfW) },
+      endP:   { x: wall.x1+ux*(centerDist+halfW), y: wall.y1+uy*(centerDist+halfW) }
+    };
+  }
+  function findOpeningGripNear(worldPt, tolPx){
+    if(!selected || selected.kind!=='opening') return null;
+    const o = openings.find(x=>x.id===selected.id);
+    if(!o) return null;
+    const grips = openingGripPoints(o);
+    if(!grips) return null;
+    const ps = worldToScreen(worldPt.x, worldPt.y);
+    const sStart = worldToScreen(grips.startP.x, grips.startP.y);
+    const sEnd = worldToScreen(grips.endP.x, grips.endP.y);
+    if(Math.hypot(sStart.x-ps.x, sStart.y-ps.y) <= tolPx) return { opening:o, side:'start' };
+    if(Math.hypot(sEnd.x-ps.x, sEnd.y-ps.y) <= tolPx) return { opening:o, side:'end' };
+    return null;
+  }
+  function resizeOpeningGrip(o, wall, side, mouseWorld){
+    const wallLen = wallLenWorld(wall);
+    if(wallLen<=0) return;
+    const MIN_W = 0.2;
+    const centerDist = o.t*wallLen, halfW = o.widthM/2;
+    let startDist = centerDist-halfW, endDist = centerDist+halfW;
+    const mouseDist = wallParamDistance(wall, mouseWorld);
+    if(side==='start') startDist = Math.min(mouseDist, endDist-MIN_W);
+    else endDist = Math.max(mouseDist, startDist+MIN_W);
+    startDist = Math.max(0, startDist);
+    endDist = Math.min(wallLen, endDist);
+    if(endDist-startDist < MIN_W){
+      if(side==='start') startDist = endDist-MIN_W; else endDist = startDist+MIN_W;
+    }
+    o.widthM = endDist-startDist;
+    o.t = ((startDist+endDist)/2)/wallLen;
   }
 
   // ---------------------------------------------------------------
@@ -1631,6 +1700,24 @@
     }
     for(const w of walls){
       drawWallInner(w, isWallSelected(w));
+    }
+    if(tool==='select' && selected && selected.kind==='opening'){
+      const o = openings.find(x=>x.id===selected.id);
+      const grips = o ? openingGripPoints(o) : null;
+      if(grips){
+        const r = 5;
+        ctx.save();
+        ctx.fillStyle = getCss('--panel');
+        ctx.strokeStyle = getCss('--accent');
+        ctx.lineWidth = 1.6;
+        [grips.startP, grips.endP].forEach(pt=>{
+          const s = worldToScreen(pt.x, pt.y);
+          ctx.beginPath();
+          ctx.rect(s.x-r, s.y-r, r*2, r*2);
+          ctx.fill(); ctx.stroke();
+        });
+        ctx.restore();
+      }
     }
     if(tool==='wall' && chainStart){
       const p1 = worldToScreen(chainStart.x, chainStart.y);
@@ -2463,6 +2550,11 @@
     if(e.button===0 && tool==='select'){
       const rect = canvas.getBoundingClientRect();
       const world = screenToWorld(e.clientX-rect.left, e.clientY-rect.top);
+      const grip = findOpeningGripNear(world, 9);
+      if(grip){
+        draggingGrip = grip;
+        return;
+      }
       const hitSomething = findSymbolNear(world, 0.13*symbolScale) || findOpeningNear(world, 0.12)
         || findDuctNear(world, 0.12) || findWallNear(world, 0.15);
       if(!hitSomething){
@@ -2479,6 +2571,13 @@
       draw();
       return;
     }
+    if(draggingGrip){
+      const rect = canvas.getBoundingClientRect();
+      const world = screenToWorld(e.clientX-rect.left, e.clientY-rect.top);
+      const wall = walls.find(w=>w.id===draggingGrip.opening.wallId);
+      if(wall){ resizeOpeningGrip(draggingGrip.opening, wall, draggingGrip.side, world); draw(); }
+      return;
+    }
     if(dragSelectStart){
       const rect = canvas.getBoundingClientRect();
       const world = screenToWorld(e.clientX-rect.left, e.clientY-rect.top);
@@ -2492,6 +2591,12 @@
     if(e.button===1 && isPanning){
       isPanning = false;
       canvas.style.cursor = 'crosshair';
+    }
+    if(e.button===0 && draggingGrip){
+      draggingGrip = null;
+      suppressNextClick = true;
+      afterChange();
+      return;
     }
     if(e.button===0 && dragSelectStart){
       if(dragSelectActive && dragSelectCurrent){
@@ -3157,7 +3262,7 @@
         window: 'Clique sobre uma parede existente para inserir uma janela (1,20 m). Depois, use "Selecionar" pra ajustar a largura.',
         room: 'Clique no meio de um cômodo já fechado por paredes para nomeá-lo e calcular área e perímetro.',
         eletroduto: 'Clique exatamente em cima de um símbolo pra começar, depois no próximo símbolo (o círculo laranja mostra onde vai ancorar). Fora de um símbolo, não registra. Depois use "Distribuir cabos".',
-        select: 'Clique num objeto pra selecionar, ou arraste numa área vazia: pra direita = janela (só pega o que está totalmente dentro), pra esquerda = crossing (pega tudo que a janela tocar). Delete remove.'
+        select: 'Clique num objeto pra selecionar (porta/janela mostra 2 alças pra arrastar e redimensionar), ou arraste numa área vazia: pra direita = janela (só pega o que está totalmente dentro), pra esquerda = crossing (pega tudo que a janela tocar). Delete remove.'
       };
       hintBox.textContent = hints[tool] || '';
       draw(); updateStats();
