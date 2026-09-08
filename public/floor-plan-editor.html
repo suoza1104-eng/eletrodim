@@ -14,6 +14,7 @@
     --muted: #64748b;
     --accent: #ff8737;
     --accent-dim: #fff0e6;
+    --active-text: #9a3b00;
     --wall: #3f4652;
     --door: #7fd1ae;
     --window: #5fb4e0;
@@ -26,6 +27,65 @@
     --camada-teto: #7fb8ff;
     --camada-piso: #9fd66b;
     --camada-parede: #e0a355;
+    /* campos, listas, botões secundários e superfícies "recuadas" */
+    --surface: #f8fafc;
+    --surface-border: #e2e8f0;
+    --surface-hover: #ffffff;
+    --overlay-bg: rgba(255,255,255,.94);
+    --overlay-strong: rgba(255,255,255,.96);
+    --danger-soft-bg: #fdeceb;
+    --danger-soft-border: #f3b4b0;
+    --danger-soft-text: #b3261e;
+    --toast-bg: #fdeceb;
+    --toast-border: #e2564f;
+    --toast-text: #a32b25;
+    --json-text: #166534;
+    --super-panel-bg: #ffffff;
+    --super-panel-border: rgba(203,213,225,.9);
+    --shadow-color: rgba(15,23,42,.08);
+    --leftbar-bg: #fbfcfe;
+    --leftbar-border: #dde3ec;
+    --icon-color: #64748b;
+    --icon-hover-bg: #f1f5f9;
+    --icon-hover-color: #334155;
+    --icon-active-bg: #f3e8ff;
+    --icon-active-color: #a21caf;
+    --icon-active-shadow: rgba(126,34,206,.12);
+  }
+  :root[data-theme="dark"]{
+    --bg: #14171a;
+    --panel: #1b1f24;
+    --panel-border: #2a2f36;
+    --grid-minor: #22262b;
+    --grid-major: #2d333b;
+    --text: #e6e9ec;
+    --muted: #8a92a0;
+    --accent-dim: #7a4522;
+    --active-text: #ffd9b8;
+    --wall: #d7dbe0;
+    --surface: #20252b;
+    --surface-border: #2a2f36;
+    --surface-hover: #262b32;
+    --overlay-bg: rgba(20,23,26,.9);
+    --overlay-strong: rgba(20,23,26,.92);
+    --danger-soft-bg: rgba(226,86,79,.15);
+    --danger-soft-border: #e2564f;
+    --danger-soft-text: #ffb3af;
+    --toast-bg: rgba(226,86,79,.15);
+    --toast-border: #e2564f;
+    --toast-text: #ffb3af;
+    --json-text: #9be29b;
+    --super-panel-bg: #1b1f24;
+    --super-panel-border: #2a2f36;
+    --shadow-color: rgba(0,0,0,.35);
+    --leftbar-bg: #16191d;
+    --leftbar-border: #2a2f36;
+    --icon-color: #8a92a0;
+    --icon-hover-bg: #22262b;
+    --icon-hover-color: #e6e9ec;
+    --icon-active-bg: #3a2a4a;
+    --icon-active-color: #e0aaff;
+    --icon-active-shadow: rgba(126,34,206,.35);
   }
   * { box-sizing: border-box; }
   body{
@@ -48,7 +108,7 @@
     align-items:center;
     justify-content:space-between;
     padding: 10px 18px;
-    background: rgba(255,255,255,.96);
+    background: var(--overlay-strong);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--panel-border);
     box-shadow:0 6px 18px rgba(15,23,42,.05);
@@ -71,7 +131,7 @@
     flex-wrap:wrap;
   }
   .tool-btn{
-    background: #ffffff;
+    background: var(--panel);
     border: 1px solid var(--panel-border);
     color: var(--text);
     padding: 7px 12px;
@@ -81,21 +141,21 @@
     display:flex;
     align-items:center;
     gap:6px;
-    box-shadow:0 2px 7px rgba(15,23,42,.04);
+    box-shadow:0 2px 7px var(--shadow-color);
     transition: background .12s, border-color .12s, box-shadow .12s, transform .12s;
   }
   .tool-btn:hover{
-    background:#f8fafc;
-    border-color:#cbd5e1;
-    box-shadow:0 8px 18px rgba(15,23,42,.08);
+    background:var(--surface-hover);
+    border-color:var(--muted);
+    box-shadow:0 8px 18px var(--shadow-color);
     transform:translateY(-1px);
   }
   .tool-btn.active{
     background: var(--accent-dim);
     border-color: var(--accent);
-    color: #9a3b00;
+    color: var(--active-text);
   }
-  .tool-btn.danger:hover{ border-color: var(--danger); color:#ffb3af; }
+  .tool-btn.danger:hover{ border-color: var(--danger); color:var(--danger-soft-text); }
   .tool-btn.zoom{ padding:7px 10px; font-weight:700; }
   .swatch{ width:9px; height:9px; border-radius:2px; display:inline-block; }
   main{
@@ -104,15 +164,15 @@
     background: var(--bg);
   }
   .leftbar{
-    background:#fbfcfe;
-    border-right:1px solid #dde3ec;
+    background:var(--leftbar-bg);
+    border-right:1px solid var(--leftbar-border);
     padding:12px 8px;
     display:flex;
     flex-direction:column;
     align-items:center;
     gap:8px;
-    color:#334155;
-    box-shadow:inset -1px 0 0 rgba(15,23,42,.04);
+    color:var(--text);
+    box-shadow:inset -1px 0 0 var(--shadow-color);
   }
   .left-icon{
     width:38px;
@@ -120,7 +180,7 @@
     border:0;
     border-radius:10px;
     background:transparent;
-    color:#64748b;
+    color:var(--icon-color);
     cursor:pointer;
     display:flex;
     align-items:center;
@@ -129,15 +189,15 @@
     transition:background .14s, color .14s, box-shadow .14s, transform .14s;
   }
   .left-icon:hover{
-    background:#f1f5f9;
-    color:#334155;
+    background:var(--icon-hover-bg);
+    color:var(--icon-hover-color);
     transform:translateX(1px);
   }
   .left-icon.active,
   .left-icon.panel-open{
-    background:#f3e8ff;
-    color:#a21caf;
-    box-shadow:0 8px 18px rgba(126,34,206,.12);
+    background:var(--icon-active-bg);
+    color:var(--icon-active-color);
+    box-shadow:0 8px 18px var(--icon-active-shadow);
   }
   .super-panel{
     position:absolute;
@@ -147,9 +207,9 @@
     max-height:calc(100vh - 92px);
     overflow:auto;
     overflow-x:hidden;
-    background:#ffffff;
-    border:1px solid rgba(203,213,225,.9);
-    box-shadow:0 22px 55px rgba(15,23,42,.16), 0 1px 0 rgba(255,255,255,.95) inset;
+    background:var(--super-panel-bg);
+    border:1px solid var(--super-panel-border);
+    box-shadow:0 22px 55px var(--shadow-color), 0 1px 0 rgba(255,255,255,.08) inset;
     border-radius:14px;
     padding:14px;
     z-index:12;
@@ -171,12 +231,12 @@
   }
   .super-panel .panel-block:last-child{ margin-bottom:0; }
   .super-panel h2{
-    color:#64748b;
+    color:var(--muted);
     letter-spacing:.6px;
     text-transform:uppercase;
   }
   .cad-toggle{
-    background:#ffffff;
+    background:var(--panel);
     border:1px solid var(--panel-border);
     color:var(--text);
     padding:7px 10px;
@@ -190,19 +250,19 @@
   .cad-toggle.active{
     background:var(--accent-dim);
     border-color:var(--accent);
-    color:#9a3b00;
+    color:var(--active-text);
   }
   canvas{ display:block; cursor: crosshair; }
   .hint{
     position:absolute;
     bottom:12px;
     left:12px;
-    background: rgba(255,255,255,.94);
+    background: var(--overlay-bg);
     border:1px solid var(--panel-border);
     padding:6px 10px;
     font-size:11.5px;
     color: var(--muted);
-    box-shadow:0 10px 24px rgba(15,23,42,.08);
+    box-shadow:0 10px 24px var(--shadow-color);
     border-radius:6px;
     pointer-events:none;
     max-width:60%;
@@ -211,7 +271,7 @@
     position:absolute;
     top:12px;
     left:12px;
-    background: rgba(255,255,255,.94);
+    background: var(--overlay-bg);
     border:1px solid var(--panel-border);
     padding:6px 10px;
     font-size:11.5px;
@@ -219,7 +279,7 @@
     border-radius:6px;
     pointer-events:none;
     font-variant-numeric: tabular-nums;
-    box-shadow:0 10px 24px rgba(15,23,42,.08);
+    box-shadow:0 10px 24px var(--shadow-color);
   }
   aside{
     background: var(--panel);
@@ -263,9 +323,9 @@
     align-items:center;
     font-size:12.5px;
     padding:6px 8px;
-    background:#f8fafc;
+    background:var(--surface);
     border-radius:8px;
-    border:1px solid #e2e8f0;
+    border:1px solid var(--surface-border);
   }
   ul.item-list li.selected{ border-color: var(--accent); }
   ul.item-list li.error{ border-color: var(--danger); }
@@ -276,7 +336,7 @@
     padding:9px 11px;
     border-radius:9px;
     border:1px solid var(--panel-border);
-    background:#f8fafc;
+    background:var(--surface);
     color:var(--text);
     font-size:13px;
     cursor:pointer;
@@ -290,13 +350,13 @@
     font-weight:800;
     box-shadow:0 10px 20px rgba(255,135,55,.22);
   }
-  button.wide:hover{ filter:brightness(1.03); transform:translateY(-1px); box-shadow:0 12px 22px rgba(15,23,42,.08); }
+  button.wide:hover{ filter:brightness(1.03); transform:translateY(-1px); box-shadow:0 12px 22px var(--shadow-color); }
   textarea{
     width:100%;
     height:140px;
-    background:#f8fafc;
+    background:var(--surface);
     border:1px solid var(--panel-border);
-    color:#166534;
+    color:var(--json-text);
     font-family: 'Consolas', monospace;
     font-size:11px;
     border-radius:9px;
@@ -312,7 +372,7 @@
     border:1px solid var(--accent);
     border-radius:12px;
     padding:12px;
-    box-shadow: 0 18px 48px rgba(15,23,42,.18);
+    box-shadow: 0 18px 48px var(--shadow-color);
     z-index:20;
     display:flex;
     flex-direction:column;
@@ -330,7 +390,7 @@
   }
   .mini-modal .field-row{ display:flex; gap:8px; }
   .mini-modal input, .mini-modal select{
-    background:#101317;
+    background:var(--surface);
     border:1px solid var(--panel-border);
     color:var(--text);
     padding:6px 8px;
@@ -344,7 +404,7 @@
     padding:6px 10px;
     border-radius:5px;
     border:1px solid var(--panel-border);
-    background:#23282e;
+    background:var(--surface);
     color:var(--text);
     font-size:12px;
     cursor:pointer;
@@ -356,7 +416,7 @@
     border:1px solid var(--accent);
     border-radius:8px;
     padding:14px;
-    box-shadow: 0 8px 24px rgba(0,0,0,.5);
+    box-shadow: 0 8px 24px var(--shadow-color);
     z-index:25;
     width:340px;
     max-height:70vh;
@@ -372,12 +432,12 @@
     align-items:center;
     gap:8px;
     padding:6px 8px;
-    background:#20252b;
+    background:var(--surface);
     border-radius:5px;
   }
-  .rule-row label{ flex:1; font-size:12.5px; cursor:pointer; }
+  .rule-row label{ flex:1; font-size:12.5px; cursor:pointer; color:var(--text); }
   .rule-row select, .rule-row input{
-    background:#101317; border:1px solid var(--panel-border); color:var(--text);
+    background:var(--panel); border:1px solid var(--panel-border); color:var(--text);
     padding:4px 6px; border-radius:4px; font-size:11.5px;
   }
   .new-rule-form{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding-top:6px; border-top:1px solid var(--panel-border); }
@@ -387,9 +447,9 @@
     top:14px;
     left:50%;
     transform: translateX(-50%);
-    background: rgba(226,86,79,.15);
-    border:1px solid var(--danger);
-    color:#ffb3af;
+    background: var(--toast-bg);
+    border:1px solid var(--toast-border);
+    color:var(--toast-text);
     padding:7px 14px;
     border-radius:6px;
     font-size:12.5px;
@@ -401,26 +461,26 @@
   .block-grid{ display:flex; flex-wrap:wrap; gap:6px; }
   .prop-field{ display:flex; flex-direction:column; gap:3px; font-size:11px; color:var(--muted); margin-bottom:8px; }
   .prop-field input, .prop-field select{
-    background:#f8fafc; border:1px solid var(--panel-border); color:var(--text);
+    background:var(--surface); border:1px solid var(--panel-border); color:var(--text);
     padding:7px 9px; border-radius:8px; font-size:13px;
   }
   .super-panel input,
   .super-panel select{
-    background:#f8fafc!important;
-    border:1px solid #dbe4ee!important;
-    color:#111827!important;
+    background:var(--surface)!important;
+    border:1px solid var(--panel-border)!important;
+    color:var(--text)!important;
     border-radius:8px!important;
   }
   .block-grid .tool-btn{
-    background:#f8fafc;
-    border-color:#e2e8f0;
+    background:var(--surface);
+    border-color:var(--surface-border);
     border-radius:9px;
   }
   .block-grid .tool-btn:hover{
-    background:#ffffff;
-    border-color:#cbd5e1;
+    background:var(--surface-hover);
+    border-color:var(--muted);
   }
-  .np-row{ display:flex; flex-direction:column; gap:4px; padding:6px; background:#f8fafc; border-radius:8px; }
+  .np-row{ display:flex; flex-direction:column; gap:4px; padding:6px; background:var(--surface); border-radius:8px; }
 </style>
 </head>
 <body>
@@ -447,13 +507,15 @@
       <button class="cad-toggle" id="btnOtrack" type="button">OTRACK</button>
       <span style="width:1px;background:var(--panel-border);align-self:stretch;margin:0 2px;"></span>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);">Escala símbolos
-        <input type="number" id="symbolScaleInput" value="1.5" min="0.5" max="4" step="0.1" style="width:52px;background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;">
+        <input type="number" id="symbolScaleInput" value="1.5" min="0.5" max="4" step="0.1" style="width:52px;background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;">
       </label>
       <button class="tool-btn zoom" id="btnZoomOut" title="Diminuir zoom">−</button>
       <button class="tool-btn zoom" id="btnZoomIn" title="Aumentar zoom">+</button>
       <button class="tool-btn" id="btnResetView">Resetar vista</button>
       <button class="tool-btn danger" id="btnDelete">Excluir</button>
       <button class="tool-btn danger" id="btnClear">Limpar tudo</button>
+      <span style="width:1px;background:var(--panel-border);align-self:stretch;margin:0 2px;"></span>
+      <button class="tool-btn" id="btnThemeToggle" type="button" title="Alternar tema claro/escuro"><span id="themeToggleIcon">🌙</span><span id="themeToggleLabel">Tema escuro</span></button>
     </div>
   </header>
   <nav class="leftbar">
@@ -493,22 +555,22 @@
         <h2>QUANTIDADE DE MATERIAL</h2>
         <div class="field-row" style="display:flex;gap:8px;margin-bottom:6px;">
           <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Pe direito (m)
-            <input type="number" id="matPeDireito" value="2.70" step="0.05" min="1" style="background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
+            <input type="number" id="matPeDireito" value="2.70" step="0.05" min="1" style="background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
           </label>
           <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Altura QDC (m)
-            <input type="number" id="matAlturaQdc" value="1.60" step="0.05" min="0" style="background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
+            <input type="number" id="matAlturaQdc" value="1.60" step="0.05" min="0" style="background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
           </label>
         </div>
         <div class="field-row" style="display:flex;gap:8px;margin-bottom:6px;">
           <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Altura interruptor (m)
-            <input type="number" id="matAlturaInt" value="1.10" step="0.05" min="0" style="background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
+            <input type="number" id="matAlturaInt" value="1.10" step="0.05" min="0" style="background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
           </label>
           <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Folga/emenda (m)
-            <input type="number" id="matFolga" value="0.30" step="0.05" min="0" style="background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
+            <input type="number" id="matFolga" value="0.30" step="0.05" min="0" style="background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
           </label>
         </div>
         <label style="font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;margin-bottom:8px;">Margem de seguranca (%)
-          <input type="number" id="matMargem" value="10" step="1" min="0" style="background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
+          <input type="number" id="matMargem" value="10" step="1" min="0" style="background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
         </label>
         <button class="wide primary" id="btnMaterial">Calcular materiais</button>
         <div class="empty" id="materialEmpty">Distribua os cabos primeiro. O calculo soma o trecho horizontal com descidas/subidas e margem.</div>
@@ -564,22 +626,22 @@
       <h2>QUANTIDADE DE MATERIAL</h2>
       <div class="field-row" style="display:flex;gap:8px;margin-bottom:6px;">
         <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Pé direito (m)
-          <input type="number" id="matPeDireito" value="2.70" step="0.05" min="1" style="background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
+          <input type="number" id="matPeDireito" value="2.70" step="0.05" min="1" style="background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
         </label>
         <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Altura QDC (m)
-          <input type="number" id="matAlturaQdc" value="1.60" step="0.05" min="0" style="background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
+          <input type="number" id="matAlturaQdc" value="1.60" step="0.05" min="0" style="background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
         </label>
       </div>
       <div class="field-row" style="display:flex;gap:8px;margin-bottom:6px;">
         <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Altura interruptor (m)
-          <input type="number" id="matAlturaInt" value="1.10" step="0.05" min="0" style="background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
+          <input type="number" id="matAlturaInt" value="1.10" step="0.05" min="0" style="background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
         </label>
         <label style="flex:1;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;">Folga/emenda (m)
-          <input type="number" id="matFolga" value="0.30" step="0.05" min="0" style="background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
+          <input type="number" id="matFolga" value="0.30" step="0.05" min="0" style="background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
         </label>
       </div>
       <label style="font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:3px;margin-bottom:8px;">Margem de segurança (%)
-        <input type="number" id="matMargem" value="10" step="1" min="0" style="background:#101317;border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
+        <input type="number" id="matMargem" value="10" step="1" min="0" style="background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;font-size:12px;">
       </label>
       <button class="wide primary" id="btnMaterial">Calcular materiais</button>
       <div class="empty" id="materialEmpty">Distribua os cabos primeiro. O cálculo soma o trecho horizontal (pelo eletroduto) com a descida do QDC e a subida até cada dispositivo, mais folga e margem.</div>
@@ -690,7 +752,7 @@
     return props;
   }
   function resolveColor(c){
-    if(!c) return '#ffffff';
+    if(!c) return getCss('--muted');
     return c.indexOf('--')===0 ? getCss(c) : c;
   }
 
@@ -1151,7 +1213,7 @@
   }
 
   function drawSymbol(sym, isSelected){
-    const blockDef = findBlockDef(sym.blockId) || { tipo:'custom', cor:'#8a92a0', shape:'circulo', properties:[], nome:'Bloco removido' };
+    const blockDef = findBlockDef(sym.blockId) || { tipo:'custom', cor:'--muted', shape:'circulo', properties:[], nome:'Bloco removido' };
     const p = worldToScreen(sym.x, sym.y);
     const s = symbolScale;
     const color = isSelected ? getCss('--accent') : resolveColor(blockDef.cor);
@@ -1553,11 +1615,11 @@
     if(selected.kind==='symbol'){
       const sym = symbols.find(s=>s.id===selected.id);
       if(!sym){ selected=null; return renderPropertiesPanel(); }
-      const blockDef = findBlockDef(sym.blockId) || { nome:'Bloco removido', properties:[], cor:'#8a92a0' };
+      const blockDef = findBlockDef(sym.blockId) || { nome:'Bloco removido', properties:[], cor:'--muted' };
       let html = `<div class="stat-row"><span>Bloco</span><span><span class="swatch" style="background:${resolveColor(blockDef.cor)}"></span> ${blockDef.nome}</span></div>`;
       html += blockDef.properties.map(p=>propFieldHtml(p, sym.props ? sym.props[p.key] : undefined)).join('');
       if(blockDef.properties.length===0) html += '<div class="empty">Este bloco não tem propriedades editáveis.</div>';
-      html += `<button class="wide danger" id="propDeleteBtn" style="margin-top:4px;background:#2a2020;border-color:var(--danger);">Excluir bloco (Delete)</button>`;
+      html += `<button class="wide danger" id="propDeleteBtn" style="margin-top:4px;background:var(--danger-soft-bg);color:var(--danger-soft-text);border-color:var(--danger);">Excluir bloco (Delete)</button>`;
       container.innerHTML = html;
       container.querySelectorAll('[data-propkey]').forEach(el=>{
         el.addEventListener('input', ()=>{
@@ -1578,7 +1640,7 @@
       if(!room){ selected=null; return renderPropertiesPanel(); }
       container.innerHTML = `
         <label class="prop-field">Nome<input type="text" id="propRoomName" value="${room.name}" maxlength="30"></label>
-        <button class="wide danger" id="propDeleteBtn" style="background:#2a2020;border-color:var(--danger);">Excluir cômodo (Delete)</button>`;
+        <button class="wide danger" id="propDeleteBtn" style="background:var(--danger-soft-bg);color:var(--danger-soft-text);border-color:var(--danger);">Excluir cômodo (Delete)</button>`;
       container.querySelector('#propRoomName').addEventListener('input', (e)=>{ room.name = e.target.value; draw(); scheduleSave(); });
       container.querySelector('#propDeleteBtn').addEventListener('click', deleteSelected);
     } else if(selected.kind==='duct'){
@@ -1589,7 +1651,7 @@
       container.innerHTML = `
         <div class="stat-row"><span>Comprimento</span><span>${ductLenM(duct).toFixed(2)} m</span></div>
         <label class="prop-field">Camada<select id="propDuctCamada">${opts}</select></label>
-        <button class="wide danger" id="propDeleteBtn" style="background:#2a2020;border-color:var(--danger);">Excluir eletroduto (Delete)</button>`;
+        <button class="wide danger" id="propDeleteBtn" style="background:var(--danger-soft-bg);color:var(--danger-soft-text);border-color:var(--danger);">Excluir eletroduto (Delete)</button>`;
       container.querySelector('#propDuctCamada').addEventListener('change', (e)=>{ duct.camada = e.target.value; draw(); scheduleSave(); });
       container.querySelector('#propDeleteBtn').addEventListener('click', deleteSelected);
     } else if(selected.kind==='wall'){
@@ -1597,7 +1659,7 @@
       if(!wall){ selected=null; return renderPropertiesPanel(); }
       container.innerHTML = `
         <div class="stat-row"><span>Comprimento</span><span>${wallLenM(wall).toFixed(2)} m</span></div>
-        <button class="wide danger" id="propDeleteBtn" style="margin-top:8px;background:#2a2020;border-color:var(--danger);">Excluir parede (Delete)</button>`;
+        <button class="wide danger" id="propDeleteBtn" style="margin-top:8px;background:var(--danger-soft-bg);color:var(--danger-soft-text);border-color:var(--danger);">Excluir parede (Delete)</button>`;
       container.querySelector('#propDeleteBtn').addEventListener('click', deleteSelected);
     }
   }
@@ -2185,7 +2247,7 @@
       </div>
       <div style="font-size:11px;color:var(--muted);margin-top:2px;">Propriedades editáveis (opcional)</div>
       <div id="nbPropsList" style="display:flex;flex-direction:column;gap:6px;"></div>
-      <button id="nbAddProp" type="button" style="align-self:flex-start;padding:5px 9px;border-radius:5px;border:1px solid var(--panel-border);background:#23282e;color:var(--text);font-size:11.5px;cursor:pointer;">+ Propriedade</button>
+      <button id="nbAddProp" type="button" style="align-self:flex-start;padding:5px 9px;border-radius:5px;border:1px solid var(--panel-border);background:var(--surface);color:var(--text);font-size:11.5px;cursor:pointer;">+ Propriedade</button>
       <div class="buttons">
         <button class="cancel">Cancelar</button>
         <button class="ok">Criar bloco</button>
@@ -2731,6 +2793,35 @@
       resize();
       updateStats();
     }
+  });
+
+  // ---------------------------------------------------------------
+  // Tema claro/escuro: persistido em localStorage, aplicado via
+  // data-theme na tag <html> — as variáveis CSS (e o desenho no
+  // canvas, que lê as mesmas variáveis via getCss) reagem sozinhas.
+  // ---------------------------------------------------------------
+  const THEME_KEY = 'eletrodim-floorplan-theme';
+  function applyTheme(theme){
+    document.documentElement.setAttribute('data-theme', theme);
+    const icon = document.getElementById('themeToggleIcon');
+    const label = document.getElementById('themeToggleLabel');
+    if(theme === 'dark'){
+      if(icon) icon.textContent = '☀️';
+      if(label) label.textContent = 'Tema claro';
+    } else {
+      if(icon) icon.textContent = '🌙';
+      if(label) label.textContent = 'Tema escuro';
+    }
+    draw();
+  }
+  let savedTheme = 'light';
+  try { savedTheme = localStorage.getItem(THEME_KEY) || 'light'; } catch(e) {}
+  applyTheme(savedTheme);
+  document.getElementById('btnThemeToggle').addEventListener('click', ()=>{
+    const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    const next = current === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+    applyTheme(next);
   });
 
   renderBlockLibrary();
