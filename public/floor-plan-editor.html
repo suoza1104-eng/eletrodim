@@ -483,6 +483,27 @@
     background:var(--surface); border:1px solid var(--panel-border); color:var(--text);
     padding:7px 9px; border-radius:8px; font-size:13px;
   }
+  .prop-field input[type=range]{
+    -webkit-appearance:none; appearance:none;
+    background:transparent; border:none; padding:6px 0; height:20px;
+  }
+  .prop-field input[type=range]::-webkit-slider-runnable-track{
+    height:5px; border-radius:3px; background:var(--surface-border);
+  }
+  .prop-field input[type=range]::-moz-range-track{
+    height:5px; border-radius:3px; background:var(--surface-border);
+  }
+  .prop-field input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; appearance:none;
+    width:16px; height:16px; border-radius:50%;
+    background:var(--accent); border:2px solid var(--panel);
+    box-shadow:0 1px 4px var(--shadow-color); margin-top:-5.5px; cursor:pointer;
+  }
+  .prop-field input[type=range]::-moz-range-thumb{
+    width:16px; height:16px; border-radius:50%;
+    background:var(--accent); border:2px solid var(--panel);
+    box-shadow:0 1px 4px var(--shadow-color); cursor:pointer;
+  }
   .super-panel input,
   .super-panel select{
     background:var(--surface)!important;
@@ -1346,20 +1367,22 @@
     });
 
     if(o.type === 'door'){
+      const hinge = o.mirror ? b : a;
+      const other = o.mirror ? a : b;
       ctx.strokeStyle = isSelected ? getCss('--accent') : getCss('--door');
       ctx.lineWidth = isSelected ? 2.6 : 2;
       ctx.beginPath();
       ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
       ctx.stroke();
-      const leafLen = Math.hypot(b.x-a.x,b.y-a.y);
-      const leafEnd = { x: a.x + nx*leafLen, y: a.y + ny*leafLen };
+      const leafLen = Math.hypot(other.x-hinge.x,other.y-hinge.y);
+      const leafEnd = { x: hinge.x + nx*leafLen, y: hinge.y + ny*leafLen };
       ctx.beginPath();
-      ctx.moveTo(a.x,a.y); ctx.lineTo(leafEnd.x, leafEnd.y);
+      ctx.moveTo(hinge.x,hinge.y); ctx.lineTo(leafEnd.x, leafEnd.y);
       ctx.stroke();
       ctx.beginPath();
-      const angle1 = Math.atan2(b.y-a.y, b.x-a.x);
-      const angle2 = Math.atan2(leafEnd.y-a.y, leafEnd.x-a.x);
-      ctx.arc(a.x, a.y, leafLen, Math.min(angle1,angle2), Math.max(angle1,angle2));
+      const angle1 = Math.atan2(other.y-hinge.y, other.x-hinge.x);
+      const angle2 = Math.atan2(leafEnd.y-hinge.y, leafEnd.x-hinge.x);
+      ctx.arc(hinge.x, hinge.y, leafLen, Math.min(angle1,angle2), Math.max(angle1,angle2));
       ctx.stroke();
     } else {
       ctx.strokeStyle = isSelected ? getCss('--accent') : getCss('--window');
@@ -1374,6 +1397,14 @@
         ctx.stroke();
       });
     }
+
+    const midX = (a.x+b.x)/2, midY = (a.y+b.y)/2;
+    ctx.save();
+    ctx.font = '10px Segoe UI, sans-serif';
+    ctx.fillStyle = isSelected ? getCss('--accent') : getCss('--muted');
+    ctx.textAlign = 'center';
+    ctx.fillText(Math.round(o.widthM*100)+'', midX-wnx*(half+12), midY-wny*(half+12));
+    ctx.restore();
   }
 
   function closestPointOnWall(w, p){
@@ -2039,19 +2070,55 @@
       const opening = openings.find(o=>o.id===selected.id);
       if(!opening){ selected=null; return renderPropertiesPanel(); }
       const isDoor = opening.type==='door';
+      const cm = Math.round(opening.widthM*100);
       container.innerHTML = `
         <div class="stat-row"><span>Tipo</span><span>${isDoor?'Porta':'Janela'}</span></div>
-        <label class="prop-field">Largura (m)<input type="number" id="propOpeningWidth" value="${opening.widthM}" min="0.3" max="3" step="0.05"></label>
-        ${isDoor ? `<button class="wide" id="propOpeningFlip" type="button" style="margin-bottom:8px;">${opening.flip ? '↺ Voltar abertura ao lado padrão' : '↻ Inverter lado da abertura'}</button>` : ''}
+        <label class="prop-field" style="margin-bottom:6px;">Largura do vão
+          <input type="range" id="propOpeningSlider" min="20" max="300" step="1" value="${cm}">
+        </label>
+        <div style="display:flex;align-items:flex-end;gap:8px;margin-bottom:10px;">
+          <label class="prop-field" style="flex:1;margin-bottom:0;">Ajuste fino (cm)
+            <input type="number" id="propOpeningWidthCm" value="${cm}" min="20" max="300" step="1">
+          </label>
+          <div id="propOpeningWidthBadge" style="flex-shrink:0;background:var(--accent-dim);color:var(--active-text);font-size:12px;font-weight:700;padding:8px 10px;border-radius:8px;white-space:nowrap;">${opening.widthM.toFixed(2)} m</div>
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);margin-bottom:10px;cursor:pointer;">
+          <input type="checkbox" id="propOpeningApplyAll"> Aplicar largura a todas as ${isDoor?'Portas':'Janelas'}
+        </label>
+        ${isDoor ? `
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <button class="wide" id="propOpeningFlip" type="button" style="flex:1;">${opening.flip ? '↺ Lado padrão' : '↻ Inverter lado'}</button>
+          <button class="wide" id="propOpeningMirror" type="button" style="flex:1;">${opening.mirror ? '⇋ Dobradiça padrão' : '⇋ Espelhar'}</button>
+        </div>` : ''}
         <button class="wide danger" id="propDeleteBtn" style="background:var(--danger-soft-bg);color:var(--danger-soft-text);border-color:var(--danger);">Excluir ${isDoor?'porta':'janela'} (Delete)</button>`;
-      container.querySelector('#propOpeningWidth').addEventListener('input', (e)=>{
-        const v = +e.target.value;
-        if(v>0) opening.widthM = v;
+
+      const slider = container.querySelector('#propOpeningSlider');
+      const cmInput = container.querySelector('#propOpeningWidthCm');
+      const badge = container.querySelector('#propOpeningWidthBadge');
+      const applyAll = container.querySelector('#propOpeningApplyAll');
+      function applyWidthCm(v){
+        const c = Math.max(20, Math.min(300, v));
+        const m = c/100;
+        if(applyAll.checked){ openings.forEach(o=>{ if(o.type===opening.type) o.widthM = m; }); }
+        else { opening.widthM = m; }
+        badge.textContent = m.toFixed(2)+' m';
         draw(); scheduleSave();
+      }
+      slider.addEventListener('input', (e)=>{
+        const c = +e.target.value; cmInput.value = c; applyWidthCm(c);
+      });
+      cmInput.addEventListener('input', (e)=>{
+        const c = +e.target.value || 20; slider.value = Math.max(20, Math.min(300, c)); applyWidthCm(c);
       });
       const flipBtn = container.querySelector('#propOpeningFlip');
       if(flipBtn) flipBtn.addEventListener('click', ()=>{
         opening.flip = !opening.flip;
+        renderPropertiesPanel();
+        draw(); scheduleSave();
+      });
+      const mirrorBtn = container.querySelector('#propOpeningMirror');
+      if(mirrorBtn) mirrorBtn.addEventListener('click', ()=>{
+        opening.mirror = !opening.mirror;
         renderPropertiesPanel();
         draw(); scheduleSave();
       });
@@ -2912,7 +2979,7 @@
     } else if(tool==='door' || tool==='window'){
       const near = findWallNear(world, 0.3);
       if(near){
-        openings.push({ id: nextId++, wallId: near.wall.id, type: tool, t: near.t, widthM: tool==='door'?0.8:1.2, flip:false });
+        openings.push({ id: nextId++, wallId: near.wall.id, type: tool, t: near.t, widthM: tool==='door'?0.8:1.2, flip:false, mirror:false });
       }
     } else if(tool==='room'){
       const faces = computeRoomFaces();
@@ -3365,7 +3432,7 @@
         id: o.id, parede_id: o.wallId,
         tipo: o.type==='door'?'porta':'janela',
         posicao_relativa: +o.t.toFixed(3), largura_m: o.widthM,
-        invertido: !!o.flip
+        invertido: !!o.flip, espelhado: !!o.mirror
       })),
       comodos: buildComodosPayload(),
       simbolos: symbols.map(s=>{
