@@ -2364,7 +2364,19 @@
 
   function renderPropertiesPanel(){
     const appEl = document.querySelector('.app');
-    if(appEl) appEl.classList.toggle('no-props', !selected && selectedMulti.length===0);
+    if(appEl){
+      const shouldHide = !selected && selectedMulti.length===0;
+      const wasHidden = appEl.classList.contains('no-props');
+      appEl.classList.toggle('no-props', shouldHide);
+      if(wasHidden !== shouldHide){
+        // a coluna de propriedades some/aparece com transição CSS — o
+        // canvas tem largura/altura fixas em pixels (atributos width/height,
+        // não CSS), então precisa recalcular depois que o layout mudar,
+        // senão sobra área em branco (ou corta) em vez do grid preencher
+        resize();
+        setTimeout(resize, 160);
+      }
+    }
     const container = document.getElementById('propContent');
     if(selectedMulti.length>0){
       container.innerHTML = `
