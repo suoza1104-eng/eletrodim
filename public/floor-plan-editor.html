@@ -5,16 +5,16 @@
 <title>Editor de Planta Baixa — v2 (blocos)</title>
 <style>
   :root{
-    --bg: #14171a;
-    --panel: #1b1f24;
-    --panel-border: #2a2f36;
-    --grid-minor: #22262b;
-    --grid-major: #2d333b;
-    --text: #e6e9ec;
-    --muted: #8a92a0;
-    --accent: #ff8a3d;
-    --accent-dim: #7a4522;
-    --wall: #d7dbe0;
+    --bg: #f7f9fc;
+    --panel: #ffffff;
+    --panel-border: #dfe6ef;
+    --grid-minor: #edf2f7;
+    --grid-major: #dfe7f0;
+    --text: #182132;
+    --muted: #64748b;
+    --accent: #ff8737;
+    --accent-dim: #fff0e6;
+    --wall: #3f4652;
     --door: #7fd1ae;
     --window: #5fb4e0;
     --danger: #e2564f;
@@ -48,8 +48,10 @@
     align-items:center;
     justify-content:space-between;
     padding: 10px 18px;
-    background: var(--panel);
+    background: rgba(255,255,255,.96);
+    backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--panel-border);
+    box-shadow:0 6px 18px rgba(15,23,42,.05);
   }
   header h1{
     font-size: 15px;
@@ -69,23 +71,29 @@
     flex-wrap:wrap;
   }
   .tool-btn{
-    background: #23282e;
+    background: #ffffff;
     border: 1px solid var(--panel-border);
     color: var(--text);
     padding: 7px 12px;
     font-size: 12.5px;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor:pointer;
     display:flex;
     align-items:center;
     gap:6px;
-    transition: background .12s, border-color .12s;
+    box-shadow:0 2px 7px rgba(15,23,42,.04);
+    transition: background .12s, border-color .12s, box-shadow .12s, transform .12s;
   }
-  .tool-btn:hover{ background:#2a3038; }
+  .tool-btn:hover{
+    background:#f8fafc;
+    border-color:#cbd5e1;
+    box-shadow:0 8px 18px rgba(15,23,42,.08);
+    transform:translateY(-1px);
+  }
   .tool-btn.active{
     background: var(--accent-dim);
     border-color: var(--accent);
-    color: #ffd9b8;
+    color: #9a3b00;
   }
   .tool-btn.danger:hover{ border-color: var(--danger); color:#ffb3af; }
   .tool-btn.zoom{ padding:7px 10px; font-weight:700; }
@@ -139,11 +147,11 @@
     max-height:calc(100vh - 92px);
     overflow:auto;
     overflow-x:hidden;
-    background:#1b2027;
-    border:1px solid rgba(148,163,184,.22);
-    box-shadow:0 22px 55px rgba(0,0,0,.36), 0 0 0 1px rgba(255,255,255,.03) inset;
-    border-radius:12px;
-    padding:12px;
+    background:#ffffff;
+    border:1px solid rgba(203,213,225,.9);
+    box-shadow:0 22px 55px rgba(15,23,42,.16), 0 1px 0 rgba(255,255,255,.95) inset;
+    border-radius:14px;
+    padding:14px;
     z-index:12;
     opacity:0;
     pointer-events:none;
@@ -163,17 +171,17 @@
   }
   .super-panel .panel-block:last-child{ margin-bottom:0; }
   .super-panel h2{
-    color:#93a4ba;
+    color:#64748b;
     letter-spacing:.6px;
     text-transform:uppercase;
   }
   .cad-toggle{
-    background:#23282e;
+    background:#ffffff;
     border:1px solid var(--panel-border);
     color:var(--text);
     padding:7px 10px;
     font-size:12px;
-    border-radius:6px;
+    border-radius:8px;
     cursor:pointer;
     display:flex;
     align-items:center;
@@ -182,18 +190,19 @@
   .cad-toggle.active{
     background:var(--accent-dim);
     border-color:var(--accent);
-    color:#ffd9b8;
+    color:#9a3b00;
   }
   canvas{ display:block; cursor: crosshair; }
   .hint{
     position:absolute;
     bottom:12px;
     left:12px;
-    background: rgba(27,31,36,.9);
+    background: rgba(255,255,255,.94);
     border:1px solid var(--panel-border);
     padding:6px 10px;
     font-size:11.5px;
     color: var(--muted);
+    box-shadow:0 10px 24px rgba(15,23,42,.08);
     border-radius:6px;
     pointer-events:none;
     max-width:60%;
@@ -202,7 +211,7 @@
     position:absolute;
     top:12px;
     left:12px;
-    background: rgba(27,31,36,.9);
+    background: rgba(255,255,255,.94);
     border:1px solid var(--panel-border);
     padding:6px 10px;
     font-size:11.5px;
@@ -210,6 +219,7 @@
     border-radius:6px;
     pointer-events:none;
     font-variant-numeric: tabular-nums;
+    box-shadow:0 10px 24px rgba(15,23,42,.08);
   }
   aside{
     background: var(--panel);
@@ -253,9 +263,9 @@
     align-items:center;
     font-size:12.5px;
     padding:6px 8px;
-    background:#20252b;
-    border-radius:5px;
-    border:1px solid transparent;
+    background:#f8fafc;
+    border-radius:8px;
+    border:1px solid #e2e8f0;
   }
   ul.item-list li.selected{ border-color: var(--accent); }
   ul.item-list li.error{ border-color: var(--danger); }
@@ -263,43 +273,46 @@
   ul.item-list li .len.err{ color: var(--danger); }
   button.wide{
     width:100%;
-    padding:9px;
-    border-radius:6px;
+    padding:9px 11px;
+    border-radius:9px;
     border:1px solid var(--panel-border);
-    background:#23282e;
+    background:#f8fafc;
     color:var(--text);
     font-size:13px;
     cursor:pointer;
+    font-weight:700;
+    transition:filter .12s, transform .12s, box-shadow .12s;
   }
   button.wide.primary{
-    background: var(--accent);
+    background: linear-gradient(135deg, #ff9b47, #ff7a2f);
     border-color: var(--accent);
     color:#1a1000;
-    font-weight:600;
+    font-weight:800;
+    box-shadow:0 10px 20px rgba(255,135,55,.22);
   }
-  button.wide:hover{ filter:brightness(1.1); }
+  button.wide:hover{ filter:brightness(1.03); transform:translateY(-1px); box-shadow:0 12px 22px rgba(15,23,42,.08); }
   textarea{
     width:100%;
     height:140px;
-    background:#101317;
+    background:#f8fafc;
     border:1px solid var(--panel-border);
-    color:#9be29b;
+    color:#166534;
     font-family: 'Consolas', monospace;
     font-size:11px;
-    border-radius:6px;
+    border-radius:9px;
     padding:8px;
     resize:vertical;
     display:none;
   }
   textarea.show{ display:block; }
-  .empty{ color: var(--muted); font-size:12.5px; padding:8px 0;}
+  .empty{ color: var(--muted); font-size:12.5px; padding:8px 0; line-height:1.45;}
   .mini-modal{
     position:absolute;
     background: var(--panel);
     border:1px solid var(--accent);
-    border-radius:8px;
+    border-radius:12px;
     padding:12px;
-    box-shadow: 0 8px 24px rgba(0,0,0,.45);
+    box-shadow: 0 18px 48px rgba(15,23,42,.18);
     z-index:20;
     display:flex;
     flex-direction:column;
@@ -388,10 +401,26 @@
   .block-grid{ display:flex; flex-wrap:wrap; gap:6px; }
   .prop-field{ display:flex; flex-direction:column; gap:3px; font-size:11px; color:var(--muted); margin-bottom:8px; }
   .prop-field input, .prop-field select{
-    background:#101317; border:1px solid var(--panel-border); color:var(--text);
-    padding:6px 8px; border-radius:5px; font-size:13px;
+    background:#f8fafc; border:1px solid var(--panel-border); color:var(--text);
+    padding:7px 9px; border-radius:8px; font-size:13px;
   }
-  .np-row{ display:flex; flex-direction:column; gap:4px; padding:6px; background:#20252b; border-radius:5px; }
+  .super-panel input,
+  .super-panel select{
+    background:#f8fafc!important;
+    border:1px solid #dbe4ee!important;
+    color:#111827!important;
+    border-radius:8px!important;
+  }
+  .block-grid .tool-btn{
+    background:#f8fafc;
+    border-color:#e2e8f0;
+    border-radius:9px;
+  }
+  .block-grid .tool-btn:hover{
+    background:#ffffff;
+    border-color:#cbd5e1;
+  }
+  .np-row{ display:flex; flex-direction:column; gap:4px; padding:6px; background:#f8fafc; border-radius:8px; }
 </style>
 </head>
 <body>
@@ -432,8 +461,8 @@
     <button class="left-icon" data-tool="rect" title="Rectangle">▭</button>
     <button class="left-icon" data-tool="room" title="Marcar cômodo">▣</button>
     <button class="left-icon" data-tool="select" title="Selecionar">⌖</button>
-    <button class="left-icon" id="btnBlocksPanel" title="Biblioteca de blocos">◉</button>
-    <button class="left-icon" id="btnSuperpowers" title="Superpoderes">✣</button>
+    <button class="left-icon" id="btnBlocksPanel" aria-label="Biblioteca de blocos">◉</button>
+    <button class="left-icon" id="btnSuperpowers" aria-label="Superpoderes">✣</button>
   </nav>
   <main>
     <canvas id="canvas"></canvas>
@@ -484,6 +513,11 @@
         <button class="wide primary" id="btnMaterial">Calcular materiais</button>
         <div class="empty" id="materialEmpty">Distribua os cabos primeiro. O calculo soma o trecho horizontal com descidas/subidas e margem.</div>
         <ul class="item-list" id="materialList" style="margin-top:8px;"></ul>
+      </div>
+      <div class="panel-block">
+        <h2>PROJETO ELETRODIM</h2>
+        <button class="wide primary" id="btnSendRooms">Enviar cômodos para o projeto</button>
+        <div class="empty">Use depois de marcar/nomear os cômodos fechados. O editor também sincroniza automaticamente quando a planta muda.</div>
       </div>
     </div>
   </main>
@@ -568,7 +602,7 @@
     </div>
     <div class="panel-block">
       <h2>PROJETO ELETRODIM</h2>
-      <button class="wide primary" id="btnSendRooms">Enviar cômodos para o projeto</button>
+      <button class="wide primary" type="button">Enviar cômodos para o projeto</button>
       <div style="font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.4;">Envia nome, área e perímetro de cada cômodo fechado pro assistente de dimensionamento (só funciona quando este editor está aberto dentro do EletroDIM).</div>
     </div>
   </aside>
@@ -714,10 +748,37 @@
     }, 450);
   }
 
+  let roomSyncTimer = null;
+  let lastRoomSyncPayload = '';
+  function postRoomsToProject(autoSync = false){
+    const comodos = buildComodosPayload();
+    const fechados = comodos.filter(c=>c.fechado);
+    if(fechados.length===0){
+      if(!autoSync) showToast('Nenhum cômodo fechado ainda — desenhe as paredes ao redor e use "Nomear cômodo" antes de enviar.');
+      return false;
+    }
+    const payload = JSON.stringify(fechados);
+    if(autoSync && payload === lastRoomSyncPayload) return true;
+    lastRoomSyncPayload = payload;
+    window.parent.postMessage({
+      type:'eletrodim:floorplan-rooms',
+      comodos: fechados,
+      autoSync
+    }, window.location.origin==='null' ? '*' : window.location.origin);
+    if(!autoSync) showToast(`${fechados.length} cômodo(s) enviado(s) para o projeto.`);
+    return true;
+  }
+
+  function scheduleRoomSync(){
+    clearTimeout(roomSyncTimer);
+    roomSyncTimer = setTimeout(()=>postRoomsToProject(true), 700);
+  }
+
   function afterChange(){
     draw();
     updateStats();
     scheduleSave();
+    scheduleRoomSync();
   }
 
   // ---------------------------------------------------------------
@@ -2495,10 +2556,30 @@
     updateStats();
   });
 
+  function activateSelectMode(){
+    tool = 'select';
+    activeBlockId = null;
+    chainStart = null;
+    ductChainStart = null;
+    rectStart = null;
+    hoverDuct = null;
+    removeOpenModals();
+    document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.left-icon').forEach(b=>b.classList.remove('active'));
+    const selectToolBtn = document.querySelector('.tool-btn[data-tool="select"]');
+    const selectLeftBtn = document.querySelector('.left-icon[data-tool="select"]');
+    if(selectToolBtn) selectToolBtn.classList.add('active');
+    if(selectLeftBtn) selectLeftBtn.classList.add('active');
+    hintBox.textContent = 'Clique numa parede, bloco, eletroduto ou cômodo para selecionar. Delete remove o item selecionado.';
+    renderBlockLibrary();
+    draw();
+    updateStats();
+  }
+
   window.addEventListener('keydown', (e)=>{
     const activeTag = document.activeElement && document.activeElement.tagName;
     const isEditingField = activeTag==='INPUT' || activeTag==='SELECT' || activeTag==='TEXTAREA';
-    if(e.key === 'Escape'){ chainStart = null; ductChainStart = null; rectStart = null; removeOpenModals(); draw(); updateStats(); }
+    if(e.key === 'Escape' && !isEditingField){ activateSelectMode(); }
     if((e.key === 'Delete' || e.key === 'Backspace') && !isEditingField){
       if(!document.querySelector('.mini-modal')) deleteSelected();
     }

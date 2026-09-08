@@ -265,7 +265,7 @@
                     window.addEventListener('message', (e) => {
                         if (e.origin !== window.location.origin) return;
                         if (e.data && e.data.type === 'eletrodim:floorplan-rooms') {
-                            $wire.importRoomsFromFloorPlan(e.data.comodos);
+                            $wire.importRoomsFromFloorPlan(e.data.comodos, !!e.data.autoSync);
                         }
                     });
                 }

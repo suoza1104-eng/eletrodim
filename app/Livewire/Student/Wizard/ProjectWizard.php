@@ -1295,7 +1295,7 @@ class ProjectWizard extends Component
      * linhas de $rooms, reaproveitando o mesmo cálculo de cargas mínimas
      * (iluminação/TUG) usado no cadastro manual.
      */
-    public function importRoomsFromFloorPlan(array $comodos): void
+    public function importRoomsFromFloorPlan(array $comodos, bool $autoSync = false): void
     {
         $imported = 0;
         foreach ($comodos as $c) {
@@ -1307,6 +1307,7 @@ class ProjectWizard extends Component
             if ($area === null && $perimetro === null) continue;
 
             $projectRoomId = $c['project_room_id'] ?? null;
+            $cadRoomId = $c['id'] ?? null;
             $roomIndex = null;
             if ($projectRoomId) {
                 foreach ($this->rooms as $idx => $existingRoom) {
@@ -1316,8 +1317,19 @@ class ProjectWizard extends Component
                     }
                 }
             }
+            if ($roomIndex === null && $cadRoomId) {
+                foreach ($this->rooms as $idx => $existingRoom) {
+                    if ((string)($existingRoom['cad_room_id'] ?? '') === (string)$cadRoomId) {
+                        $roomIndex = $idx;
+                        break;
+                    }
+                }
+            }
 
             $room = $roomIndex !== null ? $this->rooms[$roomIndex] : $this->emptyRoom(count($this->rooms));
+            if ($cadRoomId) {
+                $room['cad_room_id'] = $cadRoomId;
+            }
             $room['room_type']   = $this->guessRoomType($nome);
             $room['description'] = $nome;
             $room['area_m2']     = $area      !== null ? (string)$area      : '';
@@ -1333,12 +1345,14 @@ class ProjectWizard extends Component
             $imported++;
         }
 
-        if ($imported > 0) {
+        if ($imported > 0 && $autoSync) {
+            $this->dispatch('room-added');
+        } elseif ($imported > 0) {
             $this->showFloorPlanEditor = false;
             $this->projectInputMode = 'manual';
             $this->successMessage = "{$imported} cômodo(s) importado(s) da planta baixa. Confira o tipo de cada cômodo (foi adivinhado pelo nome) antes de avançar.";
             $this->dispatch('room-added');
-        } else {
+        } elseif (!$autoSync) {
             $this->errorMessage = 'Nenhum cômodo fechado foi recebido da planta — desenhe as paredes ao redor e nomeie os cômodos antes de enviar.';
         }
     }
