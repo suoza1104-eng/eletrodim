@@ -564,6 +564,8 @@
       <button class="cad-toggle active" id="btnOsnap" type="button">OSNAP</button>
       <button class="cad-toggle" id="btnOtrack" type="button">OTRACK</button>
       <span style="width:1px;background:var(--panel-border);align-self:stretch;margin:0 2px;"></span>
+      <button class="cad-toggle active" id="btnUnit" type="button" title="Unidade usada ao digitar o comprimento de uma linha (Enter confirma)">Unidade: cm</button>
+      <span style="width:1px;background:var(--panel-border);align-self:stretch;margin:0 2px;"></span>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);">Escala símbolos
         <input type="number" id="symbolScaleInput" value="1.5" min="0.5" max="4" step="0.1" style="width:52px;background:var(--surface);border:1px solid var(--panel-border);color:var(--text);padding:5px 6px;border-radius:5px;">
       </label>
@@ -722,6 +724,8 @@
   let osnapMode = true;
   let otrackMode = false;
   let rectStart = null;
+  let measureUnit = 'cm'; // 'cm' ou 'm' — como interpretar o número digitado ao desenhar uma linha
+  let typedLength = '';   // buffer do comprimento digitado durante Line/Eletroduto (confirma com Enter)
 
   // ---------------------------------------------------------------
   // Biblioteca de blocos: cada símbolo colocado na planta referencia
@@ -781,7 +785,7 @@
       cableResult, ductRules, materialResult,
       blockLibrary, nextBlockId, nextRuleId, nextId,
       view: { zoom, origin },
-      settings: { symbolScale, orthoMode, osnapMode, otrackMode },
+      settings: { symbolScale, orthoMode, osnapMode, otrackMode, measureUnit },
       projectRooms: pendingProjectRooms
     };
   }
@@ -812,6 +816,7 @@
       orthoMode = state.settings.orthoMode !== false;
       osnapMode = state.settings.osnapMode !== false;
       otrackMode = !!state.settings.otrackMode;
+      measureUnit = (state.settings.measureUnit === 'm') ? 'm' : 'cm';
     }
     syncCadToggles();
     renderBlockLibrary();
@@ -1055,6 +1060,29 @@
   }
 
   function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+
+  // Entrada dinâmica de comprimento (estilo AutoCAD): mantém a direção já
+  // resolvida pelo mouse/ORTO (dirPoint) mas troca a distância pelo valor
+  // digitado, na unidade escolhida em measureUnit.
+  function pointAtLength(start, dirPoint, lengthM){
+    const dx = dirPoint.x - start.x, dy = dirPoint.y - start.y;
+    const len = Math.hypot(dx,dy) || 1e-9;
+    const ux = dx/len, uy = dy/len;
+    return { x: start.x + ux*lengthM, y: start.y + uy*lengthM };
+  }
+  function parseTypedLength(str){
+    const v = parseFloat(String(str).replace(',', '.'));
+    if(!isFinite(v) || v<=0) return null;
+    return measureUnit === 'cm' ? v/100 : v;
+  }
+  function commitWallSegment(endpoint){
+    if(!chainStart) return;
+    if(dist(chainStart, endpoint) > 0.05){
+      walls.push({ id: nextId++, x1: chainStart.x, y1: chainStart.y, x2: endpoint.x, y2: endpoint.y });
+    }
+    chainStart = endpoint;
+    typedLength = '';
+  }
 
   function drawGrid(){
     const w = canvas.width, h = canvas.height;
@@ -1438,7 +1466,9 @@
     }
     if(tool==='wall' && chainStart){
       const p1 = worldToScreen(chainStart.x, chainStart.y);
-      const snapped = applyOrtho(chainStart, snapPoint(mouseWorld));
+      const dirPoint = applyOrtho(chainStart, snapPoint(mouseWorld));
+      const typedM = typedLength ? parseTypedLength(typedLength) : null;
+      const snapped = typedM!==null ? pointAtLength(chainStart, dirPoint, typedM) : dirPoint;
       const p2 = worldToScreen(snapped.x, snapped.y);
       ctx.strokeStyle = getCss('--accent');
       ctx.lineWidth = 2;
@@ -1447,10 +1477,12 @@
       ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
       ctx.stroke();
       ctx.setLineDash([]);
-      const len = dist(chainStart, snapped);
       ctx.fillStyle = getCss('--accent');
       ctx.font = '12px Segoe UI, sans-serif';
-      ctx.fillText(len.toFixed(2)+' m', (p1.x+p2.x)/2+10, (p1.y+p2.y)/2-10);
+      const label = typedLength
+        ? (typedLength + (measureUnit==='cm' ? ' cm' : ' m') + ' ↵')
+        : (dist(chainStart, snapped).toFixed(2)+' m');
+      ctx.fillText(label, (p1.x+p2.x)/2+10, (p1.y+p2.y)/2-10);
     }
     if(tool==='rect' && rectStart){
       const end = snapPoint(mouseWorld);
@@ -2201,9 +2233,11 @@
     const ortho = document.getElementById('btnOrtho');
     const osnap = document.getElementById('btnOsnap');
     const otrack = document.getElementById('btnOtrack');
+    const unit = document.getElementById('btnUnit');
     if(ortho) ortho.classList.toggle('active', orthoMode);
     if(osnap) osnap.classList.toggle('active', osnapMode);
     if(otrack) otrack.classList.toggle('active', otrackMode);
+    if(unit) unit.textContent = 'Unidade: '+measureUnit;
   }
   document.getElementById('btnOrtho').addEventListener('click', ()=>{
     orthoMode = !orthoMode; syncCadToggles(); scheduleSave();
@@ -2213,6 +2247,10 @@
   });
   document.getElementById('btnOtrack').addEventListener('click', ()=>{
     otrackMode = !otrackMode; syncCadToggles(); scheduleSave();
+  });
+  document.getElementById('btnUnit').addEventListener('click', ()=>{
+    measureUnit = measureUnit === 'cm' ? 'm' : 'cm';
+    syncCadToggles(); scheduleSave();
   });
   function bindFloatingPanel(buttonId, panelId){
     const button = document.getElementById(buttonId);
@@ -2402,11 +2440,7 @@
       if(!chainStart){
         chainStart = snapped;
       } else {
-        snapped = applyOrtho(chainStart, snapped);
-        if(dist(chainStart, snapped) > 0.05){
-          walls.push({ id: nextId++, x1: chainStart.x, y1: chainStart.y, x2: snapped.x, y2: snapped.y });
-        }
-        chainStart = snapped;
+        commitWallSegment(applyOrtho(chainStart, snapped));
       }
     } else if(tool==='rect'){
       if(!rectStart){
@@ -2683,6 +2717,7 @@
     chainStart = null;
     ductChainStart = null;
     rectStart = null;
+    typedLength = '';
     draw();
     updateStats();
   });
@@ -2693,6 +2728,7 @@
     chainStart = null;
     ductChainStart = null;
     rectStart = null;
+    typedLength = '';
     hoverDuct = null;
     removeOpenModals();
     document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>b.classList.remove('active'));
@@ -2710,9 +2746,41 @@
   window.addEventListener('keydown', (e)=>{
     const activeTag = document.activeElement && document.activeElement.tagName;
     const isEditingField = activeTag==='INPUT' || activeTag==='SELECT' || activeTag==='TEXTAREA';
+    const hasModal = !!document.querySelector('.mini-modal');
+    const noMods = !e.ctrlKey && !e.metaKey && !e.altKey;
+
+    // Entrada dinâmica de comprimento: com uma parede em andamento, digitar
+    // números define a distância exata (na unidade escolhida) na direção
+    // já resolvida pelo mouse/ORTO — Enter confirma, Esc cancela só o
+    // número digitado (sem cancelar a corrente inteira).
+    const isTypingLength = tool==='wall' && !!chainStart && !isEditingField && !hasModal;
+    if(isTypingLength && noMods && /^[0-9]$/.test(e.key)){
+      typedLength += e.key; e.preventDefault(); draw(); return;
+    }
+    if(isTypingLength && noMods && (e.key==='.' || e.key===',') && !typedLength.includes('.')){
+      typedLength += (typedLength===''? '0.' : '.'); e.preventDefault(); draw(); return;
+    }
+    if(isTypingLength && typedLength!=='' && (e.key==='Backspace' || e.key==='Delete')){
+      typedLength = typedLength.slice(0, -1); e.preventDefault(); draw(); return;
+    }
+    if(isTypingLength && typedLength!=='' && e.key==='Enter'){
+      const lengthM = parseTypedLength(typedLength);
+      if(lengthM!==null){
+        const dirPoint = applyOrtho(chainStart, snapPoint(mouseWorld));
+        commitWallSegment(pointAtLength(chainStart, dirPoint, lengthM));
+        afterChange();
+      } else {
+        typedLength = ''; draw();
+      }
+      e.preventDefault(); return;
+    }
+    if(isTypingLength && typedLength!=='' && e.key==='Escape'){
+      typedLength = ''; e.preventDefault(); draw(); return;
+    }
+
     if(e.key === 'Escape' && !isEditingField){ activateSelectMode(); }
     if((e.key === 'Delete' || e.key === 'Backspace') && !isEditingField){
-      if(!document.querySelector('.mini-modal')) deleteSelected();
+      if(!hasModal) deleteSelected();
     }
   });
 
@@ -2725,12 +2793,13 @@
       chainStart = null;
       ductChainStart = null;
       rectStart = null;
+      typedLength = '';
       selected = null;
       hoverDuct = null;
       removeOpenModals();
       renderBlockLibrary();
       const hints = {
-        wall: 'Clique para começar a desenhar uma parede. Cada clique adiciona um trecho. Clique direito ou Esc encerra a corrente.',
+        wall: 'Clique para começar a desenhar uma parede. Depois do 1º ponto, digite um número pra definir a medida exata (Enter confirma) — a unidade é a que estiver marcada em "Unidade". Clique direito ou Esc encerra a corrente.',
         door: 'Clique sobre uma parede existente para inserir uma porta (0,80 m).',
         window: 'Clique sobre uma parede existente para inserir uma janela (1,20 m).',
         room: 'Clique no meio de um cômodo já fechado por paredes para nomeá-lo e calcular área e perímetro.',
@@ -2775,7 +2844,7 @@
   document.getElementById('btnClear').addEventListener('click', ()=>{
     if(confirm('Apagar toda a planta atual?')){
       walls = []; openings = []; rooms = []; symbols = []; ducts = [];
-      cableResult = null; materialResult = null; selected = null; chainStart = null; ductChainStart = null;
+      cableResult = null; materialResult = null; selected = null; chainStart = null; ductChainStart = null; typedLength = '';
       afterChange();
     }
   });
