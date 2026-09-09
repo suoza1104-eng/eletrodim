@@ -15,16 +15,15 @@ use Illuminate\Support\Facades\DB;
 
 class ProjectWizard extends Component
 {
-    public const TOTAL_STEPS = 8;
+    public const TOTAL_STEPS = 7;
     public const STEP_LABELS = [
         1 => 'Dados do Projeto',
-        2 => 'Cadastro dos Cômodos e Cargas Mínimas',
-        3 => 'Levantamento das Cargas',
-        4 => 'Atribuição de Circuitos',
-        5 => 'Memorial de Cálculo e Dimensionamento',
-        6 => 'Distribuição de Fases',
-        7 => 'Eletrodutos / DPS / IDR',
-        8 => 'Padrão de Entrada',
+        2 => 'Cômodos e Cargas',
+        3 => 'Atribuição de Circuitos',
+        4 => 'Memorial de Cálculo e Dimensionamento',
+        5 => 'Distribuição de Fases',
+        6 => 'Eletrodutos / DPS / IDR',
+        7 => 'Padrão de Entrada',
     ];
 
     public const ROOM_TYPES = [
@@ -377,11 +376,11 @@ class ProjectWizard extends Component
             if ($this->currentStep >= 3) {
                 $this->loadLoadsFromDb();
                 if ($this->hasRoomsMissingFromLoads()) {
-                    $this->generateLoadsFromRooms();
+                    $this->generateLoadsFromRooms(false);
                 }
             }
 
-            if ($this->currentStep >= 5) {
+            if ($this->currentStep >= 4) {
                 $this->loadCircuitOverrides();
                 $this->loadPhaseAssignments();
                 $this->loadServiceEntrance();
@@ -410,16 +409,17 @@ class ProjectWizard extends Component
         $this->currentStep = min($this->currentStep + 1, self::TOTAL_STEPS);
         $this->updateProgress();
 
-        if ($this->currentStep === 3 || $this->currentStep === 4) {
+        if ($this->currentStep === 3) {
             if (empty($this->loads)) {
                 $this->loadLoadsFromDb();
             }
             if (empty($this->loads) || $this->hasRoomsMissingFromLoads()) {
-                $this->generateLoadsFromRooms();
+                $this->generateLoadsFromRooms(false);
+                $this->saveStep3();
             }
         }
 
-        if ($this->currentStep >= 5 && empty($this->circuitOverrides)) {
+        if ($this->currentStep >= 4 && empty($this->circuitOverrides)) {
             $this->loadCircuitOverrides();
             $this->loadPhaseAssignments();
             $this->loadServiceEntrance();
@@ -480,16 +480,17 @@ class ProjectWizard extends Component
             $this->clearMessages();
             $this->currentStep = $step;
 
-            if ($step === 3 || $step === 4) {
+            if ($step === 3) {
                 if (empty($this->loads)) {
                     $this->loadLoadsFromDb();
                 }
                 if (empty($this->loads) || $this->hasRoomsMissingFromLoads()) {
-                    $this->generateLoadsFromRooms();
+                    $this->generateLoadsFromRooms(false);
+                    $this->saveStep3();
                 }
             }
 
-            if ($step >= 5 && empty($this->circuitOverrides)) {
+            if ($step >= 4 && empty($this->circuitOverrides)) {
                 $this->loadCircuitOverrides();
                 $this->loadPhaseAssignments();
                 $this->loadServiceEntrance();
@@ -552,11 +553,17 @@ class ProjectWizard extends Component
                 'name.min'          => 'O nome deve ter pelo menos 3 caracteres.',
                 'clientEmail.email' => 'E-mail do cliente inválido.',
             ]),
-            2 => $this->validateRoomsStep2(),
-            3 => $this->validateLoads(),
-            4 => $this->validateStep4(),
+            2 => $this->validateRoomsStep2AndLoads(),
+            3 => $this->validateStep4(),
             default => null,
         };
+    }
+
+    private function validateRoomsStep2AndLoads(): void
+    {
+        $this->validateRoomsStep2();
+        $this->syncLoadRoomReferences();
+        $this->validateLoads();
     }
 
     private function validateRoomsStep2(): void
@@ -635,16 +642,40 @@ class ProjectWizard extends Component
         DB::transaction(function () {
             match ($this->currentStep) {
                 1 => $this->saveStep1(),
-                2 => $this->saveStep2(),
-                3 => $this->saveStep3(),
-                4 => $this->saveStep4(),
-                5 => $this->saveStep5(),
-                6 => $this->saveStep6(),
-                7 => $this->saveStep7(),
-                8 => $this->saveStep8(),
+                2 => $this->saveStep2AndLoads(),
+                3 => $this->saveStep4(),
+                4 => $this->saveStep5(),
+                5 => $this->saveStep6(),
+                6 => $this->saveStep7(),
+                7 => $this->saveStep8(),
                 default => null,
             };
         });
+    }
+
+    private function saveStep2AndLoads(): void
+    {
+        $this->saveStep2();
+        $this->syncLoadRoomReferences();
+        $this->generateLoadsFromRooms(false);
+        $this->syncLoadRoomReferences();
+        $this->saveStep3();
+    }
+
+    private function syncLoadRoomReferences(): void
+    {
+        foreach ($this->loads as &$load) {
+            $roomIndex = (int)($load['room_index'] ?? 0);
+            if (!isset($this->rooms[$roomIndex])) {
+                continue;
+            }
+
+            $room = $this->rooms[$roomIndex];
+            $load['room_id'] = $room['id'] ?? ($load['room_id'] ?? null);
+            $load['room_label'] = trim(($room['room_type'] ?? '') . ': ' . ($room['description'] ?? ''), ': ');
+            $load['floor_number'] = max(1, (int)($room['floor_number'] ?? 1));
+        }
+        unset($load);
     }
 
     public function saveStep1(): void
@@ -2032,6 +2063,9 @@ class ProjectWizard extends Component
         $room['total_minimum_va_final']      = $room['total_minimum_va_calculated'];
 
         unset($room);
+
+        $this->syncLoadRoomReferences();
+        $this->generateLoadsFromRooms(false);
     }
 
     public function recalculateAllRooms(): void
@@ -2063,9 +2097,11 @@ class ProjectWizard extends Component
 
     // ─── Step 3: Geração e cálculo de cargas ─────────────
 
-    public function generateLoadsFromRooms(): void
+    public function generateLoadsFromRooms(bool $showMessage = true): void
     {
-        $this->pushHistory();
+        if ($showMessage) {
+            $this->pushHistory();
+        }
         // Separate existing TUEs (manual) and auto loads
         $existingTues     = [];
         $existingAutoLoads = [];
@@ -2125,7 +2161,9 @@ class ProjectWizard extends Component
         }
 
         foreach ($this->loads as $load) {
-            $rid = (string)($load['room_id'] ?? '');
+            $rid = !empty($load['room_id'])
+                ? (string)$load['room_id']
+                : 'i' . (int)($load['room_index'] ?? 0);
             if (!($load['is_auto'] ?? false)) {
                 $existingTues[$rid][] = $load;
             } else {
@@ -2139,7 +2177,7 @@ class ProjectWizard extends Component
         foreach ($this->rooms as $ri => $room) {
             $roomId    = $room['id'] ?? null;
             $roomLabel = trim(($room['room_type'] ?? '') . ': ' . ($room['description'] ?? ''), ': ');
-            $rid       = (string)$roomId;
+            $rid       = $roomId !== null ? (string)$roomId : 'i' . $ri;
 
             // Effective lighting VA from Step 2
             $lightingVa = 0;
@@ -2315,7 +2353,9 @@ class ProjectWizard extends Component
             $this->calculateLoad($li);
         }
 
-        $this->successMessage = 'Cargas atualizadas a partir dos cômodos.';
+        if ($showMessage) {
+            $this->successMessage = 'Cargas atualizadas a partir dos cômodos.';
+        }
     }
 
     private function sortLoadsBySequence(): void
@@ -2351,6 +2391,9 @@ class ProjectWizard extends Component
     public function addTueLoad(int $roomIndex): void
     {
         if (!isset($this->rooms[$roomIndex])) return;
+        if ($this->projectId && empty($this->rooms[$roomIndex]['id'])) {
+            $this->saveStep2();
+        }
         $this->pushHistory();
         $room      = $this->rooms[$roomIndex];
         $roomId    = $room['id'] ?? null;
