@@ -449,207 +449,17 @@
                         </div>
                     </div>
 
-                    {{-- Resultados dos cálculos --}}
+                    {{-- Cargas do cômodo: um único bloco compacto (sem repetir os
+                    mesmos totais em cards separados) — cada carga aparece como
+                    uma linha resumida, e clicar nela expande alimentação,
+                    tensão, fp e potência (editáveis). Agrupamento e
+                    temperatura ficam pra etapa de dimensionamento. --}}
                     @if($hasCalc)
-                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-stretch">
-
-                        {{-- Card: Iluminação --}}
-                        <div class="bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3.5 h-full flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between gap-1.5 mb-2 relative" x-data="{ showInfo: false }">
-                                    <div class="flex items-center gap-1.5">
-                                        <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-                                        <span class="text-xs font-bold text-blue-800 dark:text-blue-300 uppercase tracking-wide">Iluminação</span>
-                                    </div>
-                                    <button @click="showInfo = !showInfo" @click.away="showInfo = false" type="button" class="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center justify-center hover:bg-blue-200 dark:hover:bg-blue-800 transition focus:outline-none" title="Informações da Norma (NBR 5410)">
-                                        i
-                                    </button>
-                                    <div x-show="showInfo" x-transition.opacity style="display:none;" class="absolute right-0 top-7 z-30 w-64 p-3 bg-white dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-200 rounded-lg shadow-xl border border-blue-200 dark:border-blue-800 leading-relaxed">
-                                        <div class="font-bold text-blue-700 dark:text-blue-300 mb-1">NBR 5410 — Iluminação</div>
-                                        {{ $room['lighting_rule_description'] ?: '100 VA até 6 m² + 60 VA a cada 4 m² inteiros adicionais.' }}
-                                    </div>
-                                </div>
-                                <div class="text-2xl font-black text-blue-900 dark:text-blue-200">
-                                    {{ number_format($effectiveLightingVa, 0, ',', '.') }} VA
-                                </div>
-                                @if($room['use_manual_lighting'] ?? false)
-                                    <p class="text-[11px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-100/80 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700 rounded px-1.5 py-0.5 mt-1 inline-block">Ajustado manualmente</p>
-                                    <p class="text-xs text-blue-500 mt-0.5 line-through opacity-70">Cálculo: {{ $room['lighting_va_calculated'] ?? '—' }} VA</p>
-                                @endif
-                            </div>
-
-                            {{-- Divider & Override --}}
-                            <div class="mt-auto pt-3 border-t border-blue-200/70 dark:border-blue-800/70">
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" wire:model="rooms.{{ $i }}.use_manual_lighting"
-                                        wire:change="calculateRoomLoads({{ $i }})"
-                                        class="w-3.5 h-3.5 accent-blue-600 rounded">
-                                    <span class="text-xs text-blue-700 dark:text-blue-300 font-medium">Ajustar manualmente</span>
-                                </label>
-                                @if($room['use_manual_lighting'] ?? false)
-                                <div class="mt-2 flex items-center gap-1.5">
-                                    <input type="text" inputmode="decimal" wire:model="rooms.{{ $i }}.lighting_va_manual"
-                                        wire:change="calculateRoomLoads({{ $i }})"
-                                        @keydown.enter="evaluateCalcFormula($event.target); $event.target.blur()"
-                                        @blur="evaluateCalcFormula($event.target)"
-                                        placeholder="VA (ex: =30*5)"
-                                        class="flex-1 border border-blue-300 bg-white dark:bg-gray-800 rounded-lg px-2.5 py-1.5 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-blue-400">
-                                    <span class="text-xs text-blue-600 dark:text-blue-400 font-bold">VA</span>
-                                </div>
-                                <button wire:click="resetRoomManual({{ $i }}, 'use_manual_lighting')"
-                                    class="mt-1.5 text-[11px] text-blue-600 hover:text-blue-800 dark:text-blue-300 underline font-medium">
-                                    ↺ Restaurar automático
-                                </button>
-                                @endif
-                            </div>
-                        </div>
-
-                        {{-- Card: Tomadas TUG --}}
-                        <div class="bg-green-50/80 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-3.5 h-full flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between gap-1.5 mb-2 relative" x-data="{ showInfo: false }">
-                                    <div class="flex items-center gap-1.5">
-                                        <svg class="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                                        <span class="text-xs font-bold text-green-800 dark:text-green-300 uppercase tracking-wide">Tomadas TUG</span>
-                                    </div>
-                                    <button @click="showInfo = !showInfo" @click.away="showInfo = false" type="button" class="w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 text-xs font-bold flex items-center justify-center hover:bg-green-200 dark:hover:bg-green-800 transition focus:outline-none" title="Informações da Norma (NBR 5410)">
-                                        i
-                                    </button>
-                                    <div x-show="showInfo" x-transition.opacity style="display:none;" class="absolute right-0 top-7 z-30 w-64 p-3 bg-white dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-200 rounded-lg shadow-xl border border-green-200 dark:border-green-800 leading-relaxed">
-                                        <div class="font-bold text-green-700 dark:text-green-300 mb-1">NBR 5410 — Tomadas TUG</div>
-                                        {{ $room['tug_rule_description'] ?: 'Área ≤ 6 m²: 1 tomada. Acima: 1 tomada a cada 5 m de perímetro (ou fração).' }}
-                                    </div>
-                                </div>
-                                <div class="text-2xl font-black text-green-900 dark:text-green-200">
-                                    {{ number_format($effectiveTugVa, 0, ',', '.') }} VA
-                                </div>
-                                <div class="text-xs font-semibold text-green-700 dark:text-green-300 mt-0.5">
-                                    {{ $effectiveTugQty }} tomada{{ $effectiveTugQty !== 1 ? 's' : '' }}
-                                    @if($effectiveTugQty600 > 0 || $effectiveTugQty100 > 0)
-                                        <span class="text-[11px] font-normal text-green-600 dark:text-green-400 opacity-90">({{ $effectiveTugQty100 }}× 100VA + {{ $effectiveTugQty600 }}× 600VA)</span>
-                                    @endif
-                                </div>
-                                @if($room['use_manual_tug_qty'] ?? false)
-                                    <p class="text-[11px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-100/80 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700 rounded px-1.5 py-0.5 mt-1 inline-block">Ajustado manualmente</p>
-                                @endif
-                            </div>
-
-                            {{-- Divider & Manual controls --}}
-                            <div class="mt-auto pt-3 border-t border-green-200/70 dark:border-green-800/70">
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" wire:model="rooms.{{ $i }}.use_manual_tug_qty"
-                                        wire:change="calculateRoomLoads({{ $i }})"
-                                        class="w-3.5 h-3.5 accent-green-600 rounded">
-                                    <span class="text-xs text-green-700 dark:text-green-300 font-medium">Ajustar quantidade</span>
-                                </label>
-                                @if($room['use_manual_tug_qty'] ?? false)
-                                <div class="space-y-2 mt-2">
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label class="block text-[11px] font-medium text-green-800 dark:text-green-300 mb-0.5">Tomadas 100 VA</label>
-                                            <input type="text" inputmode="decimal" wire:model="rooms.{{ $i }}.tug_qty_100_manual"
-                                                wire:change="calculateRoomLoads({{ $i }})"
-                                                @keydown.enter="evaluateCalcFormula($event.target); $event.target.blur()"
-                                                @blur="evaluateCalcFormula($event.target)"
-                                                placeholder="Ex: =2"
-                                                class="w-full border border-green-300 bg-white dark:bg-gray-800 rounded-lg px-2 py-1 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-green-400">
-                                        </div>
-                                        <div>
-                                            <label class="block text-[11px] font-medium text-green-800 dark:text-green-300 mb-0.5">Tomadas 600 VA</label>
-                                            <input type="text" inputmode="decimal" wire:model="rooms.{{ $i }}.tug_qty_600_manual"
-                                                wire:change="calculateRoomLoads({{ $i }})"
-                                                @keydown.enter="evaluateCalcFormula($event.target); $event.target.blur()"
-                                                @blur="evaluateCalcFormula($event.target)"
-                                                placeholder="Ex: =3"
-                                                class="w-full border border-green-300 bg-white dark:bg-gray-800 rounded-lg px-2 py-1 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-green-400">
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center justify-between pt-0.5">
-                                        <button wire:click="resetRoomManual({{ $i }}, 'use_manual_tug_qty')"
-                                            class="text-[11px] text-green-600 hover:text-green-800 dark:text-green-300 underline font-medium">
-                                            ↺ Restaurar automático
-                                        </button>
-                                    </div>
-                                </div>
-                                @endif
-                            </div>
-                        </div>
-
-                        {{-- Card: TUE --}}
-                        <div class="bg-orange-50/80 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-3.5 h-full flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between gap-1.5 mb-2">
-                                    <div class="flex items-center gap-1.5">
-                                        <svg class="w-4 h-4 text-orange-600 dark:text-orange-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5h2m-1 0v6m-4 8h8a2 2 0 002-2v-1a6 6 0 00-12 0v1a2 2 0 002 2z"/></svg>
-                                        <span class="text-xs font-bold text-orange-800 dark:text-orange-300 uppercase tracking-wide">TUE</span>
-                                    </div>
-                                    <span class="text-[11px] font-semibold text-orange-700 dark:text-orange-300">{{ $roomTueRows->count() }}</span>
-                                </div>
-                                <div class="text-2xl font-black text-orange-900 dark:text-orange-200">
-                                    {{ number_format($effectiveTueVa, 0, ',', '.') }} VA
-                                </div>
-                            </div>
-
-                            <div class="mt-auto pt-3 border-t border-orange-200/70 dark:border-orange-800/70">
-                                @if($roomTueRows->isNotEmpty())
-                                    <div class="space-y-1 max-h-24 overflow-auto pr-1">
-                                        @foreach($roomTueRows as $tue)
-                                            <div class="flex items-center justify-between gap-2 text-xs text-orange-900 dark:text-orange-200 bg-white/70 dark:bg-gray-900/30 rounded px-2 py-1">
-                                                <span class="truncate">{{ ($tue['description'] ?? '') ?: 'TUE sem nome' }}</span>
-                                                <span class="font-bold tabular-nums flex-shrink-0">{{ number_format((int)($tue['power_va'] ?? 0), 0, ',', '.') }} VA</span>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    <p class="text-xs text-orange-700/80 dark:text-orange-300/80">Nenhuma TUE neste cômodo.</p>
-                                @endif
-                            </div>
-                        </div>
-
-                        {{-- Card: Total Mínimo --}}
-                        <div class="bg-yellow-50/80 dark:bg-yellow-900/20 border border-yellow-300 rounded-xl p-3.5 h-full flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between gap-1.5 mb-2 relative" x-data="{ showInfo: false }">
-                                    <div class="flex items-center gap-1.5">
-                                        <svg class="w-4 h-4 text-yellow-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                                        <span class="text-xs font-bold text-yellow-800 uppercase tracking-wide">Total Mínimo</span>
-                                    </div>
-                                    <button @click="showInfo = !showInfo" @click.away="showInfo = false" type="button" class="w-5 h-5 rounded-full bg-yellow-200/80 text-yellow-800 text-xs font-bold flex items-center justify-center hover:bg-yellow-300 transition focus:outline-none" title="Informações do Resumo">
-                                        i
-                                    </button>
-                                    <div x-show="showInfo" x-transition.opacity style="display:none;" class="absolute right-0 top-7 z-30 w-64 p-3 bg-white dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-200 rounded-lg shadow-xl border border-yellow-300 leading-relaxed">
-                                        <div class="font-bold text-yellow-800 dark:text-yellow-400 mb-1">Resumo do Cômodo</div>
-                                        Soma das potências mínimas calculadas de iluminação e tomadas TUG exigidas pela NBR 5410.
-                                    </div>
-                                </div>
-                                <div class="text-2xl font-black text-yellow-900 dark:text-yellow-200">
-                                    {{ number_format($totalVa, 0, ',', '.') }} VA
-                                </div>
-                            </div>
-
-                            {{-- Divider & Summary breakdown --}}
-                            <div class="mt-auto pt-3 border-t border-yellow-300/80 dark:border-yellow-700/80 text-xs text-yellow-900 dark:text-yellow-200 space-y-1">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-yellow-800/90 dark:text-yellow-300/90">Iluminação:</span>
-                                    <span class="font-bold">{{ number_format($effectiveLightingVa, 0, ',', '.') }} VA</span>
-                                </div>
-                                <div class="flex justify-between items-center">
-                                    <span class="text-yellow-800/90 dark:text-yellow-300/90">TUG ({{ $effectiveTugQty }} tom.):</span>
-                                    <span class="font-bold">{{ number_format($effectiveTugVa, 0, ',', '.') }} VA</span>
-                                </div>
-                                <div class="flex justify-between items-center">
-                                    <span class="text-yellow-800/90 dark:text-yellow-300/90">TUE:</span>
-                                    <span class="font-bold">{{ number_format($effectiveTueVa, 0, ',', '.') }} VA</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 overflow-hidden">
+                    <div class="border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 overflow-hidden">
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-3 bg-gray-50 dark:bg-gray-900/40 border-b border-gray-200 dark:border-gray-700">
                             <div>
                                 <div class="text-sm font-black text-gray-900 dark:text-gray-100">Cargas do cômodo</div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">{{ count($roomLoadRowsStep2) }} carga{{ count($roomLoadRowsStep2) !== 1 ? 's' : '' }} para dimensionamento dos circuitos.</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">{{ count($roomLoadRowsStep2) }} carga{{ count($roomLoadRowsStep2) !== 1 ? 's' : '' }} · <strong class="text-gray-700 dark:text-gray-200">{{ number_format($totalVa, 0, ',', '.') }} VA</strong> no total</div>
                             </div>
                             <div class="flex items-center gap-2">
                                 <button wire:click="generateLoadsFromRooms"
@@ -696,6 +506,12 @@
                                         @if($loadType === 'TUG')
                                             <span class="hidden sm:inline text-xs text-gray-500 dark:text-gray-400">{{ (int)($load['quantity'] ?? 0) }} tomada{{ (int)($load['quantity'] ?? 0) !== 1 ? 's' : '' }} × {{ number_format((int)($load['unit_va'] ?? 0), 0, ',', '.') }} VA</span>
                                         @endif
+                                        @if(($load['is_auto'] ?? true) && in_array($loadType, ['ILUMINAÇÃO','TUG']))
+                                            @php $isManualRoom = $loadType === 'ILUMINAÇÃO' ? ($room['use_manual_lighting'] ?? false) : ($room['use_manual_tug_qty'] ?? false); @endphp
+                                            @if($isManualRoom)
+                                                <span class="hidden sm:inline text-[10px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-100/80 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700 rounded px-1.5 py-0.5">Manual</span>
+                                            @endif
+                                        @endif
                                         <span class="text-sm font-black text-gray-900 dark:text-gray-100 tabular-nums">{{ number_format($effectiveVaLoad, 0, ',', '.') }} VA</span>
                                         @if(($load['corrected_current_a'] ?? null) !== null)
                                             <span class="hidden md:inline text-xs font-mono text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 px-2 py-0.5 rounded">Ic {{ number_format((float)$load['corrected_current_a'], 2) }} A</span>
@@ -724,34 +540,71 @@
                                                 @error('loads.'.$li.'.power_va')<p class="mt-0.5 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                                             </div>
                                         </div>
-                                        @else
+                                        @elseif($loadType === 'ILUMINAÇÃO')
                                         <div class="pt-3">
                                             <div class="flex flex-wrap items-center gap-3 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-                                                <span class="text-xs text-gray-600 dark:text-gray-300">Potência calculada: <strong>{{ number_format((int)($load['power_va'] ?? 0), 0, ',', '.') }} VA</strong></span>
+                                                <span class="text-xs text-gray-600 dark:text-gray-300">Cálculo NBR 5410: <strong>{{ number_format((int)($room['lighting_va_calculated'] ?? 0), 0, ',', '.') }} VA</strong></span>
                                                 <label class="flex items-center gap-1.5 cursor-pointer">
-                                                    <input type="checkbox" wire:model="loads.{{ $li }}.use_manual_va"
-                                                        wire:change="calculateLoad({{ $li }})"
+                                                    <input type="checkbox" wire:model="rooms.{{ $i }}.use_manual_lighting"
+                                                        wire:change="calculateRoomLoads({{ $i }})"
                                                         class="w-3.5 h-3.5 accent-amber-600">
                                                     <span class="text-xs text-amber-700 dark:text-amber-300 font-medium">Ajustar manualmente</span>
                                                 </label>
-                                                @if($load['use_manual_va'] ?? false)
+                                                @if($room['use_manual_lighting'] ?? false)
                                                 <div class="flex items-center gap-1.5">
-                                                    <input type="text" inputmode="decimal" wire:model="loads.{{ $li }}.manual_va"
-                                                        wire:change="calculateLoad({{ $li }})"
+                                                    <input type="text" inputmode="decimal" wire:model="rooms.{{ $i }}.lighting_va_manual"
+                                                        wire:change="calculateRoomLoads({{ $i }})"
                                                         @keydown.enter="evaluateCalcFormula($event.target); $event.target.blur()"
                                                         @blur="evaluateCalcFormula($event.target)"
-                                                        placeholder="VA"
+                                                        placeholder="VA (ex: =30*5)"
                                                         class="w-28 border border-amber-300 bg-white dark:bg-gray-800 rounded-lg px-2 py-1.5 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-amber-400">
-                                                    <button wire:click="resetLoadManual({{ $li }})" class="text-xs text-amber-600 dark:text-amber-300 underline">Restaurar</button>
+                                                    <button wire:click="resetRoomManual({{ $i }}, 'use_manual_lighting')" class="text-xs text-amber-600 dark:text-amber-300 underline">Restaurar</button>
                                                 </div>
                                                 @endif
                                             </div>
+                                            <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5 px-1">{{ $room['lighting_rule_description'] ?: '100 VA até 6 m² + 60 VA a cada 4 m² inteiros adicionais.' }}</p>
+                                        </div>
+                                        @else
+                                        <div class="pt-3">
+                                            <div class="flex flex-wrap items-center gap-3 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+                                                <span class="text-xs text-gray-600 dark:text-gray-300">{{ $effectiveTugQty }} tomada{{ $effectiveTugQty !== 1 ? 's' : '' }} ({{ $effectiveTugQty100 }}× 100VA + {{ $effectiveTugQty600 }}× 600VA)</span>
+                                                <label class="flex items-center gap-1.5 cursor-pointer">
+                                                    <input type="checkbox" wire:model="rooms.{{ $i }}.use_manual_tug_qty"
+                                                        wire:change="calculateRoomLoads({{ $i }})"
+                                                        class="w-3.5 h-3.5 accent-amber-600">
+                                                    <span class="text-xs text-amber-700 dark:text-amber-300 font-medium">Ajustar quantidade</span>
+                                                </label>
+                                                @if($room['use_manual_tug_qty'] ?? false)
+                                                <div class="flex items-center gap-2">
+                                                    <div class="flex items-center gap-1">
+                                                        <input type="text" inputmode="decimal" wire:model="rooms.{{ $i }}.tug_qty_100_manual"
+                                                            wire:change="calculateRoomLoads({{ $i }})"
+                                                            @keydown.enter="evaluateCalcFormula($event.target); $event.target.blur()"
+                                                            @blur="evaluateCalcFormula($event.target)"
+                                                            placeholder="Ex: =2"
+                                                            class="w-16 border border-amber-300 bg-white dark:bg-gray-800 rounded-lg px-2 py-1.5 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-amber-400">
+                                                        <span class="text-[11px] text-gray-500 dark:text-gray-400">× 100VA</span>
+                                                    </div>
+                                                    <div class="flex items-center gap-1">
+                                                        <input type="text" inputmode="decimal" wire:model="rooms.{{ $i }}.tug_qty_600_manual"
+                                                            wire:change="calculateRoomLoads({{ $i }})"
+                                                            @keydown.enter="evaluateCalcFormula($event.target); $event.target.blur()"
+                                                            @blur="evaluateCalcFormula($event.target)"
+                                                            placeholder="Ex: =3"
+                                                            class="w-16 border border-amber-300 bg-white dark:bg-gray-800 rounded-lg px-2 py-1.5 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-amber-400">
+                                                        <span class="text-[11px] text-gray-500 dark:text-gray-400">× 600VA</span>
+                                                    </div>
+                                                    <button wire:click="resetRoomManual({{ $i }}, 'use_manual_tug_qty')" class="text-xs text-amber-600 dark:text-amber-300 underline">Restaurar</button>
+                                                </div>
+                                                @endif
+                                            </div>
+                                            <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5 px-1">{{ $room['tug_rule_description'] ?: 'Área ≤ 6 m²: 1 tomada. Acima: 1 tomada a cada 5 m de perímetro (ou fração).' }}</p>
                                         </div>
                                         @endif
 
-                                        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-3">
+                                        <div class="grid grid-cols-3 gap-3 mt-3">
                                             <div>
-                                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Fases</label>
+                                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Alimentação</label>
                                                 <select wire:model="loads.{{ $li }}.phases" wire:change="calculateLoad({{ $li }})"
                                                     class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-2 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
                                                     <option value="1">1F</option>
@@ -770,16 +623,6 @@
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">fp</label>
                                                 <input type="number" wire:model="loads.{{ $li }}.fp" wire:change="calculateLoad({{ $li }})" min="0.01" max="1" step="0.01"
-                                                    class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-2 py-2 text-sm text-center text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
-                                            </div>
-                                            <div>
-                                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Agrup.</label>
-                                                <input type="number" wire:model="loads.{{ $li }}.grouped_circuits" wire:change="calculateLoad({{ $li }})" min="1" step="1"
-                                                    class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-2 py-2 text-sm text-center text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
-                                            </div>
-                                            <div>
-                                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Temp.</label>
-                                                <input type="number" wire:model="loads.{{ $li }}.temperature_c" wire:change="calculateLoad({{ $li }})" min="10" max="60" step="1"
                                                     class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-2 py-2 text-sm text-center text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow">
                                             </div>
                                         </div>
