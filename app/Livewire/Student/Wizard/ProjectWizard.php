@@ -1330,19 +1330,43 @@ class ProjectWizard extends Component
             if ($cadRoomId) {
                 $room['cad_room_id'] = $cadRoomId;
             }
-            $room['room_type']   = $this->guessRoomType($nome);
+            $tipoComodo = trim((string)($c['tipo_comodo'] ?? ''));
+            $room['room_type']   = ($tipoComodo !== '' && in_array($tipoComodo, self::ROOM_TYPES, true))
+                ? $tipoComodo
+                : $this->guessRoomType($nome);
             $room['description'] = $nome;
             $room['area_m2']     = $area      !== null ? (string)$area      : '';
             $room['perimeter_m'] = $perimetro !== null ? (string)$perimetro : '';
+
+            // ajustes manuais de iluminação/TUG feitos no editor de planta
+            $room['use_manual_lighting'] = !empty($c['usar_iluminacao_manual']);
+            $room['lighting_va_manual']  = ($room['use_manual_lighting'] && ($c['iluminacao_manual_va'] ?? null) !== null)
+                ? (string)$c['iluminacao_manual_va'] : '';
+            $room['use_manual_tug_qty']  = !empty($c['usar_tug_manual']);
+            $room['tug_qty_600_manual']  = ($room['use_manual_tug_qty'] && ($c['tug_manual_qty_600'] ?? null) !== null)
+                ? (string)$c['tug_manual_qty_600'] : '';
+            $room['tug_qty_100_manual']  = ($room['use_manual_tug_qty'] && ($c['tug_manual_qty_100'] ?? null) !== null)
+                ? (string)$c['tug_manual_qty_100'] : '';
 
             if ($roomIndex !== null) {
                 $this->rooms[$roomIndex] = $room;
                 $this->calculateRoomLoads($roomIndex);
             } else {
                 $this->rooms[] = $room;
-                $this->calculateRoomLoads(count($this->rooms) - 1);
+                $roomIndex = count($this->rooms) - 1;
+                $this->calculateRoomLoads($roomIndex);
             }
+
+            $this->syncTuesForRoom($roomIndex, is_array($c['tues'] ?? null) ? $c['tues'] : []);
+
             $imported++;
+        }
+
+        if ($imported > 0) {
+            // grava cômodos (área/perímetro/tipo/ajustes) no banco imediatamente,
+            // pra "Ver detalhes do projeto" já refletir o que foi desenhado sem
+            // precisar passar pelos passos seguintes do assistente antes
+            $this->saveStep2();
         }
 
         if ($imported > 0 && $autoSync) {
@@ -1355,6 +1379,90 @@ class ProjectWizard extends Component
         } elseif (!$autoSync) {
             $this->errorMessage = 'Nenhum cômodo fechado foi recebido da planta — desenhe as paredes ao redor e nomeie os cômodos antes de enviar.';
         }
+    }
+
+    /**
+     * Espelha as TUEs (tomadas de uso específico) criadas no editor de
+     * planta pro cômodo correspondente em $this->loads — casando pelo
+     * cad_tue_id (id do bloco no CAD) pra atualizar em vez de duplicar a
+     * cada sincronização automática, e removendo as que o aluno apagou lá.
+     * TUEs criadas manualmente no assistente (sem cad_tue_id) não são mexidas.
+     */
+    private function syncTuesForRoom(int $roomIndex, array $tues): void
+    {
+        $room = $this->rooms[$roomIndex] ?? null;
+        if (!$room) return;
+        $roomId    = $room['id'] ?? null;
+        $roomLabel = trim(($room['room_type'] ?? '') . ': ' . ($room['description'] ?? ''), ': ');
+
+        $existingTueCount = count(array_filter($this->loads, fn($l) =>
+            ($l['load_type'] ?? '') === 'TUE' && ($l['room_id'] ?? null) == $roomId
+        ));
+
+        $seenCadIds = [];
+        foreach ($tues as $t) {
+            $cadTueId = $t['id'] ?? null;
+            $nome = trim((string)($t['nome'] ?? ''));
+            $va   = (float)($t['va'] ?? 0);
+            if ($cadTueId === null || $nome === '' || $va <= 0) continue;
+            $seenCadIds[] = (string)$cadTueId;
+
+            $loadIndex = null;
+            foreach ($this->loads as $idx => $load) {
+                if (($load['load_type'] ?? '') === 'TUE' && (string)($load['cad_tue_id'] ?? '') === (string)$cadTueId) {
+                    $loadIndex = $idx;
+                    break;
+                }
+            }
+
+            if ($loadIndex !== null) {
+                $this->loads[$loadIndex]['description'] = $nome;
+                $this->loads[$loadIndex]['power_va']    = (int)round($va);
+                $this->loads[$loadIndex]['unit_va']     = (int)round($va);
+                $this->loads[$loadIndex]['room_index']  = $roomIndex;
+                $this->loads[$loadIndex]['room_label']  = $roomLabel;
+                continue;
+            }
+
+            $this->loads[] = [
+                'id'                  => null,
+                'room_id'             => $roomId,
+                'room_index'          => $roomIndex,
+                'room_label'          => $roomLabel,
+                'cad_tue_id'          => $cadTueId,
+                'load_type'           => 'TUE',
+                'description'         => $nome,
+                'quantity'            => 1,
+                'power_va'            => (int)round($va),
+                'unit_va'             => (int)round($va),
+                'is_auto'             => false,
+                'sort_order'          => 10 + $existingTueCount,
+                'phases'              => $this->defaultPhases,
+                'voltage_v'           => $this->defaultVoltage,
+                'installation_method' => $this->defaultInstallationMethod,
+                'temperature_c'       => $this->defaultTemperatureC,
+                'grouped_circuits'    => 1,
+                'fp'                  => 1.0,
+                'power_w'             => null,
+                'current_a'           => null,
+                'grouping_factor'     => null,
+                'temperature_factor'  => null,
+                'corrected_current_a' => null,
+                'use_manual_va'              => false,
+                'manual_va'                  => '',
+                'circuit_number'             => null,
+                'split_original_va'          => null,
+                'split_original_description' => null,
+            ];
+            $existingTueCount++;
+        }
+
+        $this->loads = array_values(array_filter($this->loads, function ($load) use ($roomId, $seenCadIds) {
+            if (($load['load_type'] ?? '') !== 'TUE') return true;
+            if (($load['room_id'] ?? null) != $roomId) return true;
+            if (empty($load['cad_tue_id'])) return true;
+            return in_array((string)$load['cad_tue_id'], $seenCadIds, true);
+        }));
     }
 
     /**

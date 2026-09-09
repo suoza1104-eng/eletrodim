@@ -753,6 +753,7 @@
   let rectFixedWidthM = null; // largura (eixo X) travada no retângulo após o 1º Enter — null = ainda livre
   let polyRoomPoints = []; // pontos clicados (mundo) na ferramenta "Poliline cômodo", em andamento
   let draggingLabel = null; // {room, startMouse, startOffset} — arrastando o rótulo (nome/área/perímetro) de um cômodo
+  let addingTueForRoomId = null; // id do cômodo com o formulário "+ Adicionar TUE" aberto no momento
 
   // ---------------------------------------------------------------
   // Biblioteca de blocos: cada símbolo colocado na planta referencia
@@ -2377,6 +2378,9 @@
   }
 
   function renderPropertiesPanel(){
+    if(addingTueForRoomId!==null && !(selected && selected.kind==='room' && selected.id===addingTueForRoomId)){
+      addingTueForRoomId = null;
+    }
     const appEl = document.querySelector('.app');
     if(appEl){
       const shouldHide = !selected && selectedMulti.length===0;
@@ -2553,16 +2557,21 @@
           ${(room.tues||[]).length ? `
             <ul style="list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:4px;">
               ${(room.tues||[]).map((t,i)=>`
-                <li style="display:flex;justify-content:space-between;align-items:center;font-size:11px;background:var(--panel);border-radius:6px;padding:4px 8px;">
-                  <span>${t.name} — ${t.va} VA</span>
-                  <button type="button" class="prop-tue-remove" data-idx="${i}" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px;padding:0 2px;">✕</button>
+                <li style="display:flex;justify-content:space-between;align-items:center;font-size:11px;background:var(--panel);border-radius:6px;padding:4px 8px;min-width:0;">
+                  <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.name} — ${t.va} VA</span>
+                  <button type="button" class="prop-tue-remove" data-idx="${i}" style="flex-shrink:0;background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px;padding:0 2px;">✕</button>
                 </li>`).join('')}
             </ul>` : ''}
-          <div style="display:flex;gap:6px;margin-top:8px;">
-            <input type="text" id="propRoomTueName" placeholder="Ex: Chuveiro" style="flex:2;background:var(--panel);border:1px solid var(--panel-border);color:var(--text);padding:6px 8px;border-radius:6px;font-size:12px;">
-            <input type="number" id="propRoomTueVa" placeholder="VA" min="0" step="10" style="flex:1;background:var(--panel);border:1px solid var(--panel-border);color:var(--text);padding:6px 8px;border-radius:6px;font-size:12px;">
-            <button type="button" id="propRoomTueAdd" style="flex-shrink:0;padding:6px 10px;border-radius:6px;border:1px solid var(--panel-border);background:var(--surface-hover);color:var(--text);font-size:12px;cursor:pointer;">+</button>
-          </div>
+          ${addingTueForRoomId===room.id ? `
+            <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+              <input type="text" id="propRoomTueName" placeholder="Nome (ex: Chuveiro)" style="width:100%;box-sizing:border-box;background:var(--panel);border:1px solid var(--panel-border);color:var(--text);padding:6px 8px;border-radius:6px;font-size:12px;">
+              <input type="number" id="propRoomTueVa" placeholder="Potência (VA)" min="0" step="10" style="width:100%;box-sizing:border-box;background:var(--panel);border:1px solid var(--panel-border);color:var(--text);padding:6px 8px;border-radius:6px;font-size:12px;">
+              <div style="display:flex;gap:6px;">
+                <button type="button" id="propRoomTueConfirm" class="wide primary" style="flex:1;padding:7px;">Adicionar</button>
+                <button type="button" id="propRoomTueCancel" class="wide" style="flex:1;padding:7px;">Cancelar</button>
+              </div>
+            </div>` : `
+            <button type="button" id="propRoomTueAdd" class="wide" style="margin-top:8px;">+ Adicionar TUE</button>`}
         </div>
         <div style="background:var(--accent-dim);border-radius:10px;padding:10px;display:flex;justify-content:space-between;align-items:center;">
           <span style="font-size:11px;color:var(--active-text);">📐 Total mínimo</span>
@@ -2596,7 +2605,11 @@
       });
     });
     const tueAdd = container.querySelector('#propRoomTueAdd');
-    if(tueAdd) tueAdd.addEventListener('click', ()=>{
+    if(tueAdd) tueAdd.addEventListener('click', ()=>{ addingTueForRoomId = room.id; rerender(); });
+    const tueCancel = container.querySelector('#propRoomTueCancel');
+    if(tueCancel) tueCancel.addEventListener('click', ()=>{ addingTueForRoomId = null; rerender(); });
+    const tueConfirm = container.querySelector('#propRoomTueConfirm');
+    if(tueConfirm) tueConfirm.addEventListener('click', ()=>{
       const nameInput = container.querySelector('#propRoomTueName');
       const vaInput = container.querySelector('#propRoomTueVa');
       const name = nameInput.value.trim();
@@ -2604,6 +2617,7 @@
       if(!name || !(va>0)){ showToast('Informe nome e potência (VA) da TUE.'); return; }
       if(!room.tues) room.tues = [];
       room.tues.push({ id: nextId++, name, va });
+      addingTueForRoomId = null;
       rerender();
       scheduleSave();
     });
@@ -4042,7 +4056,19 @@
         id: r.id, nome: r.name, project_room_id: r.projectRoomId || null,
         area_m2: face ? +face.area.toFixed(2) : null,
         perimetro_m: face ? +face.perimeter.toFixed(2) : null,
-        fechado: !!face
+        fechado: !!face,
+        // configurações do cômodo — seguem junto pro projeto entender o
+        // mesmo dimensionamento (NBR) que o editor já calculou/ajustou
+        tipo_comodo: r.roomType || null,
+        cor: r.color || null,
+        mostrar_area: r.showArea !== false,
+        mostrar_perimetro: r.showPerimeter !== false,
+        usar_iluminacao_manual: !!r.useManualLighting,
+        iluminacao_manual_va: r.manualLightingVa ?? null,
+        usar_tug_manual: !!r.useManualTug,
+        tug_manual_qty_600: r.manualTugQty600 ?? null,
+        tug_manual_qty_100: r.manualTugQty100 ?? null,
+        tues: (r.tues||[]).map(t=>({ id:t.id, nome:t.name, va:t.va }))
       };
     });
   }
