@@ -984,6 +984,48 @@
     });
   }
 
+  function projectRoomName(projectRoom){
+    return String(projectRoom && (projectRoom.description || projectRoom.nome || projectRoom.name || projectRoom.room_type) || '').trim();
+  }
+
+  function normalizeLabel(value){
+    return String(value || '').trim().toLocaleUpperCase('pt-BR');
+  }
+
+  function roomMatchesProjectRoomByGeometry(room, projectRoom, faces){
+    const projectName = normalizeLabel(projectRoomName(projectRoom));
+    if(!projectName || normalizeLabel(room.name) !== projectName) return false;
+
+    const area = projectRoom.area_m2 !== undefined && projectRoom.area_m2 !== null && projectRoom.area_m2 !== '' ? +projectRoom.area_m2 : null;
+    const perimeter = projectRoom.perimeter_m !== undefined && projectRoom.perimeter_m !== null && projectRoom.perimeter_m !== '' ? +projectRoom.perimeter_m : null;
+    if(area === null || perimeter === null) return true;
+
+    const face = getRoomFace(room, faces);
+    if(!face) return false;
+    return Math.abs(face.area - area) <= 0.05 && Math.abs(face.perimeter - perimeter) <= 0.05;
+  }
+
+  function projectRoomHasCadRepresentation(projectRoom, faces){
+    if(isProjectRoomLinked(projectRoom)) return true;
+    return rooms.some(room=>roomMatchesProjectRoomByGeometry(room, projectRoom, faces));
+  }
+
+  function unlinkedProjectRooms(faces){
+    const seen = new Set();
+    return pendingProjectRooms.filter(projectRoom=>{
+      if(!projectRoom || !projectRoom.id || projectRoomHasCadRepresentation(projectRoom, faces)) return false;
+      const key = [
+        normalizeLabel(projectRoomName(projectRoom)),
+        projectRoom.room_type || '',
+        projectRoom.area_m2 || '',
+        projectRoom.perimeter_m || ''
+      ].join('|');
+      if(seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
   function syncProjectRoomsIntoCadRooms(){
     if(!Array.isArray(pendingProjectRooms) || !pendingProjectRooms.length) return;
     const projectRoomsById = new Map(pendingProjectRooms.map(r=>[String(r.id || ''), r]));
@@ -3659,11 +3701,10 @@
     // 1) cômodo cadastrado no projeto (modo "com planta") sem contorno
     //    desenhado/vinculado na planta baixa
     if(projectInputMode === 'floorplan' && pendingProjectRooms.length){
-      pendingProjectRooms.forEach(pr=>{
-        if(!pr || !pr.id || isProjectRoomLinked(pr)) return;
+      unlinkedProjectRooms(faces).forEach(pr=>{
         alerts.push({
           severity:'error',
-          title:`Cômodo "${pr.nome||pr.name||'sem nome'}" não existe na planta`,
+          title:`Cômodo "${projectRoomName(pr) || 'sem nome'}" não existe na planta`,
           message:'Este cômodo foi cadastrado no projeto mas ainda não tem um contorno desenhado (ou vinculado) aqui na planta baixa. Desenhe as paredes dele ou vincule-o a um contorno já existente.',
           target:null
         });
@@ -4141,7 +4182,7 @@
     const rect = canvas.getBoundingClientRect();
     modal.style.left = (screenX - rect.left + 10) + 'px';
     modal.style.top = (screenY - rect.top + 10) + 'px';
-    const pendingChoices = pendingProjectRooms.filter(r=>r && r.id && !isProjectRoomLinked(r));
+    const pendingChoices = unlinkedProjectRooms(computeRoomFaces());
     modal.innerHTML = `
       <input type="text" placeholder="Nome do cômodo (ex: Quarto 1)" maxlength="30" />
       <button class="ok">OK</button>
@@ -4156,7 +4197,7 @@
       label.textContent = 'Comodo do projeto';
       roomProjectRef = document.createElement('select');
       roomProjectRef.id = 'roomProjectRef';
-      roomProjectRef.innerHTML = '<option value="">Novo comodo no CAD</option>' + pendingChoices.map(r=>`<option value="${r.id}">${r.description || r.room_type || 'Comodo '+r.id}</option>`).join('');
+      roomProjectRef.innerHTML = '<option value="">Novo comodo no CAD</option>' + pendingChoices.map(r=>`<option value="${r.id}">${projectRoomName(r) || 'Comodo '+r.id}</option>`).join('');
       roomProjectRef.addEventListener('change', ()=>{
         const linked = pendingProjectRooms.find(r=>String(r.id)===String(roomProjectRef.value));
         if(linked) input.value = linked.description || linked.room_type || '';
