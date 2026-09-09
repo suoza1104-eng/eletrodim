@@ -969,11 +969,47 @@
     updateStats();
   }
 
-  function syncProjectTuesIntoRooms(){
+  function findLinkedProjectRoomForCadRoom(room, projectRoomsById, projectRoomsByCadId){
+    return projectRoomsById.get(String(room.projectRoomId || ''))
+      || projectRoomsByCadId.get(String(room.id || ''))
+      || null;
+  }
+
+  function isProjectRoomLinked(projectRoom){
+    if(!projectRoom || !projectRoom.id) return false;
+    return rooms.some(room=>{
+      if(String(room.projectRoomId || '') === String(projectRoom.id)) return true;
+      if(projectRoom.cad_room_id && String(room.id || '') === String(projectRoom.cad_room_id)) return true;
+      return false;
+    });
+  }
+
+  function syncProjectRoomsIntoCadRooms(){
     if(!Array.isArray(pendingProjectRooms) || !pendingProjectRooms.length) return;
     const projectRoomsById = new Map(pendingProjectRooms.map(r=>[String(r.id || ''), r]));
+    const projectRoomsByCadId = new Map(
+      pendingProjectRooms
+        .filter(r=>r && r.cad_room_id)
+        .map(r=>[String(r.cad_room_id), r])
+    );
     rooms.forEach(room=>{
-      const projectRoom = projectRoomsById.get(String(room.projectRoomId || ''));
+      const projectRoom = findLinkedProjectRoomForCadRoom(room, projectRoomsById, projectRoomsByCadId);
+      if(!projectRoom) return;
+      room.projectRoomId = projectRoom.id || room.projectRoomId || null;
+      room.name = projectRoom.description || projectRoom.room_type || room.name;
+      room.roomType = projectRoom.room_type || room.roomType || null;
+      room.useManualLighting = !!projectRoom.use_manual_lighting;
+      room.manualLightingVa = projectRoom.lighting_va_manual !== undefined && projectRoom.lighting_va_manual !== null && projectRoom.lighting_va_manual !== ''
+        ? projectRoom.lighting_va_manual
+        : null;
+      room.useManualTug = !!projectRoom.use_manual_tug_qty;
+      room.manualTugQty600 = projectRoom.tug_qty_600_manual !== undefined && projectRoom.tug_qty_600_manual !== null && projectRoom.tug_qty_600_manual !== ''
+        ? projectRoom.tug_qty_600_manual
+        : null;
+      room.manualTugQty100 = projectRoom.tug_qty_100_manual !== undefined && projectRoom.tug_qty_100_manual !== null && projectRoom.tug_qty_100_manual !== ''
+        ? projectRoom.tug_qty_100_manual
+        : null;
+
       const projectTues = Array.isArray(projectRoom && projectRoom.tues) ? projectRoom.tues : [];
       if(!projectTues.length) return;
 
@@ -3623,9 +3659,8 @@
     // 1) cômodo cadastrado no projeto (modo "com planta") sem contorno
     //    desenhado/vinculado na planta baixa
     if(projectInputMode === 'floorplan' && pendingProjectRooms.length){
-      const usedRoomIds = new Set(rooms.map(r=>String(r.projectRoomId||'')).filter(Boolean));
       pendingProjectRooms.forEach(pr=>{
-        if(!pr || !pr.id || usedRoomIds.has(String(pr.id))) return;
+        if(!pr || !pr.id || isProjectRoomLinked(pr)) return;
         alerts.push({
           severity:'error',
           title:`Cômodo "${pr.nome||pr.name||'sem nome'}" não existe na planta`,
@@ -4106,8 +4141,7 @@
     const rect = canvas.getBoundingClientRect();
     modal.style.left = (screenX - rect.left + 10) + 'px';
     modal.style.top = (screenY - rect.top + 10) + 'px';
-    const usedRoomIds = new Set(rooms.map(r=>String(r.projectRoomId || '')).filter(Boolean));
-    const pendingChoices = pendingProjectRooms.filter(r=>r && r.id && !usedRoomIds.has(String(r.id)));
+    const pendingChoices = pendingProjectRooms.filter(r=>r && r.id && !isProjectRoomLinked(r));
     modal.innerHTML = `
       <input type="text" placeholder="Nome do cômodo (ex: Quarto 1)" maxlength="30" />
       <button class="ok">OK</button>
@@ -4135,8 +4169,19 @@
       const name = input.value.trim();
       if(name){
         const roomData = { id: nextId++, name, projectRoomId: modal.querySelector('#roomProjectRef') ? modal.querySelector('#roomProjectRef').value || null : null };
+        const linked = pendingProjectRooms.find(r=>String(r.id)===String(roomData.projectRoomId || ''));
+        if(linked){
+          roomData.name = linked.description || linked.room_type || name;
+          roomData.roomType = linked.room_type || null;
+          roomData.useManualLighting = !!linked.use_manual_lighting;
+          roomData.manualLightingVa = linked.lighting_va_manual || null;
+          roomData.useManualTug = !!linked.use_manual_tug_qty;
+          roomData.manualTugQty600 = linked.tug_qty_600_manual || null;
+          roomData.manualTugQty100 = linked.tug_qty_100_manual || null;
+        }
         if(polygon) roomData.polygon = polygon; else roomData.seed = worldPt;
         rooms.push(roomData);
+        syncProjectRoomsIntoCadRooms();
         afterChange();
       }
       modal.remove();
@@ -4553,7 +4598,7 @@
       resize();
       updateStats();
     }
-    syncProjectTuesIntoRooms();
+    syncProjectRoomsIntoCadRooms();
     draw();
     updateStats();
     // ressincroniza os cômodos ao abrir — sem isso, o projeto só reflete o

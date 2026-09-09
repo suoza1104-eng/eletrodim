@@ -12,6 +12,7 @@ class ProjectRoom extends Model
 {
     protected $fillable = [
         'project_id',
+        'cad_room_id',
         'room_type',
         'description',
         'area_m2',

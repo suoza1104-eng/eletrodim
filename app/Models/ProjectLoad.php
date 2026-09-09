@@ -13,6 +13,7 @@ class ProjectLoad extends Model
         'project_id',
         'room_id',
         'load_type',
+        'cad_tue_id',
         'description',
         'quantity',
         'power_va',

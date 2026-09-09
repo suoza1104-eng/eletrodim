@@ -23,6 +23,7 @@ class Project extends Model
         'state',
         'observations',
         'floor_plan_json',
+        'input_mode',
         'floors_count',
         'status',
         'progress_step',

@@ -133,6 +133,7 @@ class ProjectWizard extends Component
     {
         foreach ($this->rooms as &$room) {
             // Step 2 — min load fields
+            $room['cad_room_id']                 ??= null;
             $room['floor_number']                ??= 1;
             $room['lighting_va_calculated']      ??= null;
             $room['lighting_rule_description']   ??= '';
@@ -207,6 +208,7 @@ class ProjectWizard extends Component
             $load['room_id']              ??= null;
             $load['room_index']           ??= 0;
             $load['room_label']           ??= '';
+            $load['cad_tue_id']           ??= null;
             $load['load_type']            ??= 'ILUMINAÇÃO';
             $load['description']          ??= '';
             $load['quantity']             ??= 1;
@@ -262,6 +264,9 @@ class ProjectWizard extends Component
             $this->state        = $project->state        ?? '';
             $this->observations = $project->observations ?? '';
             $this->floorPlanJson = $project->floor_plan_json ?? '';
+            $this->projectInputMode = in_array($project->input_mode ?? '', ['floorplan', 'manual'], true)
+                ? $project->input_mode
+                : (($project->floor_plan_json ?? '') !== '' ? 'floorplan' : '');
             $this->floorsCount  = (int)($project->floors_count ?? 1);
 
             if ($project->settings) {
@@ -277,13 +282,41 @@ class ProjectWizard extends Component
             foreach ($project->rooms as $room) {
                 $lighting = $room->inputRows()->where('load_type', 'ILUMINAÇÃO')->first();
                 $tug      = $room->inputRows()->where('load_type', 'TUG')->first();
-                $tues     = $room->inputRows()->where('load_type', 'TUE')->get();
+                $tues     = DB::table('project_loads')
+                    ->where('project_id', $this->projectId)
+                    ->where('room_id', $room->id)
+                    ->where('load_type', 'TUE')
+                    ->orderBy('sort_order')
+                    ->get();
+                $roomTues = $tues->map(fn($t) => [
+                    'id'          => $t->id,
+                    'project_load_id' => $t->id,
+                    'description' => $t->description ?? '',
+                    'power_va'    => (string)$t->power_va,
+                    'phases'      => (string)($t->phases ?? ''),
+                    'voltage'     => (string)($t->voltage_v ?? ''),
+                    'distance_m'  => '',
+                    'cad_tue_id'  => $t->cad_tue_id ?? null,
+                ]);
+                if ($roomTues->isEmpty()) {
+                    $roomTues = $room->inputRows()->where('load_type', 'TUE')->get()->map(fn($t) => [
+                        'id'          => $t->id,
+                        'project_load_id' => null,
+                        'description' => $t->tue_description ?? $t->description ?? '',
+                        'power_va'    => (string)$t->specific_power_va,
+                        'phases'      => (string)($t->phases ?? ''),
+                        'voltage'     => (string)($t->voltage ?? ''),
+                        'distance_m'  => (string)($t->distance_m ?? ''),
+                        'cad_tue_id'  => null,
+                    ]);
+                }
 
                 $minLighting = $this->calcMinLightingVa((float)($room->area_m2 ?? 0));
                 $tugData     = $this->calcMinTugData($room->room_type, (float)($room->area_m2 ?? 0), (float)($room->perimeter_m ?? 0));
 
                 $this->rooms[] = [
                     'id'           => $room->id,
+                    'cad_room_id'  => $room->cad_room_id ?? null,
                     'room_type'    => $room->room_type,
                     'description'  => $room->description ?? '',
                     'area_m2'      => $room->area_m2     ?? '',
@@ -335,14 +368,7 @@ class ProjectWizard extends Component
                     'voltage_drop_percent' => $lighting?->voltage_drop_percent ?? $tug?->voltage_drop_percent ?? '',
                     'grouped_circuits'     => $lighting?->grouped_circuits ?? $tug?->grouped_circuits ?? '',
 
-                    'tues' => $tues->map(fn($t) => [
-                        'id'          => $t->id,
-                        'description' => $t->tue_description ?? $t->description ?? '',
-                        'power_va'    => (string)$t->specific_power_va,
-                        'phases'      => (string)($t->phases ?? ''),
-                        'voltage'     => (string)($t->voltage ?? ''),
-                        'distance_m'  => (string)($t->distance_m ?? ''),
-                    ])->toArray(),
+                    'tues' => $roomTues->toArray(),
                 ];
             }
 
@@ -365,8 +391,12 @@ class ProjectWizard extends Component
         $this->normalizeRooms();
         $this->normalizeLoads();
 
-        if (!empty($this->rooms)) {
+        if (!empty($this->rooms) && $this->projectInputMode === '') {
             $this->projectInputMode = 'manual';
+        }
+
+        if ($this->projectId && $this->projectInputMode === 'floorplan') {
+            $this->consolidateDuplicateFloorPlanRooms();
         }
     }
 
@@ -630,6 +660,7 @@ class ProjectWizard extends Component
             'state'        => $this->state       ?: null,
             'observations' => $this->observations ?: null,
             'floor_plan_json' => $this->floorPlanJson ?: null,
+            'input_mode'   => in_array($this->projectInputMode, ['floorplan', 'manual'], true) ? $this->projectInputMode : 'manual',
             'floors_count' => max(1, (int)$this->floorsCount),
             'status'       => 'in_progress',
         ];
@@ -646,12 +677,20 @@ class ProjectWizard extends Component
     {
         if (!$this->projectId) return;
 
+        Project::where('id', $this->projectId)
+            ->where('user_id', Auth::id())
+            ->update([
+                'input_mode'      => in_array($this->projectInputMode, ['floorplan', 'manual'], true) ? $this->projectInputMode : 'manual',
+                'floor_plan_json' => $this->floorPlanJson ?: null,
+            ]);
+
         $savedIds = [];
         foreach ($this->rooms as $i => &$room) {
             $model = ProjectRoom::updateOrCreate(
                 ['id' => $room['id'] ?? null, 'project_id' => $this->projectId],
                 [
                     'project_id'   => $this->projectId,
+                    'cad_room_id'  => ($room['cad_room_id'] ?? '') !== '' ? (string)$room['cad_room_id'] : null,
                     'room_type'    => $room['room_type'],
                     'description'  => $room['description'] ?: null,
                     'area_m2'      => $room['area_m2']    !== '' ? (float)$room['area_m2']    : null,
@@ -692,6 +731,8 @@ class ProjectWizard extends Component
             try { DB::table('project_loads')->where('room_id', $dr->id)->delete(); } catch (\Throwable) {}
             $dr->delete();
         }
+
+        $this->syncFloorPlanRoomLinks();
     }
 
     public function saveStep3(): void
@@ -707,6 +748,7 @@ class ProjectWizard extends Component
                 'project_id'          => $this->projectId,
                 'room_id'             => (int)$load['room_id'],
                 'load_type'           => $load['load_type'],
+                'cad_tue_id'          => $load['cad_tue_id'] ?? null,
                 'description'         => ($load['description'] ?? '') ?: null,
                 'quantity'            => (int)($load['quantity'] ?? 1),
                 'power_va'            => (int)($load['power_va'] ?? 0),
@@ -754,6 +796,7 @@ class ProjectWizard extends Component
 
         // Mirror to project_input_rows for Step 4+ compatibility
         $this->mirrorLoadsToInputRows();
+        $this->refreshAllRoomTuesFromLoads();
     }
 
     private function mirrorLoadsToInputRows(): void
@@ -1058,6 +1101,7 @@ class ProjectWizard extends Component
                     'room_id'             => $row->room_id,
                     'room_index'          => $roomIndex,
                     'room_label'          => $roomLabel,
+                    'cad_tue_id'          => $row->cad_tue_id ?? null,
                     'load_type'           => $row->load_type,
                     'description'         => $desc,
                     'quantity'            => (int)$row->quantity,
@@ -1252,6 +1296,11 @@ class ProjectWizard extends Component
         $this->clearMessages();
         $this->projectInputMode = $mode;
         $this->showFloorPlanEditor = $mode === 'floorplan';
+        if ($this->projectId) {
+            Project::where('id', $this->projectId)
+                ->where('user_id', Auth::id())
+                ->update(['input_mode' => $mode]);
+        }
 
         if ($mode === 'manual' && empty($this->rooms)) {
             $this->rooms[] = $this->emptyRoom(0);
@@ -1263,6 +1312,11 @@ class ProjectWizard extends Component
         $this->clearMessages();
         $this->projectInputMode = 'floorplan';
         $this->showFloorPlanEditor = true;
+        if ($this->projectId) {
+            Project::where('id', $this->projectId)
+                ->where('user_id', Auth::id())
+                ->update(['input_mode' => 'floorplan']);
+        }
     }
 
     public function closeFloorPlanEditor(): void
@@ -1273,11 +1327,16 @@ class ProjectWizard extends Component
     public function saveFloorPlanState(string $json): void
     {
         $this->floorPlanJson = $json;
+        $this->projectInputMode = 'floorplan';
 
         if ($this->projectId) {
             Project::where('id', $this->projectId)
                 ->where('user_id', Auth::id())
-                ->update(['floor_plan_json' => $json ?: null]);
+                ->update([
+                    'floor_plan_json' => $json ?: null,
+                    'input_mode'      => 'floorplan',
+                ]);
+            $this->syncFloorPlanRoomLinks();
         }
     }
 
@@ -1297,6 +1356,7 @@ class ProjectWizard extends Component
      */
     public function importRoomsFromFloorPlan(array $comodos, bool $autoSync = false): void
     {
+        $this->projectInputMode = 'floorplan';
         $imported = 0;
         $pendingTues = []; // [roomIndex => tues[]] — sincronizado só depois do saveStep2(),
                            // pra já ter o id real do cômodo no banco (chave estrangeira de project_loads)
@@ -1310,23 +1370,7 @@ class ProjectWizard extends Component
 
             $projectRoomId = $c['project_room_id'] ?? null;
             $cadRoomId = $c['id'] ?? null;
-            $roomIndex = null;
-            if ($projectRoomId) {
-                foreach ($this->rooms as $idx => $existingRoom) {
-                    if ((string)($existingRoom['id'] ?? '') === (string)$projectRoomId) {
-                        $roomIndex = $idx;
-                        break;
-                    }
-                }
-            }
-            if ($roomIndex === null && $cadRoomId) {
-                foreach ($this->rooms as $idx => $existingRoom) {
-                    if ((string)($existingRoom['cad_room_id'] ?? '') === (string)$cadRoomId) {
-                        $roomIndex = $idx;
-                        break;
-                    }
-                }
-            }
+            $roomIndex = $this->findRoomIndexForFloorPlanRoom($projectRoomId, $cadRoomId, $nome, $area, $perimetro);
 
             $room = $roomIndex !== null ? $this->rooms[$roomIndex] : $this->emptyRoom(count($this->rooms));
             if ($cadRoomId) {
@@ -1372,17 +1416,124 @@ class ProjectWizard extends Component
             foreach ($pendingTues as $roomIndex => $tues) {
                 $this->syncTuesForRoom($roomIndex, $tues);
             }
+            $this->consolidateDuplicateFloorPlanRooms();
         }
 
         if ($imported > 0 && $autoSync) {
             $this->dispatch('room-added');
         } elseif ($imported > 0) {
             $this->showFloorPlanEditor = false;
-            $this->projectInputMode = 'manual';
+            $this->projectInputMode = 'floorplan';
             $this->successMessage = "{$imported} cômodo(s) importado(s) da planta baixa. Confira o tipo de cada cômodo (foi adivinhado pelo nome) antes de avançar.";
             $this->dispatch('room-added');
         } elseif (!$autoSync) {
             $this->errorMessage = 'Nenhum cômodo fechado foi recebido da planta — desenhe as paredes ao redor e nomeie os cômodos antes de enviar.';
+        }
+    }
+
+    private function findRoomIndexForFloorPlanRoom($projectRoomId, $cadRoomId, string $nome, mixed $area, mixed $perimetro): ?int
+    {
+        if ($projectRoomId) {
+            foreach ($this->rooms as $idx => $existingRoom) {
+                if ((string)($existingRoom['id'] ?? '') === (string)$projectRoomId) {
+                    return $idx;
+                }
+            }
+        }
+
+        if ($cadRoomId) {
+            foreach ($this->rooms as $idx => $existingRoom) {
+                if ((string)($existingRoom['cad_room_id'] ?? '') === (string)$cadRoomId) {
+                    return $idx;
+                }
+            }
+        }
+
+        $normalizedName = mb_strtoupper(trim($nome), 'UTF-8');
+        $areaValue = $area !== null ? round((float)$area, 2) : null;
+        $perimeterValue = $perimetro !== null ? round((float)$perimetro, 2) : null;
+
+        foreach ($this->rooms as $idx => $existingRoom) {
+            if (($existingRoom['cad_room_id'] ?? null) !== null) continue;
+            if (mb_strtoupper(trim((string)($existingRoom['description'] ?? '')), 'UTF-8') !== $normalizedName) continue;
+
+            $existingArea = ($existingRoom['area_m2'] ?? '') !== '' ? round((float)$existingRoom['area_m2'], 2) : null;
+            $existingPerimeter = ($existingRoom['perimeter_m'] ?? '') !== '' ? round((float)$existingRoom['perimeter_m'], 2) : null;
+            if ($areaValue === $existingArea && $perimeterValue === $existingPerimeter) {
+                return $idx;
+            }
+        }
+
+        return null;
+    }
+
+    private function consolidateDuplicateFloorPlanRooms(): void
+    {
+        $groups = [];
+        foreach ($this->rooms as $idx => $room) {
+            $name = mb_strtoupper(trim((string)($room['description'] ?? '')), 'UTF-8');
+            $area = ($room['area_m2'] ?? '') !== '' ? number_format((float)$room['area_m2'], 2, '.', '') : '';
+            $perimeter = ($room['perimeter_m'] ?? '') !== '' ? number_format((float)$room['perimeter_m'], 2, '.', '') : '';
+            if ($name === '' || $area === '' || $perimeter === '') continue;
+            $groups["{$name}|{$area}|{$perimeter}"][] = $idx;
+        }
+
+        $removeIndexes = [];
+        foreach ($groups as $indexes) {
+            if (count($indexes) < 2) continue;
+
+            usort($indexes, function ($a, $b) {
+                $aHasCad = !empty($this->rooms[$a]['cad_room_id']);
+                $bHasCad = !empty($this->rooms[$b]['cad_room_id']);
+                if ($aHasCad !== $bHasCad) return $aHasCad ? -1 : 1;
+                return ((int)($this->rooms[$a]['id'] ?? PHP_INT_MAX)) <=> ((int)($this->rooms[$b]['id'] ?? PHP_INT_MAX));
+            });
+
+            $keepIndex = array_shift($indexes);
+            $keepId = $this->rooms[$keepIndex]['id'] ?? null;
+            if (!$keepId) continue;
+
+            foreach ($indexes as $duplicateIndex) {
+                $duplicateId = $this->rooms[$duplicateIndex]['id'] ?? null;
+                if (!$duplicateId) {
+                    $removeIndexes[] = $duplicateIndex;
+                    continue;
+                }
+
+                try {
+                    DB::table('project_loads')
+                        ->where('room_id', $duplicateId)
+                        ->where('load_type', 'TUE')
+                        ->update(['room_id' => $keepId, 'updated_at' => now()]);
+                    DB::table('project_loads')
+                        ->where('room_id', $duplicateId)
+                        ->where('load_type', '<>', 'TUE')
+                        ->delete();
+                    ProjectInputRow::where('room_id', $duplicateId)->delete();
+                    ProjectRoom::where('project_id', $this->projectId)->where('id', $duplicateId)->delete();
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::error('Erro ao consolidar cômodo duplicado da planta: ' . $e->getMessage());
+                }
+                $removeIndexes[] = $duplicateIndex;
+            }
+        }
+
+        if (empty($removeIndexes)) return;
+
+        rsort($removeIndexes);
+        foreach (array_unique($removeIndexes) as $idx) {
+            array_splice($this->rooms, $idx, 1);
+        }
+        $this->rooms = array_values($this->rooms);
+
+        foreach ($this->rooms as $idx => &$room) {
+            $room['sort_order'] = $idx;
+        }
+        unset($room);
+        $this->saveStep2();
+        $this->refreshAllRoomTuesFromLoads();
+        if ($this->currentStep >= 3) {
+            $this->loadLoadsFromDb();
         }
     }
 
@@ -1406,15 +1557,22 @@ class ProjectWizard extends Component
 
         $seenCadIds = [];
         foreach ($tues as $t) {
-            $cadTueId = $t['id'] ?? null;
+            $projectLoadId = $t['project_load_id'] ?? null;
+            $cadTueId = $t['cad_tue_id'] ?? ($t['id'] ?? null);
             $nome = trim((string)($t['nome'] ?? ''));
             $va   = (float)($t['va'] ?? 0);
-            if ($cadTueId === null || $nome === '' || $va <= 0) continue;
-            $seenCadIds[] = (string)$cadTueId;
+            if (($cadTueId === null && $projectLoadId === null) || $nome === '' || $va <= 0) continue;
+            if ($cadTueId !== null && !str_starts_with((string)$cadTueId, 'project-load-')) {
+                $seenCadIds[] = (string)$cadTueId;
+            }
 
             $loadIndex = null;
             foreach ($this->loads as $idx => $load) {
-                if (($load['load_type'] ?? '') === 'TUE' && (string)($load['cad_tue_id'] ?? '') === (string)$cadTueId) {
+                if ($projectLoadId !== null && ($load['load_type'] ?? '') === 'TUE' && (string)($load['id'] ?? '') === (string)$projectLoadId) {
+                    $loadIndex = $idx;
+                    break;
+                }
+                if ($cadTueId !== null && ($load['load_type'] ?? '') === 'TUE' && (string)($load['cad_tue_id'] ?? '') === (string)$cadTueId) {
                     $loadIndex = $idx;
                     break;
                 }
@@ -1430,11 +1588,11 @@ class ProjectWizard extends Component
             }
 
             $this->loads[] = [
-                'id'                  => null,
+                'id'                  => $projectLoadId,
                 'room_id'             => $roomId,
                 'room_index'          => $roomIndex,
                 'room_label'          => $roomLabel,
-                'cad_tue_id'          => $cadTueId,
+                'cad_tue_id'          => ($cadTueId !== null && !str_starts_with((string)$cadTueId, 'project-load-')) ? $cadTueId : null,
                 'load_type'           => 'TUE',
                 'description'         => $nome,
                 'quantity'            => 1,
@@ -1470,6 +1628,7 @@ class ProjectWizard extends Component
         }));
 
         $this->persistTueLoadsToDb($roomId, $seenCadIds);
+        $this->refreshRoomTuesFromLoads($roomIndex);
     }
 
     /**
@@ -1486,13 +1645,13 @@ class ProjectWizard extends Component
             foreach ($this->loads as &$load) {
                 if (($load['load_type'] ?? '') !== 'TUE') continue;
                 if (($load['room_id'] ?? null) != $roomId) continue;
-                if (empty($load['cad_tue_id'])) continue;
+                if (empty($load['cad_tue_id']) && empty($load['id'])) continue;
 
                 $data = [
                     'project_id'          => $this->projectId,
                     'room_id'             => $roomId,
                     'load_type'           => 'TUE',
-                    'cad_tue_id'          => $load['cad_tue_id'],
+                    'cad_tue_id'          => $load['cad_tue_id'] ?? null,
                     'description'         => $load['description'] ?? null,
                     'quantity'            => 1,
                     'power_va'            => (int)($load['power_va'] ?? 0),
@@ -1534,9 +1693,126 @@ class ProjectWizard extends Component
                 $q->whereNotIn('cad_tue_id', $seenCadIds);
             }
             $q->delete();
+            $this->mirrorTueLoadsForRoomToInputRows((int)$roomId);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Erro ao sincronizar TUE do editor de planta: ' . $e->getMessage());
         }
+    }
+
+    private function mirrorTueLoadsForRoomToInputRows(int $roomId): void
+    {
+        if (!$this->projectId || !$roomId) return;
+
+        $room = ProjectRoom::where('project_id', $this->projectId)->where('id', $roomId)->first();
+        if (!$room) return;
+
+        ProjectInputRow::where('project_id', $this->projectId)
+            ->where('room_id', $roomId)
+            ->where('load_type', 'TUE')
+            ->delete();
+
+        $loads = DB::table('project_loads')
+            ->where('project_id', $this->projectId)
+            ->where('room_id', $roomId)
+            ->where('load_type', 'TUE')
+            ->orderBy('sort_order')
+            ->get();
+
+        foreach ($loads as $load) {
+            if ((int)($load->power_va ?? 0) <= 0) continue;
+
+            ProjectInputRow::create([
+                'project_id'          => $this->projectId,
+                'room_id'             => $roomId,
+                'circuit_number'      => $load->circuit_number ?: null,
+                'room_type'           => $room->room_type,
+                'description'         => $load->description ?: null,
+                'load_type'           => 'TUE',
+                'specific_power_va'   => (int)$load->power_va,
+                'quantity'            => (int)($load->quantity ?? 1),
+                'phases'              => (int)($load->phases ?? $this->defaultPhases),
+                'voltage'             => (int)($load->voltage_v ?? $this->defaultVoltage),
+                'installation_method' => $load->installation_method ?? $this->defaultInstallationMethod,
+                'temperature_c'       => (int)($load->temperature_c ?? $this->defaultTemperatureC),
+                'distance_m'          => null,
+                'voltage_drop_percent'=> $this->defaultVoltageDropPercent,
+                'grouped_circuits'    => (int)($load->grouped_circuits ?? 1),
+                'power_factor'        => (float)($load->fp ?? 1.0),
+                'is_below_minimum'    => 0,
+                'minimum_va'          => null,
+                'area_m2'             => $room->area_m2,
+                'perimeter_m'         => $room->perimeter_m,
+                'sort_order'          => (int)($load->sort_order ?? 10),
+                'tue_description'     => $load->description ?: null,
+            ]);
+        }
+    }
+
+    private function refreshRoomTuesFromLoads(int $roomIndex): void
+    {
+        $roomId = $this->rooms[$roomIndex]['id'] ?? null;
+        if (!$this->projectId || !$roomId) return;
+
+        $this->rooms[$roomIndex]['tues'] = DB::table('project_loads')
+            ->where('project_id', $this->projectId)
+            ->where('room_id', $roomId)
+            ->where('load_type', 'TUE')
+            ->orderBy('sort_order')
+            ->get()
+            ->map(fn($t) => [
+                'id'          => $t->id,
+                'project_load_id' => $t->id,
+                'description' => $t->description ?? '',
+                'power_va'    => (string)$t->power_va,
+                'phases'      => (string)($t->phases ?? ''),
+                'voltage'     => (string)($t->voltage_v ?? ''),
+                'distance_m'  => '',
+                'cad_tue_id'  => $t->cad_tue_id ?? null,
+            ])
+            ->toArray();
+    }
+
+    private function refreshAllRoomTuesFromLoads(): void
+    {
+        foreach (array_keys($this->rooms) as $roomIndex) {
+            $this->refreshRoomTuesFromLoads($roomIndex);
+        }
+    }
+
+    private function syncFloorPlanRoomLinks(): void
+    {
+        if (!$this->projectId || trim($this->floorPlanJson) === '') return;
+
+        $state = json_decode($this->floorPlanJson, true);
+        if (!is_array($state) || !isset($state['rooms']) || !is_array($state['rooms'])) return;
+
+        $projectRoomIdByCadId = [];
+        foreach ($this->rooms as $room) {
+            if (!empty($room['id']) && !empty($room['cad_room_id'])) {
+                $projectRoomIdByCadId[(string)$room['cad_room_id']] = (int)$room['id'];
+            }
+        }
+        if (empty($projectRoomIdByCadId)) return;
+
+        $changed = false;
+        foreach ($state['rooms'] as &$room) {
+            $cadId = $room['id'] ?? null;
+            if ($cadId !== null && isset($projectRoomIdByCadId[(string)$cadId])) {
+                $linkedId = $projectRoomIdByCadId[(string)$cadId];
+                if ((string)($room['projectRoomId'] ?? '') !== (string)$linkedId) {
+                    $room['projectRoomId'] = $linkedId;
+                    $changed = true;
+                }
+            }
+        }
+        unset($room);
+
+        if (!$changed) return;
+
+        $this->floorPlanJson = json_encode($state, JSON_UNESCAPED_UNICODE);
+        Project::where('id', $this->projectId)
+            ->where('user_id', Auth::id())
+            ->update(['floor_plan_json' => $this->floorPlanJson]);
     }
 
     /**
@@ -1704,6 +1980,7 @@ class ProjectWizard extends Component
                         'room_id'             => $tRow->room_id,
                         'room_index'          => $roomIndex,
                         'room_label'          => $roomLabel,
+                        'cad_tue_id'          => $tRow->cad_tue_id ?? null,
                         'load_type'           => $tRow->load_type ?: 'TUE',
                         'description'         => $tRow->description ?? '',
                         'quantity'            => (int)($tRow->quantity ?? 1),
@@ -3026,6 +3303,7 @@ class ProjectWizard extends Component
     {
         return [
             'id'                          => null,
+            'cad_room_id'                 => null,
             'room_type'                   => '',
             'description'                 => '',
             'area_m2'                     => '',

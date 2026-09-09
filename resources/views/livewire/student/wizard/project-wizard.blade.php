@@ -328,7 +328,9 @@
                 $effectiveTugQty = $effectiveTugQty600 + $effectiveTugQty100;
                 $effectiveTugVa  = ($effectiveTugQty600 * 600) + ($effectiveTugQty100 * 100);
 
-                $totalVa = $effectiveLightingVa + $effectiveTugVa;
+                $roomTueRows = collect($room['tues'] ?? [])->filter(fn($tue) => (int)($tue['power_va'] ?? 0) > 0);
+                $effectiveTueVa = (int)$roomTueRows->sum(fn($tue) => (int)($tue['power_va'] ?? 0));
+                $totalVa = $effectiveLightingVa + $effectiveTugVa + $effectiveTueVa;
                 $hasCalc = ($room['lighting_va_calculated'] ?? null) !== null || ($room['tug_qty_calculated'] ?? null) !== null;
             @endphp
             <div class="bg-slate-50/70 dark:bg-gray-800/60 border border-gray-200/80 dark:border-gray-700 rounded-xl overflow-hidden mb-5 shadow-sm transition-all hover:border-gray-300 dark:hover:border-gray-600" wire:key="room2-{{ $i }}">
@@ -417,7 +419,7 @@
 
                     {{-- Resultados dos cálculos --}}
                     @if($hasCalc)
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-stretch">
 
                         {{-- Card: Iluminação --}}
                         <div class="bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3.5 h-full flex flex-col justify-between">
@@ -541,6 +543,37 @@
                             </div>
                         </div>
 
+                        {{-- Card: TUE --}}
+                        <div class="bg-orange-50/80 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-3.5 h-full flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between gap-1.5 mb-2">
+                                    <div class="flex items-center gap-1.5">
+                                        <svg class="w-4 h-4 text-orange-600 dark:text-orange-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5h2m-1 0v6m-4 8h8a2 2 0 002-2v-1a6 6 0 00-12 0v1a2 2 0 002 2z"/></svg>
+                                        <span class="text-xs font-bold text-orange-800 dark:text-orange-300 uppercase tracking-wide">TUE</span>
+                                    </div>
+                                    <span class="text-[11px] font-semibold text-orange-700 dark:text-orange-300">{{ $roomTueRows->count() }}</span>
+                                </div>
+                                <div class="text-2xl font-black text-orange-900 dark:text-orange-200">
+                                    {{ number_format($effectiveTueVa, 0, ',', '.') }} VA
+                                </div>
+                            </div>
+
+                            <div class="mt-auto pt-3 border-t border-orange-200/70 dark:border-orange-800/70">
+                                @if($roomTueRows->isNotEmpty())
+                                    <div class="space-y-1 max-h-24 overflow-auto pr-1">
+                                        @foreach($roomTueRows as $tue)
+                                            <div class="flex items-center justify-between gap-2 text-xs text-orange-900 dark:text-orange-200 bg-white/70 dark:bg-gray-900/30 rounded px-2 py-1">
+                                                <span class="truncate">{{ ($tue['description'] ?? '') ?: 'TUE sem nome' }}</span>
+                                                <span class="font-bold tabular-nums flex-shrink-0">{{ number_format((int)($tue['power_va'] ?? 0), 0, ',', '.') }} VA</span>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <p class="text-xs text-orange-700/80 dark:text-orange-300/80">Nenhuma TUE neste cômodo.</p>
+                                @endif
+                            </div>
+                        </div>
+
                         {{-- Card: Total Mínimo --}}
                         <div class="bg-yellow-50/80 dark:bg-yellow-900/20 border border-yellow-300 rounded-xl p-3.5 h-full flex flex-col justify-between">
                             <div>
@@ -571,6 +604,10 @@
                                 <div class="flex justify-between items-center">
                                     <span class="text-yellow-800/90 dark:text-yellow-300/90">TUG ({{ $effectiveTugQty }} tom.):</span>
                                     <span class="font-bold">{{ number_format($effectiveTugVa, 0, ',', '.') }} VA</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-yellow-800/90 dark:text-yellow-300/90">TUE:</span>
+                                    <span class="font-bold">{{ number_format($effectiveTueVa, 0, ',', '.') }} VA</span>
                                 </div>
                             </div>
                         </div>
