@@ -1298,6 +1298,8 @@ class ProjectWizard extends Component
     public function importRoomsFromFloorPlan(array $comodos, bool $autoSync = false): void
     {
         $imported = 0;
+        $pendingTues = []; // [roomIndex => tues[]] — sincronizado só depois do saveStep2(),
+                           // pra já ter o id real do cômodo no banco (chave estrangeira de project_loads)
         foreach ($comodos as $c) {
             if (empty($c['fechado'])) continue;
 
@@ -1357,7 +1359,7 @@ class ProjectWizard extends Component
                 $this->calculateRoomLoads($roomIndex);
             }
 
-            $this->syncTuesForRoom($roomIndex, is_array($c['tues'] ?? null) ? $c['tues'] : []);
+            $pendingTues[$roomIndex] = is_array($c['tues'] ?? null) ? $c['tues'] : [];
 
             $imported++;
         }
@@ -1367,6 +1369,9 @@ class ProjectWizard extends Component
             // pra "Ver detalhes do projeto" já refletir o que foi desenhado sem
             // precisar passar pelos passos seguintes do assistente antes
             $this->saveStep2();
+            foreach ($pendingTues as $roomIndex => $tues) {
+                $this->syncTuesForRoom($roomIndex, $tues);
+            }
         }
 
         if ($imported > 0 && $autoSync) {
@@ -1463,6 +1468,75 @@ class ProjectWizard extends Component
             if (empty($load['cad_tue_id'])) return true;
             return in_array((string)$load['cad_tue_id'], $seenCadIds, true);
         }));
+
+        $this->persistTueLoadsToDb($roomId, $seenCadIds);
+    }
+
+    /**
+     * Grava só as TUEs com cad_tue_id (originadas do editor de planta) direto
+     * em project_loads — de propósito NÃO passa pelo saveStep3()/
+     * mirrorLoadsToInputRows(), que recalcula numeração de circuito e não é
+     * seguro disparar a cada sincronização automática (a cada ~700ms) sem
+     * o aluno estar de fato revisando o Passo 3.
+     */
+    private function persistTueLoadsToDb($roomId, array $seenCadIds): void
+    {
+        if (!$this->projectId || !$roomId) return;
+        try {
+            foreach ($this->loads as &$load) {
+                if (($load['load_type'] ?? '') !== 'TUE') continue;
+                if (($load['room_id'] ?? null) != $roomId) continue;
+                if (empty($load['cad_tue_id'])) continue;
+
+                $data = [
+                    'project_id'          => $this->projectId,
+                    'room_id'             => $roomId,
+                    'load_type'           => 'TUE',
+                    'cad_tue_id'          => $load['cad_tue_id'],
+                    'description'         => $load['description'] ?? null,
+                    'quantity'            => 1,
+                    'power_va'            => (int)($load['power_va'] ?? 0),
+                    'unit_va'             => (int)($load['unit_va'] ?? 0),
+                    'is_auto'             => false,
+                    'sort_order'          => (int)($load['sort_order'] ?? 10),
+                    'phases'              => (int)($load['phases'] ?? 1),
+                    'voltage_v'           => (int)($load['voltage_v'] ?? 127),
+                    'installation_method' => $load['installation_method'] ?? 'B1',
+                    'temperature_c'       => (int)($load['temperature_c'] ?? 30),
+                    'grouped_circuits'    => (int)($load['grouped_circuits'] ?? 1),
+                    'fp'                  => (float)($load['fp'] ?? 1.0),
+                    'updated_at'          => now(),
+                ];
+
+                if (!empty($load['id'])) {
+                    DB::table('project_loads')->where('id', $load['id'])->update($data);
+                } else {
+                    $existing = DB::table('project_loads')
+                        ->where('room_id', $roomId)
+                        ->where('load_type', 'TUE')
+                        ->where('cad_tue_id', $load['cad_tue_id'])
+                        ->first();
+                    if ($existing) {
+                        DB::table('project_loads')->where('id', $existing->id)->update($data);
+                        $load['id'] = $existing->id;
+                    } else {
+                        $load['id'] = DB::table('project_loads')->insertGetId($data + ['created_at' => now()]);
+                    }
+                }
+            }
+            unset($load);
+
+            $q = DB::table('project_loads')
+                ->where('room_id', $roomId)
+                ->where('load_type', 'TUE')
+                ->whereNotNull('cad_tue_id');
+            if (!empty($seenCadIds)) {
+                $q->whereNotIn('cad_tue_id', $seenCadIds);
+            }
+            $q->delete();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Erro ao sincronizar TUE do editor de planta: ' . $e->getMessage());
+        }
     }
 
     /**

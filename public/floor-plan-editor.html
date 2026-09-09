@@ -4144,6 +4144,11 @@
       resize();
       updateStats();
     }
+    // ressincroniza os cômodos ao abrir — sem isso, o projeto só reflete o
+    // que estava salvo na última vez que algo mudou NA planta, não o estado
+    // atual (ex.: se uma correção no backend passa a aceitar campos novos
+    // que já existiam no desenho, só apareceriam depois de outra edição)
+    scheduleRoomSync();
   });
 
   // ---------------------------------------------------------------
