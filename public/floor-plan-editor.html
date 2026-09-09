@@ -522,6 +522,25 @@
   .room-modal-body{ display:grid; gap:9px; }
   .room-modal-field{ display:flex; flex-direction:column; gap:5px; font-size:11.5px; font-weight:700; color:var(--muted); }
   .room-modal-field[hidden]{ display:none; }
+  .room-choice-list{ display:grid; gap:6px; max-height:170px; overflow:auto; padding-right:2px; }
+  .room-choice{
+    width:100%;
+    text-align:left;
+    border:1px solid var(--surface-border);
+    background:var(--surface);
+    color:var(--text);
+    border-radius:8px;
+    padding:8px 10px;
+    cursor:pointer;
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+    align-items:center;
+  }
+  .room-choice:hover,
+  .room-choice.active{ border-color:var(--accent); background:var(--accent-dim); }
+  .room-choice-name{ font-size:12.5px; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .room-choice-meta{ font-size:10.5px; color:var(--muted); white-space:nowrap; }
   .room-modal-actions{ display:flex; justify-content:flex-end; gap:8px; padding-top:2px; }
   .room-modal-actions button{ min-width:82px; justify-content:center; }
   .mini-modal label{
@@ -1069,8 +1088,32 @@
         .filter(r=>r && r.cad_room_id)
         .map(r=>[String(r.cad_room_id), r])
     );
+
+    const projectRoomsByName = new Map();
+    pendingProjectRooms.forEach(projectRoom=>{
+      const nameKey = normalizeLabel(projectRoomName(projectRoom));
+      if(!nameKey) return;
+      if(!projectRoomsByName.has(nameKey)) projectRoomsByName.set(nameKey, []);
+      projectRoomsByName.get(nameKey).push(projectRoom);
+    });
+    const cadRoomsByName = new Map();
     rooms.forEach(room=>{
-      const projectRoom = findLinkedProjectRoomForCadRoom(room, projectRoomsById, projectRoomsByCadId);
+      const nameKey = normalizeLabel(room.name);
+      if(!nameKey) return;
+      if(!cadRoomsByName.has(nameKey)) cadRoomsByName.set(nameKey, []);
+      cadRoomsByName.get(nameKey).push(room);
+    });
+
+    rooms.forEach(room=>{
+      let projectRoom = findLinkedProjectRoomForCadRoom(room, projectRoomsById, projectRoomsByCadId);
+      if(!projectRoom && !room.projectRoomId){
+        const nameKey = normalizeLabel(room.name);
+        const projectNameMatches = projectRoomsByName.get(nameKey) || [];
+        const cadNameMatches = cadRoomsByName.get(nameKey) || [];
+        if(projectNameMatches.length === 1 && cadNameMatches.length === 1){
+          projectRoom = projectNameMatches[0];
+        }
+      }
       if(!projectRoom) return;
       room.projectRoomId = projectRoom.id || room.projectRoomId || null;
       room.name = projectRoom.description || projectRoom.room_type || room.name;
@@ -4270,9 +4313,14 @@
           <input type="text" id="roomNameInput" placeholder="Ex: Quarto 1" maxlength="30" />
         </label>
         <label class="room-modal-field" id="roomLinkField" hidden>Cômodo do projeto
-          <select id="roomProjectRef">
-            ${pendingChoices.map(r=>`<option value="${r.id}">${projectRoomName(r) || 'Cômodo '+r.id}</option>`).join('')}
-          </select>
+          <div class="room-choice-list" id="roomProjectChoices">
+            ${pendingChoices.map((r,i)=>`
+              <button type="button" class="room-choice ${i===0?'active':''}" data-room-id="${r.id}">
+                <span class="room-choice-name">${projectRoomName(r) || 'Cômodo '+r.id}</span>
+                <span class="room-choice-meta">${r.room_type || 'Sem tipo'}</span>
+              </button>
+            `).join('')}
+          </div>
         </label>
       </div>
       <div class="room-modal-actions">
@@ -4284,7 +4332,8 @@
     const input = modal.querySelector('#roomNameInput');
     const linkField = modal.querySelector('#roomLinkField');
     const nameField = modal.querySelector('#roomNameField');
-    const roomProjectRef = modal.querySelector('#roomProjectRef');
+    const roomProjectChoices = modal.querySelector('#roomProjectChoices');
+    let selectedProjectRoomId = pendingChoices[0] ? String(pendingChoices[0].id) : '';
     let mode = 'new';
 
     function setMode(nextMode){
@@ -4293,18 +4342,26 @@
       modal.querySelectorAll('[data-room-mode]').forEach(btn=>btn.classList.toggle('active', btn.dataset.roomMode === mode));
       nameField.hidden = mode === 'link';
       linkField.hidden = mode !== 'link';
-      if(mode === 'link' && roomProjectRef){
-        const linked = pendingProjectRooms.find(r=>String(r.id)===String(roomProjectRef.value));
+      if(mode === 'link' && selectedProjectRoomId){
+        const linked = pendingProjectRooms.find(r=>String(r.id)===selectedProjectRoomId);
         input.value = linked ? projectRoomName(linked) : '';
       }
     }
     modal.querySelectorAll('[data-room-mode]').forEach(btn=>btn.addEventListener('click', ()=>setMode(btn.dataset.roomMode)));
-    if(roomProjectRef) roomProjectRef.addEventListener('change', ()=>setMode('link'));
+    if(roomProjectChoices){
+      roomProjectChoices.querySelectorAll('.room-choice').forEach(choice=>{
+        choice.addEventListener('click', ()=>{
+          selectedProjectRoomId = String(choice.dataset.roomId || '');
+          roomProjectChoices.querySelectorAll('.room-choice').forEach(btn=>btn.classList.toggle('active', btn === choice));
+          setMode('link');
+        });
+      });
+    }
     input.focus();
 
     function confirmIt(){
-      const linked = mode === 'link' && roomProjectRef
-        ? pendingProjectRooms.find(r=>String(r.id)===String(roomProjectRef.value))
+      const linked = mode === 'link' && selectedProjectRoomId
+        ? pendingProjectRooms.find(r=>String(r.id)===selectedProjectRoomId)
         : null;
       const name = linked ? projectRoomName(linked) : input.value.trim();
       if(name){
