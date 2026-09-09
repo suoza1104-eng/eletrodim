@@ -395,7 +395,7 @@ class ProjectWizard extends Component
             $this->projectInputMode = 'manual';
         }
 
-        if ($this->projectId && $this->projectInputMode === 'floorplan') {
+        if ($this->projectId && $this->hasFloorPlanState()) {
             $this->consolidateDuplicateFloorPlanRooms();
         }
     }
@@ -1346,7 +1346,7 @@ class ProjectWizard extends Component
     public function getFloorPlanProjectRooms(): array
     {
         $this->normalizeRooms();
-        if ($this->projectId && $this->projectInputMode === 'floorplan') {
+        if ($this->projectId && $this->hasFloorPlanState()) {
             $this->consolidateDuplicateFloorPlanRooms();
         }
         $this->refreshAllRoomTuesFromLoads();
@@ -1377,6 +1377,11 @@ class ProjectWizard extends Component
         }
 
         return true;
+    }
+
+    private function hasFloorPlanState(): bool
+    {
+        return $this->projectInputMode === 'floorplan' || trim($this->floorPlanJson) !== '';
     }
 
     private function uniqueRoomsForFloorPlanPayload(): array
@@ -1516,9 +1521,11 @@ class ProjectWizard extends Component
         $areaValue = $area !== null ? round((float)$area, 2) : null;
         $perimeterValue = $perimetro !== null ? round((float)$perimetro, 2) : null;
 
+        $sameNameIndexes = [];
         foreach ($this->rooms as $idx => $existingRoom) {
             if (($existingRoom['cad_room_id'] ?? null) !== null) continue;
             if (mb_strtoupper(trim((string)($existingRoom['description'] ?? '')), 'UTF-8') !== $normalizedName) continue;
+            $sameNameIndexes[] = $idx;
 
             $existingArea = ($existingRoom['area_m2'] ?? '') !== '' ? round((float)$existingRoom['area_m2'], 2) : null;
             $existingPerimeter = ($existingRoom['perimeter_m'] ?? '') !== '' ? round((float)$existingRoom['perimeter_m'], 2) : null;
@@ -1527,11 +1534,17 @@ class ProjectWizard extends Component
             }
         }
 
+        if (($areaValue === null || $perimeterValue === null) && !empty($sameNameIndexes)) {
+            return $sameNameIndexes[0];
+        }
+
         return null;
     }
 
     private function consolidateDuplicateFloorPlanRooms(): void
     {
+        $this->markRoomsLinkedByFloorPlanState();
+
         $groups = [];
         foreach ($this->rooms as $idx => $room) {
             $name = mb_strtoupper(trim((string)($room['description'] ?? '')), 'UTF-8');
@@ -1597,6 +1610,45 @@ class ProjectWizard extends Component
         $this->refreshAllRoomTuesFromLoads();
         if ($this->currentStep >= 3) {
             $this->loadLoadsFromDb();
+        }
+    }
+
+    private function markRoomsLinkedByFloorPlanState(): void
+    {
+        if (trim($this->floorPlanJson) === '') return;
+
+        $state = json_decode($this->floorPlanJson, true);
+        $cadRooms = is_array($state['rooms'] ?? null) ? $state['rooms'] : [];
+        if (empty($cadRooms)) return;
+
+        foreach ($cadRooms as $cadRoom) {
+            $cadId = $cadRoom['id'] ?? null;
+            $name = trim((string)($cadRoom['name'] ?? ''));
+            if ($cadId === null || $name === '') continue;
+
+            $area = null;
+            $perimeter = null;
+            foreach (is_array($state['comodos'] ?? null) ? $state['comodos'] : [] as $payloadRoom) {
+                if ((string)($payloadRoom['id'] ?? '') === (string)$cadId) {
+                    $area = $payloadRoom['area_m2'] ?? null;
+                    $perimeter = $payloadRoom['perimetro_m'] ?? null;
+                    break;
+                }
+            }
+
+            $roomIndex = $this->findRoomIndexForFloorPlanRoom(
+                $cadRoom['projectRoomId'] ?? null,
+                $cadId,
+                $name,
+                $area,
+                $perimeter
+            );
+            if ($roomIndex === null) continue;
+
+            $this->rooms[$roomIndex]['cad_room_id'] = $cadId;
+            if (!empty($cadRoom['projectRoomId']) && empty($this->rooms[$roomIndex]['id'])) {
+                $this->rooms[$roomIndex]['id'] = (int)$cadRoom['projectRoomId'];
+            }
         }
     }
 
