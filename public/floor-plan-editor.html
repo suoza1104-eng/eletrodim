@@ -493,6 +493,37 @@
     overflow-y:auto;
   }
   .mini-modal.inline{ flex-direction:row; align-items:center; }
+  .mini-modal.room-modal{
+    width:min(430px, calc(100vw - 28px));
+    border-color:var(--panel-border);
+    border-radius:14px;
+    padding:14px;
+    gap:12px;
+    box-shadow:0 22px 58px var(--shadow-color), 0 1px 0 rgba(255,255,255,.18) inset;
+  }
+  .mini-modal.room-modal.inline{ flex-direction:column; align-items:stretch; }
+  .room-modal-head{ display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+  .room-modal-title{ font-size:13px; font-weight:800; color:var(--text); letter-spacing:.2px; }
+  .room-modal-sub{ font-size:11.5px; color:var(--muted); margin-top:2px; line-height:1.35; }
+  .room-modal-pill{ font-size:10.5px; font-weight:700; color:var(--accent); background:var(--accent-dim); border:1px solid var(--accent); border-radius:999px; padding:3px 8px; white-space:nowrap; }
+  .room-modal-mode{ display:grid; grid-template-columns:1fr 1fr; gap:4px; padding:3px; background:var(--surface); border:1px solid var(--surface-border); border-radius:9px; }
+  .room-modal-mode button{
+    border:0;
+    background:transparent;
+    color:var(--muted);
+    border-radius:7px;
+    padding:7px 9px;
+    font-size:12px;
+    font-weight:700;
+    box-shadow:none;
+  }
+  .room-modal-mode button.active{ background:var(--panel); color:var(--text); box-shadow:0 2px 8px var(--shadow-color); }
+  .room-modal-mode button:disabled{ opacity:.45; cursor:not-allowed; }
+  .room-modal-body{ display:grid; gap:9px; }
+  .room-modal-field{ display:flex; flex-direction:column; gap:5px; font-size:11.5px; font-weight:700; color:var(--muted); }
+  .room-modal-field[hidden]{ display:none; }
+  .room-modal-actions{ display:flex; justify-content:flex-end; gap:8px; padding-top:2px; }
+  .room-modal-actions button{ min-width:82px; justify-content:center; }
   .mini-modal label{
     font-size:11px;
     color:var(--muted);
@@ -4178,39 +4209,69 @@
   function openRoomModal(screenX, screenY, worldPt, polygon){
     removeOpenModals();
     const modal = document.createElement('div');
-    modal.className = 'mini-modal inline';
+    modal.className = 'mini-modal inline room-modal';
     const rect = canvas.getBoundingClientRect();
-    modal.style.left = (screenX - rect.left + 10) + 'px';
-    modal.style.top = (screenY - rect.top + 10) + 'px';
+    const left = Math.min(Math.max(screenX - rect.left + 10, 12), Math.max(12, rect.width - 444));
+    const top = Math.min(Math.max(screenY - rect.top + 10, 12), Math.max(12, rect.height - 250));
+    modal.style.left = left + 'px';
+    modal.style.top = top + 'px';
     const pendingChoices = unlinkedProjectRooms(computeRoomFaces());
     modal.innerHTML = `
-      <input type="text" placeholder="Nome do cômodo (ex: Quarto 1)" maxlength="30" />
-      <button class="ok">OK</button>
-      <button class="cancel">Cancelar</button>
+      <div class="room-modal-head">
+        <div>
+          <div class="room-modal-title">Identificar cômodo</div>
+          <div class="room-modal-sub">Crie um novo ambiente ou vincule este contorno a um cômodo cadastrado nos detalhes.</div>
+        </div>
+        ${pendingChoices.length ? `<span class="room-modal-pill">${pendingChoices.length} pendente${pendingChoices.length===1?'':'s'}</span>` : ''}
+      </div>
+      <div class="room-modal-mode">
+        <button type="button" class="active" data-room-mode="new">Novo cômodo</button>
+        <button type="button" data-room-mode="link" ${pendingChoices.length ? '' : 'disabled'}>Vincular existente</button>
+      </div>
+      <div class="room-modal-body">
+        <label class="room-modal-field" id="roomNameField">Nome
+          <input type="text" id="roomNameInput" placeholder="Ex: Quarto 1" maxlength="30" />
+        </label>
+        <label class="room-modal-field" id="roomLinkField" hidden>Cômodo do projeto
+          <select id="roomProjectRef">
+            ${pendingChoices.map(r=>`<option value="${r.id}">${projectRoomName(r) || 'Cômodo '+r.id}</option>`).join('')}
+          </select>
+        </label>
+      </div>
+      <div class="room-modal-actions">
+        <button class="cancel" type="button">Cancelar</button>
+        <button class="ok" type="button">Confirmar</button>
+      </div>
     `;
     canvas.parentElement.appendChild(modal);
-    const input = modal.querySelector('input');
-    let roomProjectRef = null;
-    if(pendingChoices.length){
-      const label = document.createElement('label');
-      label.style.cssText = 'font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:4px;';
-      label.textContent = 'Comodo do projeto';
-      roomProjectRef = document.createElement('select');
-      roomProjectRef.id = 'roomProjectRef';
-      roomProjectRef.innerHTML = '<option value="">Novo comodo no CAD</option>' + pendingChoices.map(r=>`<option value="${r.id}">${projectRoomName(r) || 'Comodo '+r.id}</option>`).join('');
-      roomProjectRef.addEventListener('change', ()=>{
+    const input = modal.querySelector('#roomNameInput');
+    const linkField = modal.querySelector('#roomLinkField');
+    const nameField = modal.querySelector('#roomNameField');
+    const roomProjectRef = modal.querySelector('#roomProjectRef');
+    let mode = 'new';
+
+    function setMode(nextMode){
+      if(nextMode === 'link' && !pendingChoices.length) return;
+      mode = nextMode;
+      modal.querySelectorAll('[data-room-mode]').forEach(btn=>btn.classList.toggle('active', btn.dataset.roomMode === mode));
+      nameField.hidden = mode === 'link';
+      linkField.hidden = mode !== 'link';
+      if(mode === 'link' && roomProjectRef){
         const linked = pendingProjectRooms.find(r=>String(r.id)===String(roomProjectRef.value));
-        if(linked) input.value = linked.description || linked.room_type || '';
-      });
-      label.appendChild(roomProjectRef);
-      modal.insertBefore(label, input);
+        input.value = linked ? projectRoomName(linked) : '';
+      }
     }
+    modal.querySelectorAll('[data-room-mode]').forEach(btn=>btn.addEventListener('click', ()=>setMode(btn.dataset.roomMode)));
+    if(roomProjectRef) roomProjectRef.addEventListener('change', ()=>setMode('link'));
     input.focus();
+
     function confirmIt(){
-      const name = input.value.trim();
+      const linked = mode === 'link' && roomProjectRef
+        ? pendingProjectRooms.find(r=>String(r.id)===String(roomProjectRef.value))
+        : null;
+      const name = linked ? projectRoomName(linked) : input.value.trim();
       if(name){
-        const roomData = { id: nextId++, name, projectRoomId: modal.querySelector('#roomProjectRef') ? modal.querySelector('#roomProjectRef').value || null : null };
-        const linked = pendingProjectRooms.find(r=>String(r.id)===String(roomData.projectRoomId || ''));
+        const roomData = { id: nextId++, name, projectRoomId: linked ? linked.id : null };
         if(linked){
           roomData.name = linked.description || linked.room_type || name;
           roomData.roomType = linked.room_type || null;
@@ -4229,7 +4290,7 @@
     }
     modal.querySelector('.ok').addEventListener('click', confirmIt);
     modal.querySelector('.cancel').addEventListener('click', ()=>modal.remove());
-    input.addEventListener('keydown', (ev)=>{
+    modal.addEventListener('keydown', (ev)=>{
       if(ev.key==='Enter') confirmIt();
       if(ev.key==='Escape') modal.remove();
     });
