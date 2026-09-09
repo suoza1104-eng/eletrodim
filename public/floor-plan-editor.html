@@ -1047,11 +1047,13 @@
     const seen = new Set();
     return pendingProjectRooms.filter(projectRoom=>{
       if(!projectRoom || !projectRoom.id || projectRoomHasCadRepresentation(projectRoom, faces)) return false;
+      const nameKey = normalizeLabel(projectRoomName(projectRoom));
+      if(nameKey && rooms.some(room=>normalizeLabel(room.name) === nameKey)) return false;
       const key = [
-        normalizeLabel(projectRoomName(projectRoom)),
+        nameKey,
         projectRoom.room_type || '',
-        projectRoom.area_m2 || '',
-        projectRoom.perimeter_m || ''
+        projectRoom.area_m2 !== undefined && projectRoom.area_m2 !== null ? Number(projectRoom.area_m2).toFixed(2) : '',
+        projectRoom.perimeter_m !== undefined && projectRoom.perimeter_m !== null ? Number(projectRoom.perimeter_m).toFixed(2) : ''
       ].join('|');
       if(seen.has(key)) return false;
       seen.add(key);

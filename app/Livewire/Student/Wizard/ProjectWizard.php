@@ -1346,9 +1346,12 @@ class ProjectWizard extends Component
     public function getFloorPlanProjectRooms(): array
     {
         $this->normalizeRooms();
+        if ($this->projectId && $this->projectInputMode === 'floorplan') {
+            $this->consolidateDuplicateFloorPlanRooms();
+        }
         $this->refreshAllRoomTuesFromLoads();
 
-        return array_values($this->rooms);
+        return $this->uniqueRoomsForFloorPlanPayload();
     }
 
     public function getFloorPlanProjectContext(): array
@@ -1374,6 +1377,30 @@ class ProjectWizard extends Component
         }
 
         return true;
+    }
+
+    private function uniqueRoomsForFloorPlanPayload(): array
+    {
+        $unique = [];
+        $seen = [];
+
+        foreach ($this->rooms as $room) {
+            $id = $room['id'] ?? null;
+            if ($id && isset($seen["id:{$id}"])) continue;
+
+            $name = mb_strtoupper(trim((string)($room['description'] ?? '')), 'UTF-8');
+            $type = mb_strtoupper(trim((string)($room['room_type'] ?? '')), 'UTF-8');
+            $area = ($room['area_m2'] ?? '') !== '' ? number_format((float)$room['area_m2'], 2, '.', '') : '';
+            $perimeter = ($room['perimeter_m'] ?? '') !== '' ? number_format((float)$room['perimeter_m'], 2, '.', '') : '';
+            $signature = "sig:{$name}|{$type}|{$area}|{$perimeter}";
+            if (isset($seen[$signature])) continue;
+
+            if ($id) $seen["id:{$id}"] = true;
+            $seen[$signature] = true;
+            $unique[] = $room;
+        }
+
+        return array_values($unique);
     }
 
     public function toggleFloorPlanEditor(): void
