@@ -290,6 +290,7 @@
                         const payload = {
                             type: 'eletrodim:floorplan-init',
                             state: @js($floorPlanJson ? json_decode($floorPlanJson, true) : null),
+                            inputMode: @js($projectInputMode),
                             projectRooms: @js($rooms)
                         };
                         frame.addEventListener('load', () => {

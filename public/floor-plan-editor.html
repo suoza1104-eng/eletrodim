@@ -257,6 +257,96 @@
     letter-spacing:.6px;
     text-transform:uppercase;
   }
+  .alert-fab{
+    position:absolute;
+    right:22px;
+    bottom:22px;
+    width:52px;
+    height:52px;
+    border-radius:50%;
+    border:1px solid var(--panel-border);
+    background:var(--panel);
+    color:var(--accent);
+    box-shadow:0 12px 30px var(--shadow-color);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:22px;
+    cursor:pointer;
+    z-index:14;
+    transition:transform .12s ease;
+  }
+  .alert-fab:hover{ transform:scale(1.06); }
+  .alert-fab.has-errors{ color:var(--danger); border-color:var(--danger); }
+  .alert-fab-badge{
+    position:absolute;
+    top:-4px;
+    right:-4px;
+    min-width:19px;
+    height:19px;
+    padding:0 4px;
+    border-radius:10px;
+    background:var(--danger);
+    color:#fff;
+    font-size:11px;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    line-height:1;
+  }
+  .alert-panel{
+    position:absolute;
+    right:22px;
+    bottom:86px;
+    width:320px;
+    max-height:min(520px, calc(100% - 110px));
+    overflow:auto;
+    background:var(--super-panel-bg);
+    border:1px solid var(--super-panel-border);
+    box-shadow:0 22px 55px var(--shadow-color), 0 1px 0 rgba(255,255,255,.08) inset;
+    border-radius:14px;
+    padding:14px;
+    z-index:15;
+    opacity:0;
+    pointer-events:none;
+    transform:translateY(8px) scale(.98);
+    transition:opacity .14s ease, transform .14s ease;
+  }
+  .alert-panel.show{
+    opacity:1;
+    pointer-events:auto;
+    transform:translateY(0) scale(1);
+  }
+  .alert-item{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    padding:9px 10px;
+    border-radius:9px;
+    border:1px solid var(--surface-border);
+    background:var(--surface);
+    margin-bottom:8px;
+    cursor:pointer;
+  }
+  .alert-item:last-child{ margin-bottom:0; }
+  .alert-item:hover{ border-color:var(--accent); }
+  .alert-item .alert-item-head{ display:flex; align-items:center; gap:6px; }
+  .alert-item .alert-badge{
+    font-size:9.5px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.4px;
+    padding:2px 6px;
+    border-radius:5px;
+    flex-shrink:0;
+  }
+  .alert-item .alert-badge.error{ background:var(--danger-soft-bg); color:var(--danger-soft-text); }
+  .alert-item .alert-badge.warning{ background:rgba(255,135,55,.16); color:var(--accent); }
+  .alert-item .alert-badge.tip{ background:rgba(120,140,160,.16); color:var(--muted); }
+  .alert-item .alert-item-title{ font-size:12.5px; font-weight:700; color:var(--text); }
+  .alert-item .alert-item-msg{ font-size:11.5px; color:var(--muted); line-height:1.4; }
+  .alert-item .alert-item-go{ font-size:11px; color:var(--accent); font-weight:700; margin-top:2px; }
   .cad-toggle{
     background:var(--panel);
     border:1px solid var(--panel-border);
@@ -622,6 +712,17 @@
         <div class="empty" style="margin-top:8px;">Passe o mouse, escolha um bloco e clique na planta para posicionar tomadas, interruptores, pontos de luz e QDC.</div>
       </div>
     </div>
+    <button class="alert-fab" id="btnAlerts" type="button" title="Alertas do projeto" aria-label="Alertas do projeto">
+      <span>⚠</span>
+      <span class="alert-fab-badge" id="alertBadge" hidden>0</span>
+    </button>
+    <div class="alert-panel" id="alertPanel">
+      <div class="panel-block">
+        <h2>ALERTAS DO PROJETO</h2>
+        <div class="empty" id="alertEmpty">Nenhum problema encontrado até agora.</div>
+        <div id="alertList"></div>
+      </div>
+    </div>
     <div class="super-panel" id="superPanel">
       <div class="panel-block">
         <h2>SUPERPODERES</h2>
@@ -744,6 +845,7 @@
   let materialResult = null; // {rows:[{circuito,kind,metros}], totals:{kind:metros}} — só após "Calcular materiais"
   let nextId = 1;
   let pendingProjectRooms = [];
+  let projectInputMode = '';
   let orthoMode = true;
   let osnapMode = true;
   let otrackMode = false;
@@ -867,6 +969,46 @@
     updateStats();
   }
 
+  function syncProjectTuesIntoRooms(){
+    if(!Array.isArray(pendingProjectRooms) || !pendingProjectRooms.length) return;
+    const projectRoomsById = new Map(pendingProjectRooms.map(r=>[String(r.id || ''), r]));
+    rooms.forEach(room=>{
+      const projectRoom = projectRoomsById.get(String(room.projectRoomId || ''));
+      const projectTues = Array.isArray(projectRoom && projectRoom.tues) ? projectRoom.tues : [];
+      if(!projectTues.length) return;
+
+      if(!Array.isArray(room.tues)) room.tues = [];
+      projectTues.forEach(tue=>{
+        const projectLoadId = tue.project_load_id || null;
+        const cadTueId = tue.cad_tue_id || null;
+        const name = String(tue.description || tue.nome || '').trim();
+        const va = +(tue.power_va || tue.va || 0);
+        if(!projectLoadId && !cadTueId) return;
+        if(!name || !(va > 0)) return;
+
+        const existing = room.tues.find(existingTue=>{
+          if(projectLoadId && String(existingTue.projectLoadId || '') === String(projectLoadId)) return true;
+          if(cadTueId && String(existingTue.id || '') === String(cadTueId)) return true;
+          return false;
+        });
+
+        if(existing){
+          existing.name = name;
+          existing.va = va;
+          existing.projectLoadId = projectLoadId;
+          if(cadTueId) existing.id = cadTueId;
+        } else {
+          room.tues.push({
+            id: cadTueId || `project-load-${projectLoadId}`,
+            projectLoadId,
+            name,
+            va
+          });
+        }
+      });
+    });
+  }
+
   let saveTimer = null;
   function scheduleSave(){
     clearTimeout(saveTimer);
@@ -899,11 +1041,13 @@
   function scheduleRoomSync(){
     clearTimeout(roomSyncTimer);
     roomSyncTimer = setTimeout(()=>postRoomsToProject(true), 700);
+    refreshAlertBadge();
   }
 
   function flushRoomSync(){
     clearTimeout(roomSyncTimer);
     postRoomsToProject(true);
+    refreshAlertBadge();
   }
 
   function flushAllPending(){
@@ -920,6 +1064,7 @@
     updateStats();
     scheduleSave();
     scheduleRoomSync();
+    refreshAlertBadge();
   }
 
   // ---------------------------------------------------------------
@@ -2282,6 +2427,33 @@
         if(match) drawSnapMarker(match.kind, match.point);
       }
     }
+
+    if(alertHighlight){
+      const remaining = alertHighlight.until - performance.now();
+      const pulse = 0.55 + 0.45*Math.sin(performance.now()/160);
+      ctx.save();
+      ctx.strokeStyle = '#ff2d2d';
+      ctx.globalAlpha = Math.max(0.35, Math.min(1, remaining/500)) * pulse + 0.25;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([7,5]);
+      if(alertHighlight.kind==='polygon' && alertHighlight.points){
+        ctx.beginPath();
+        alertHighlight.points.forEach((p,i)=>{
+          const s = worldToScreen(p.x,p.y);
+          if(i===0) ctx.moveTo(s.x,s.y); else ctx.lineTo(s.x,s.y);
+        });
+        ctx.closePath();
+        ctx.stroke();
+      } else if(alertHighlight.kind==='point'){
+        const s = worldToScreen(alertHighlight.x, alertHighlight.y);
+        const r = 0.6*PX_PER_M*zoom;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, r, 0, Math.PI*2);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
   }
 
   function updateStats(){
@@ -3434,6 +3606,215 @@
   bindFloatingPanel('btnSuperpowers', 'superPanel');
 
   // ---------------------------------------------------------------
+  // Alertas do projeto: botão triangular no canto inferior direito
+  // que analisa o estado atual da planta e lista erros, avisos e
+  // dicas. Clicar num item leva a câmera até o local e desenha um
+  // destaque vermelho pulsante por alguns segundos.
+  // ---------------------------------------------------------------
+  let alertHighlight = null; // {kind:'point'|'polygon', ...pontos em metros, until:number}
+  let alertHighlightRaf = null;
+
+  function closeEnough(a, b, tol){ return Math.abs(a-b) <= tol; }
+
+  function computeProjectAlerts(){
+    const alerts = [];
+    const faces = computeRoomFaces();
+
+    // 1) cômodo cadastrado no projeto (modo "com planta") sem contorno
+    //    desenhado/vinculado na planta baixa
+    if(projectInputMode === 'floorplan' && pendingProjectRooms.length){
+      const usedRoomIds = new Set(rooms.map(r=>String(r.projectRoomId||'')).filter(Boolean));
+      pendingProjectRooms.forEach(pr=>{
+        if(!pr || !pr.id || usedRoomIds.has(String(pr.id))) return;
+        alerts.push({
+          severity:'error',
+          title:`Cômodo "${pr.nome||pr.name||'sem nome'}" não existe na planta`,
+          message:'Este cômodo foi cadastrado no projeto mas ainda não tem um contorno desenhado (ou vinculado) aqui na planta baixa. Desenhe as paredes dele ou vincule-o a um contorno já existente.',
+          target:null
+        });
+      });
+    }
+
+    // 2) área fechada pelas paredes que ainda não virou um cômodo nomeado
+    const claimedFaces = new Set();
+    for(const r of rooms){
+      if(r.polygon) continue;
+      const f = findFaceContaining(r.seed, faces);
+      if(f) claimedFaces.add(f);
+    }
+    faces.forEach(f=>{
+      if(claimedFaces.has(f)) return;
+      alerts.push({
+        severity:'tip',
+        title:'Área fechada sem nome',
+        message:`Existe uma área de ${f.area.toFixed(2)} m² fechada por paredes que ainda não foi identificada. Use "Nomear cômodo" e clique dentro dela.`,
+        target:{kind:'polygon', points:f.polyCoords, center:f.centroid}
+      });
+    });
+
+    // 3) cômodos com área suspeita mente pequena
+    for(const r of rooms){
+      const face = getRoomFace(r, faces);
+      if(!face) continue;
+      if(face.area < 1.5){
+        alerts.push({
+          severity:'tip',
+          title:`Cômodo "${r.name}" com área muito pequena`,
+          message:`Área calculada de apenas ${face.area.toFixed(2)} m². Confira se as paredes deste cômodo foram fechadas corretamente.`,
+          target:{kind:'polygon', points:face.polyCoords, center:face.centroid}
+        });
+      }
+    }
+
+    // 4) nomes de cômodo duplicados
+    const byName = new Map();
+    for(const r of rooms){
+      const key = (r.name||'').trim().toLowerCase();
+      if(!key) continue;
+      if(!byName.has(key)) byName.set(key, []);
+      byName.get(key).push(r);
+    }
+    byName.forEach((list, key)=>{
+      if(list.length < 2) return;
+      const face = getRoomFace(list[0], faces);
+      alerts.push({
+        severity:'warning',
+        title:`Nome de cômodo repetido: "${list[0].name}"`,
+        message:`${list.length} cômodos estão usando o mesmo nome. Isso pode confundir o dimensionamento no projeto — renomeie para diferenciá-los.`,
+        target: face ? {kind:'polygon', points:face.polyCoords, center:face.centroid} : null
+      });
+    });
+
+    // 5) paredes muito curtas (provável erro de desenho)
+    for(const w of walls){
+      const len = Math.hypot(w.x2-w.x1, w.y2-w.y1);
+      if(len > 0 && len < 0.10){
+        alerts.push({
+          severity:'warning',
+          title:'Parede muito curta encontrada',
+          message:`Uma parede de apenas ${(len*100).toFixed(0)} cm foi detectada — provavelmente um clique acidental ao desenhar.`,
+          target:{kind:'point', x:(w.x1+w.x2)/2, y:(w.y1+w.y2)/2}
+        });
+      }
+    }
+
+    // 6) paredes sobrepostas (mesmos dois pontos, duplicadas)
+    for(let i=0;i<walls.length;i++){
+      for(let j=i+1;j<walls.length;j++){
+        const a = walls[i], b = walls[j];
+        const same = (closeEnough(a.x1,b.x1,0.02)&&closeEnough(a.y1,b.y1,0.02)&&closeEnough(a.x2,b.x2,0.02)&&closeEnough(a.y2,b.y2,0.02))
+          || (closeEnough(a.x1,b.x2,0.02)&&closeEnough(a.y1,b.y2,0.02)&&closeEnough(a.x2,b.x1,0.02)&&closeEnough(a.y2,b.y1,0.02));
+        if(same){
+          alerts.push({
+            severity:'warning',
+            title:'Paredes sobrepostas',
+            message:'Duas paredes foram desenhadas exatamente no mesmo lugar. Isso pode duplicar contagens de material — exclua uma delas.',
+            target:{kind:'point', x:(a.x1+a.x2)/2, y:(a.y1+a.y2)/2}
+          });
+        }
+      }
+    }
+
+    // 7) dicas gerais de início de projeto
+    if(walls.length===0){
+      alerts.push({ severity:'tip', title:'Nenhuma parede desenhada ainda', message:'Use a ferramenta Line ou Rectangle na barra superior para começar a desenhar as paredes do projeto.', target:null });
+    } else if(rooms.length===0){
+      alerts.push({ severity:'tip', title:'Nenhum cômodo identificado', message:'Feche um contorno de paredes e use "Nomear cômodo" (clique dentro da área) ou "Poliline cômodo" para identificar os espaços.', target:null });
+    }
+
+    const order = { error:0, warning:1, tip:2 };
+    alerts.sort((a,b)=>order[a.severity]-order[b.severity]);
+    alerts.forEach((a,i)=>{ a.id = i; });
+    return alerts;
+  }
+
+  function severityLabel(s){
+    return s==='error' ? 'Erro' : (s==='warning' ? 'Aviso' : 'Dica');
+  }
+
+  function renderAlerts(){
+    const alerts = computeProjectAlerts();
+    const badge = document.getElementById('alertBadge');
+    const fab = document.getElementById('btnAlerts');
+    const list = document.getElementById('alertList');
+    const empty = document.getElementById('alertEmpty');
+    const errorCount = alerts.filter(a=>a.severity==='error').length;
+    if(alerts.length>0){
+      badge.hidden = false;
+      badge.textContent = alerts.length;
+    } else {
+      badge.hidden = true;
+    }
+    fab.classList.toggle('has-errors', errorCount>0);
+    empty.style.display = alerts.length ? 'none' : '';
+    list.innerHTML = alerts.map(a=>`
+      <div class="alert-item" data-id="${a.id}">
+        <div class="alert-item-head">
+          <span class="alert-badge ${a.severity}">${severityLabel(a.severity)}</span>
+          <span class="alert-item-title">${a.title}</span>
+        </div>
+        <span class="alert-item-msg">${a.message}</span>
+        ${a.target ? '<span class="alert-item-go">Localizar na planta →</span>' : ''}
+      </div>
+    `).join('');
+    list.querySelectorAll('.alert-item').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const alert = alerts.find(a=>a.id===+el.dataset.id);
+        if(alert && alert.target) goToAlertTarget(alert.target);
+        alertPanel.classList.remove('show');
+        alertBtn.classList.remove('panel-open');
+      });
+    });
+    return alerts;
+  }
+
+  function goToAlertTarget(target){
+    const center = target.kind==='polygon' ? target.center : {x:target.x, y:target.y};
+    const s = worldToScreen(center.x, center.y);
+    const targetScreenX = canvas.width/2, targetScreenY = canvas.height/2;
+    origin.x += targetScreenX - s.x;
+    origin.y += targetScreenY - s.y;
+    alertHighlight = Object.assign({}, target, { until: performance.now() + 2600 });
+    cancelAnimationFrame(alertHighlightRaf);
+    const tick = ()=>{
+      draw();
+      updateStats();
+      if(alertHighlight && performance.now() < alertHighlight.until){
+        alertHighlightRaf = requestAnimationFrame(tick);
+      } else {
+        alertHighlight = null;
+        draw();
+      }
+    };
+    tick();
+  }
+
+  const alertPanel = document.getElementById('alertPanel');
+  const alertBtn = document.getElementById('btnAlerts');
+  alertBtn.addEventListener('click', ()=>{
+    document.querySelectorAll('.super-panel').forEach(p=>p.classList.remove('show'));
+    document.querySelectorAll('.left-icon').forEach(b=>b.classList.remove('panel-open'));
+    const willOpen = !alertPanel.classList.contains('show');
+    if(willOpen) renderAlerts();
+    alertPanel.classList.toggle('show', willOpen);
+    alertBtn.classList.toggle('panel-open', willOpen);
+  });
+  document.addEventListener('click', (e)=>{
+    if(!alertPanel.classList.contains('show')) return;
+    if(alertPanel.contains(e.target) || alertBtn.contains(e.target)) return;
+    alertPanel.classList.remove('show');
+    alertBtn.classList.remove('panel-open');
+  });
+  function refreshAlertBadge(){
+    const alerts = computeProjectAlerts();
+    const badge = document.getElementById('alertBadge');
+    const fab = document.getElementById('btnAlerts');
+    if(alerts.length>0){ badge.hidden = false; badge.textContent = alerts.length; }
+    else { badge.hidden = true; }
+    fab.classList.toggle('has-errors', alerts.some(a=>a.severity==='error'));
+  }
+
+  // ---------------------------------------------------------------
   // Biblioteca de blocos: grade de blocos disponíveis (padrão +
   // personalizados) e o modal pra criar blocos novos com propriedades
   // próprias — é o que torna cada símbolo "editável e recriável".
@@ -4095,7 +4476,7 @@
         usar_tug_manual: !!r.useManualTug,
         tug_manual_qty_600: r.manualTugQty600 ?? null,
         tug_manual_qty_100: r.manualTugQty100 ?? null,
-        tues: (r.tues||[]).map(t=>({ id:t.id, nome:t.name, va:t.va }))
+        tues: (r.tues||[]).map(t=>({ id:t.id, project_load_id:t.projectLoadId || null, nome:t.name, va:t.va }))
       };
     });
   }
@@ -4165,17 +4546,22 @@
     const data = e.data || {};
     if(data.type !== 'eletrodim:floorplan-init') return;
     pendingProjectRooms = Array.isArray(data.projectRooms) ? data.projectRooms : [];
+    projectInputMode = data.inputMode || '';
     if(data.state) loadEditorState(data.state);
     else {
       renderBlockLibrary();
       resize();
       updateStats();
     }
+    syncProjectTuesIntoRooms();
+    draw();
+    updateStats();
     // ressincroniza os cômodos ao abrir — sem isso, o projeto só reflete o
     // que estava salvo na última vez que algo mudou NA planta, não o estado
     // atual (ex.: se uma correção no backend passa a aceitar campos novos
     // que já existiam no desenho, só apareceriam depois de outra edição)
     scheduleRoomSync();
+    refreshAlertBadge();
   });
 
   // ---------------------------------------------------------------
