@@ -2587,21 +2587,22 @@
       wireRoomCalcEvents(container, room, area, perimeter);
     };
     const mLight = container.querySelector('#propRoomManualLighting');
-    if(mLight) mLight.addEventListener('change', (e)=>{ room.useManualLighting = e.target.checked; rerender(); scheduleSave(); });
+    if(mLight) mLight.addEventListener('change', (e)=>{ room.useManualLighting = e.target.checked; rerender(); scheduleSave(); scheduleRoomSync(); });
     const mLightVa = container.querySelector('#propRoomManualLightingVa');
-    if(mLightVa) mLightVa.addEventListener('input', (e)=>{ room.manualLightingVa = e.target.value; draw(); scheduleSave(); });
+    if(mLightVa) mLightVa.addEventListener('input', (e)=>{ room.manualLightingVa = e.target.value; draw(); scheduleSave(); scheduleRoomSync(); });
     const mTug = container.querySelector('#propRoomManualTug');
-    if(mTug) mTug.addEventListener('change', (e)=>{ room.useManualTug = e.target.checked; rerender(); scheduleSave(); });
+    if(mTug) mTug.addEventListener('change', (e)=>{ room.useManualTug = e.target.checked; rerender(); scheduleSave(); scheduleRoomSync(); });
     const t600 = container.querySelector('#propRoomTug600');
-    if(t600) t600.addEventListener('input', (e)=>{ room.manualTugQty600 = e.target.value; draw(); scheduleSave(); });
+    if(t600) t600.addEventListener('input', (e)=>{ room.manualTugQty600 = e.target.value; draw(); scheduleSave(); scheduleRoomSync(); });
     const t100 = container.querySelector('#propRoomTug100');
-    if(t100) t100.addEventListener('input', (e)=>{ room.manualTugQty100 = e.target.value; draw(); scheduleSave(); });
+    if(t100) t100.addEventListener('input', (e)=>{ room.manualTugQty100 = e.target.value; draw(); scheduleSave(); scheduleRoomSync(); });
     container.querySelectorAll('.prop-tue-remove').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         const idx = +btn.dataset.idx;
         room.tues.splice(idx,1);
         rerender();
         scheduleSave();
+        scheduleRoomSync();
       });
     });
     const tueAdd = container.querySelector('#propRoomTueAdd');
@@ -2620,6 +2621,7 @@
       addingTueForRoomId = null;
       rerender();
       scheduleSave();
+      scheduleRoomSync();
     });
   }
 
@@ -2642,16 +2644,16 @@
       <div id="propRoomCalc">${roomCalcCardsHtml(room, area, perimeter)}</div>
       <button class="wide danger" id="propDeleteBtn" style="background:var(--danger-soft-bg);color:var(--danger-soft-text);border-color:var(--danger);">Excluir cômodo (Delete)</button>
     `;
-    container.querySelector('#propRoomName').addEventListener('input', (e)=>{ room.name = e.target.value; draw(); scheduleSave(); });
+    container.querySelector('#propRoomName').addEventListener('input', (e)=>{ room.name = e.target.value; draw(); scheduleSave(); scheduleRoomSync(); });
     container.querySelector('#propRoomType').addEventListener('change', (e)=>{
       room.roomType = e.target.value;
       container.querySelector('#propRoomCalc').innerHTML = roomCalcCardsHtml(room, area, perimeter);
       wireRoomCalcEvents(container, room, area, perimeter);
-      draw(); scheduleSave();
+      draw(); scheduleSave(); scheduleRoomSync();
     });
-    container.querySelector('#propRoomShowArea').addEventListener('change', (e)=>{ room.showArea = e.target.checked; draw(); scheduleSave(); });
-    container.querySelector('#propRoomShowPerim').addEventListener('change', (e)=>{ room.showPerimeter = e.target.checked; draw(); scheduleSave(); });
-    container.querySelector('#propRoomColor').addEventListener('input', (e)=>{ room.color = e.target.value; draw(); scheduleSave(); });
+    container.querySelector('#propRoomShowArea').addEventListener('change', (e)=>{ room.showArea = e.target.checked; draw(); scheduleSave(); scheduleRoomSync(); });
+    container.querySelector('#propRoomShowPerim').addEventListener('change', (e)=>{ room.showPerimeter = e.target.checked; draw(); scheduleSave(); scheduleRoomSync(); });
+    container.querySelector('#propRoomColor').addEventListener('input', (e)=>{ room.color = e.target.value; draw(); scheduleSave(); scheduleRoomSync(); });
     wireRoomCalcEvents(container, room, area, perimeter);
     container.querySelector('#propDeleteBtn').addEventListener('click', deleteSelected);
   }
