@@ -1038,6 +1038,8 @@
 
   function projectRoomHasCadRepresentation(projectRoom, faces){
     if(isProjectRoomLinked(projectRoom)) return true;
+    const projectName = normalizeLabel(projectRoomName(projectRoom));
+    if(projectName && rooms.some(room=>normalizeLabel(room.name) === projectName)) return true;
     return rooms.some(room=>roomMatchesProjectRoomByGeometry(room, projectRoom, faces));
   }
 
@@ -1115,6 +1117,38 @@
           });
         }
       });
+    });
+  }
+
+  let projectRoomsRequestSeq = 0;
+  function requestLatestProjectRooms(){
+    if(!window.parent || window.parent === window) return Promise.resolve(false);
+
+    const requestId = ++projectRoomsRequestSeq;
+    return new Promise(resolve=>{
+      const timer = setTimeout(()=>{
+        window.removeEventListener('message', onMessage);
+        resolve(false);
+      }, 900);
+
+      function onMessage(e){
+        if(e.origin !== window.location.origin) return;
+        const data = e.data || {};
+        if(data.type !== 'eletrodim:floorplan-project-rooms') return;
+        if(data.requestId && data.requestId !== requestId) return;
+        clearTimeout(timer);
+        window.removeEventListener('message', onMessage);
+        pendingProjectRooms = Array.isArray(data.projectRooms) ? data.projectRooms : [];
+        projectInputMode = data.inputMode || projectInputMode;
+        syncProjectRoomsIntoCadRooms();
+        resolve(true);
+      }
+
+      window.addEventListener('message', onMessage);
+      window.parent.postMessage({
+        type:'eletrodim:floorplan-request-project-rooms',
+        requestId
+      }, window.location.origin==='null' ? '*' : window.location.origin);
     });
   }
 
@@ -4206,8 +4240,9 @@
     openRoomModal(screenX, screenY, {x:cx, y:cy}, pts);
   }
 
-  function openRoomModal(screenX, screenY, worldPt, polygon){
+  async function openRoomModal(screenX, screenY, worldPt, polygon){
     removeOpenModals();
+    await requestLatestProjectRooms();
     const modal = document.createElement('div');
     modal.className = 'mini-modal inline room-modal';
     const rect = canvas.getBoundingClientRect();

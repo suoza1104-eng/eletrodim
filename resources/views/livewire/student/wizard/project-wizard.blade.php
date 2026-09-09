@@ -301,6 +301,16 @@
                             if (e.data && e.data.type === 'eletrodim:floorplan-save') {
                                 $wire.saveFloorPlanState(JSON.stringify(e.data.state || {}));
                             }
+                            if (e.data && e.data.type === 'eletrodim:floorplan-request-project-rooms') {
+                                $wire.getFloorPlanProjectContext().then((context) => {
+                                    frame.contentWindow.postMessage({
+                                        type: 'eletrodim:floorplan-project-rooms',
+                                        requestId: e.data.requestId || null,
+                                        projectRooms: (context && context.projectRooms) || [],
+                                        inputMode: (context && context.inputMode) || @js($projectInputMode)
+                                    }, window.location.origin);
+                                });
+                            }
                         });
                     "
                     style="width:100%;height:calc(100vh - 56px);border:0;display:block;"

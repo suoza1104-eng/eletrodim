@@ -1311,6 +1311,9 @@ class ProjectWizard extends Component
     {
         $this->clearMessages();
         $this->projectInputMode = 'floorplan';
+        if ($this->projectId && $this->roomsArePersistable()) {
+            $this->saveStep2();
+        }
         $this->showFloorPlanEditor = true;
         if ($this->projectId) {
             Project::where('id', $this->projectId)
@@ -1338,6 +1341,39 @@ class ProjectWizard extends Component
                 ]);
             $this->syncFloorPlanRoomLinks();
         }
+    }
+
+    public function getFloorPlanProjectRooms(): array
+    {
+        $this->normalizeRooms();
+        $this->refreshAllRoomTuesFromLoads();
+
+        return array_values($this->rooms);
+    }
+
+    public function getFloorPlanProjectContext(): array
+    {
+        if ($this->projectId && $this->roomsArePersistable()) {
+            $this->saveStep2();
+        }
+
+        return [
+            'projectRooms' => $this->getFloorPlanProjectRooms(),
+            'inputMode'    => in_array($this->projectInputMode, ['floorplan', 'manual'], true) ? $this->projectInputMode : 'manual',
+        ];
+    }
+
+    private function roomsArePersistable(): bool
+    {
+        if (empty($this->rooms)) return false;
+
+        foreach ($this->rooms as $room) {
+            if (empty($room['room_type']) || empty($room['description'])) return false;
+            if (!isset($room['area_m2']) || $room['area_m2'] === '' || (float)$room['area_m2'] <= 0) return false;
+            if (!isset($room['perimeter_m']) || $room['perimeter_m'] === '' || (float)$room['perimeter_m'] <= 0) return false;
+        }
+
+        return true;
     }
 
     public function toggleFloorPlanEditor(): void
